@@ -64,9 +64,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               </p>
             </div>
             <div class="bg-gray-50 rounded-xl p-6">
-              <h4 class="font-semibold text-pdtf-navy mb-2">Property Packs</h4>
+              <h4 class="font-semibold text-pdtf-navy mb-2">Transactions</h4>
               <p class="text-gray-600 text-sm">
-                A property pack is the collection of claims about a property. The current state is computed by combining all claims, with provenance indicating trustworthiness.
+                The central entity in PDTF. A transaction is created for a property and tracks all claims, state, and participants. Transactions are identified by transactionId and can be searched by UPRN or status.
               </p>
             </div>
             <div class="bg-gray-50 rounded-xl p-6">
@@ -78,7 +78,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <div class="bg-gray-50 rounded-xl p-6">
               <h4 class="font-semibold text-pdtf-navy mb-2">Subscriptions</h4>
               <p class="text-gray-600 text-sm">
-                Subscribe to property packs to receive updates when new claims are added. Webhooks notify your system of changes in real-time.
+                Subscribe to a transaction by POSTing a callbackUrl to receive webhook notifications when new claims are added. DELETE to unsubscribe.
               </p>
             </div>
           </div>
@@ -87,27 +87,43 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <div>
           <h3 class="text-xl font-semibold text-pdtf-navy mb-4">Quick Start</h3>
           <div class="bg-gray-900 rounded-xl p-6 overflow-x-auto">
-            <div class="text-sm text-gray-400 mb-2"># Fetch current state for a property</div>
+            <div class="text-sm text-gray-400 mb-2"># Create a new transaction</div>
+            <pre class="text-green-400 text-sm"><code>curl -X POST \
+  https://api.example.com/pdtfService/transactions \
+  -H "Authorization: Bearer &#123;token&#125;" \
+  -H "Content-Type: application/json"</code></pre>
+          </div>
+
+          <div class="bg-gray-900 rounded-xl p-6 mt-4 overflow-x-auto">
+            <div class="text-sm text-gray-400 mb-2"># Get current state of a transaction</div>
             <pre class="text-green-400 text-sm"><code>curl -X GET \
-  https://api.example.com/pdtf/v1/property-pack/&#123;uprn&#125;/state \
+  https://api.example.com/pdtfService/transactions/&#123;transactionId&#125;/state \
   -H "Authorization: Bearer &#123;token&#125;" \
   -H "Accept: application/json"</code></pre>
           </div>
-          
+
           <div class="bg-gray-900 rounded-xl p-6 mt-4 overflow-x-auto">
-            <div class="text-sm text-gray-400 mb-2"># Post a new claim</div>
+            <div class="text-sm text-gray-400 mb-2"># Post claims to a transaction</div>
             <pre class="text-green-400 text-sm"><code>curl -X POST \
-  https://api.example.com/pdtf/v1/property-pack/&#123;uprn&#125;/claims \
+  https://api.example.com/pdtfService/transactions/&#123;transactionId&#125;/claims \
   -H "Authorization: Bearer &#123;token&#125;" \
   -H "Content-Type: application/json" \
-  -d '&#123;
-    "claimPath": "/propertyPack/energyEfficiency/currentEnergyRating",
-    "value": "B",
-    "provenance": &#123;
-      "type": "vouched",
-      "vouchedBy": "did:web:example.com:users:123"
+  -d '[&#123;
+    "claims": &#123;
+      "/propertyPack/energyEfficiency/currentEnergyRating": &#123;
+        "value": "B"
+      &#125;
+    &#125;,
+    "verification": &#123;
+      "trustFramework": "pdtf",
+      "evidence": [&#123;
+        "type": "electronic_record",
+        "record": &#123;
+          "source": &#123; "name": "EPC Register" &#125;
+        &#125;
+      &#125;]
     &#125;
-  &#125;'</code></pre>
+  &#125;]'</code></pre>
           </div>
           
           <div class="mt-6">
@@ -131,64 +147,79 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         The PDTF API follows REST conventions with OpenAPI specification. All data is exchanged as JSON.
       </p>
       
+      <div class="bg-white rounded-xl p-6 border border-gray-200 mb-6">
+        <p class="text-sm text-gray-600">
+          <span class="font-semibold text-pdtf-navy">Authentication:</span> All endpoints require a Bearer token (JWT) via the <code class="bg-gray-100 px-1 py-0.5 rounded text-xs">Authorization: Bearer &#123;token&#125;</code> header.
+        </p>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-white rounded-xl p-6 border border-gray-200">
           <div class="flex items-center gap-3 mb-4">
+            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-mono font-medium">POST</span>
+            <code class="text-xs text-gray-600">/pdtfService/transactions</code>
+          </div>
+          <h4 class="font-semibold text-pdtf-navy mb-2">Create Transaction</h4>
+          <p class="text-gray-600 text-sm">Create a new property transaction. Returns a transactionId and schema reference.</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 border border-gray-200">
+          <div class="flex items-center gap-3 mb-4">
             <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-mono font-medium">GET</span>
-            <code class="text-sm text-gray-600">/property-pack/&#123;uprn&#125;/claims</code>
+            <code class="text-xs text-gray-600">/pdtfService/transactions/search</code>
+          </div>
+          <h4 class="font-semibold text-pdtf-navy mb-2">Search Transactions</h4>
+          <p class="text-gray-600 text-sm">Search for transactions by UPRN or status. Returns a list of matching transactions.</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 border border-gray-200">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-mono font-medium">GET</span>
+            <code class="text-xs text-gray-600">/pdtfService/transactions/&#123;transactionId&#125;/state</code>
+          </div>
+          <h4 class="font-semibold text-pdtf-navy mb-2">Get State</h4>
+          <p class="text-gray-600 text-sm">Get the computed current state of a transaction formatted as a PDTF property pack schema.</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 border border-gray-200">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-mono font-medium">GET</span>
+            <code class="text-xs text-gray-600">/pdtfService/transactions/&#123;transactionId&#125;/claims</code>
           </div>
           <h4 class="font-semibold text-pdtf-navy mb-2">Get Claims</h4>
-          <p class="text-gray-600 text-sm">Retrieve all claims for a property pack, including full provenance metadata.</p>
+          <p class="text-gray-600 text-sm">Retrieve all claims for a transaction, including full verification metadata.</p>
         </div>
-        
-        <div class="bg-white rounded-xl p-6 border border-gray-200">
-          <div class="flex items-center gap-3 mb-4">
-            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-mono font-medium">GET</span>
-            <code class="text-sm text-gray-600">/property-pack/&#123;uprn&#125;/state</code>
-          </div>
-          <h4 class="font-semibold text-pdtf-navy mb-2">Get Current State</h4>
-          <p class="text-gray-600 text-sm">Get the computed current state of a property pack (latest values for each attribute).</p>
-        </div>
-        
-        <div class="bg-white rounded-xl p-6 border border-gray-200">
-          <div class="flex items-center gap-3 mb-4">
-            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-mono font-medium">GET</span>
-            <code class="text-sm text-gray-600">/property-pack/&#123;uprn&#125;/provenance-map</code>
-          </div>
-          <h4 class="font-semibold text-pdtf-navy mb-2">Get Provenance Map</h4>
-          <p class="text-gray-600 text-sm">Returns the same structure as state, but with provenance information replacing values.</p>
-        </div>
-        
+
         <div class="bg-white rounded-xl p-6 border border-gray-200">
           <div class="flex items-center gap-3 mb-4">
             <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-mono font-medium">POST</span>
-            <code class="text-sm text-gray-600">/property-pack/&#123;uprn&#125;/claims</code>
+            <code class="text-xs text-gray-600">/pdtfService/transactions/&#123;transactionId&#125;/claims</code>
           </div>
-          <h4 class="font-semibold text-pdtf-navy mb-2">Post Claim</h4>
-          <p class="text-gray-600 text-sm">Add a new claim to a property pack with provenance metadata.</p>
+          <h4 class="font-semibold text-pdtf-navy mb-2">Create Claims</h4>
+          <p class="text-gray-600 text-sm">Submit an array of verified claims for a transaction. Claims are validated against the PDTF schema.</p>
         </div>
-        
+
         <div class="bg-white rounded-xl p-6 border border-gray-200">
           <div class="flex items-center gap-3 mb-4">
             <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-mono font-medium">POST</span>
-            <code class="text-sm text-gray-600">/property-pack/&#123;uprn&#125;/subscriptions</code>
+            <code class="text-xs text-gray-600">/pdtfService/transactions/&#123;transactionId&#125;/subscribe</code>
           </div>
           <h4 class="font-semibold text-pdtf-navy mb-2">Subscribe</h4>
-          <p class="text-gray-600 text-sm">Subscribe to receive webhook notifications when claims are added.</p>
+          <p class="text-gray-600 text-sm">Subscribe to webhook notifications when new claims are added. Body: <code class="bg-gray-100 px-1 py-0.5 rounded text-xs">&#123;callbackUrl&#125;</code></p>
         </div>
-        
+
         <div class="bg-white rounded-xl p-6 border border-gray-200">
           <div class="flex items-center gap-3 mb-4">
             <span class="px-2 py-1 bg-red-100 text-red-700 rounded text-sm font-mono font-medium">DELETE</span>
-            <code class="text-sm text-gray-600">/property-pack/&#123;uprn&#125;/subscriptions/&#123;id&#125;</code>
+            <code class="text-xs text-gray-600">/pdtfService/transactions/&#123;transactionId&#125;/subscribe</code>
           </div>
           <h4 class="font-semibold text-pdtf-navy mb-2">Unsubscribe</h4>
-          <p class="text-gray-600 text-sm">Remove an existing subscription.</p>
+          <p class="text-gray-600 text-sm">Cancel an existing webhook subscription for this transaction.</p>
         </div>
       </div>
       
       <div class="mt-8 text-center">
-        <a href="https://github.com/Property-Data-Trust-Framework/trust-framework" target="_blank" class="btn-primary">
+        <a href="/api/pdtf-api-2.0.0.yaml" target="_blank" class="btn-primary">
           Full OpenAPI Specification →
         </a>
       </div>
@@ -198,79 +229,116 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   <!-- Schemas -->
   <section id="schemas" class="py-20 scroll-mt-20">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h2 class="section-heading">Property Pack Schemas</h2>
-      <p class="text-lg text-gray-600 mb-8 max-w-2xl">
-        All property data follows JSON Schema definitions. The schema is versioned (currently v3.x) and designed for semantic stability.
+      <h2 class="section-heading">Transaction Schema</h2>
+      <p class="text-lg text-gray-600 mb-4 max-w-3xl">
+        All property data follows the <strong>PDTF Transaction Schema</strong> — a JSON Schema defining the complete data structure for a property transaction in England and Wales. It supports mapping to BASPI, Law Society TA forms, and RICS data standards.
       </p>
-      
+      <p class="text-sm text-gray-500 mb-8">
+        <a href="https://trust.propdata.org.uk/schemas/v3/pdtf-transaction.json" target="_blank" class="text-pdtf-orange hover:underline">View full schema (v3) ↗</a>
+      </p>
+
+      <!-- Tree view -->
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
-          <h3 class="font-semibold text-pdtf-navy">Schema Structure</h3>
+        <div class="bg-gray-50 px-6 py-3 border-b border-gray-200 flex items-center justify-between">
+          <h3 class="font-semibold text-pdtf-navy text-sm">pdtf-transaction.json</h3>
+          <span class="text-xs text-gray-400 font-mono">object</span>
         </div>
-        <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div class="border border-gray-200 rounded-lg p-4">
-              <code class="text-sm text-pdtf-orange">/propertyPack</code>
-              <ul class="mt-2 text-sm text-gray-600 space-y-1">
-                <li>• /materialFacts</li>
-                <li>• /ownership</li>
-                <li>• /titles</li>
-                <li>• /energyEfficiency</li>
-              </ul>
-            </div>
-            <div class="border border-gray-200 rounded-lg p-4">
-              <code class="text-sm text-pdtf-orange">/searches</code>
-              <ul class="mt-2 text-sm text-gray-600 space-y-1">
-                <li>• /localAuthority</li>
-                <li>• /drainage</li>
-                <li>• /environmental</li>
-                <li>• /mining</li>
-              </ul>
-            </div>
-            <div class="border border-gray-200 rounded-lg p-4">
-              <code class="text-sm text-pdtf-orange">/participants</code>
-              <ul class="mt-2 text-sm text-gray-600 space-y-1">
-                <li>• /seller</li>
-                <li>• /buyer</li>
-                <li>• /sellerConveyancer</li>
-                <li>• /buyerConveyancer</li>
-              </ul>
-            </div>
-            <div class="border border-gray-200 rounded-lg p-4">
-              <code class="text-sm text-pdtf-orange">/legalInfo</code>
-              <ul class="mt-2 text-sm text-gray-600 space-y-1">
-                <li>• /tenure</li>
-                <li>• /restrictions</li>
-                <li>• /easements</li>
-                <li>• /boundaries</li>
-              </ul>
-            </div>
-            <div class="border border-gray-200 rounded-lg p-4">
-              <code class="text-sm text-pdtf-orange">/transaction</code>
-              <ul class="mt-2 text-sm text-gray-600 space-y-1">
-                <li>• /offers</li>
-                <li>• /mortgages</li>
-                <li>• /completionDate</li>
-              </ul>
-            </div>
-            <div class="border border-gray-200 rounded-lg p-4">
-              <code class="text-sm text-pdtf-orange">/verification</code>
-              <ul class="mt-2 text-sm text-gray-600 space-y-1">
-                <li>• /identity</li>
-                <li>• /aml</li>
-                <li>• /sourceOfFunds</li>
-              </ul>
-            </div>
+        <div class="p-5 font-mono text-sm leading-relaxed">
+          <!-- Top-level fields -->
+          <div class="text-gray-500">
+            <span class="text-gray-400">├─</span> <span class="text-pdtf-navy">transactionId</span> <span class="text-gray-400 text-xs">string</span> <span class="text-gray-400 text-xs ml-1">— UUID</span>
+          </div>
+          <div class="text-gray-500">
+            <span class="text-gray-400">├─</span> <span class="text-pdtf-navy">status</span> <span class="text-gray-400 text-xs">enum</span> <span class="text-gray-400 text-xs ml-1">— active | For sale | Under offer | Sold STC | …</span>
+          </div>
+          <div class="text-gray-500">
+            <span class="text-gray-400">├─</span> <span class="text-pdtf-navy">externalIds</span> <span class="text-gray-400 text-xs">object</span>
+          </div>
+
+          <!-- participants -->
+          <div class="text-gray-500 mt-1">
+            <span class="text-gray-400">├─</span> <span class="text-pdtf-navy font-semibold">participants</span> <span class="text-gray-400 text-xs">array</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">name</span> <span class="text-gray-400 text-xs">object</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">role</span> <span class="text-gray-400 text-xs">string</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">email</span><span class="text-gray-400">,</span> <span class="text-gray-600">phone</span><span class="text-gray-400">,</span> <span class="text-gray-600">organisation</span><span class="text-gray-400">,</span> <span class="text-gray-600">address</span> <span class="text-gray-400 text-xs">…</span>
+          </div>
+
+          <!-- propertyPack -->
+          <div class="text-gray-500 mt-1">
+            <span class="text-gray-400">├─</span> <span class="text-pdtf-orange font-semibold">propertyPack</span> <span class="text-gray-400 text-xs">object</span> <span class="text-gray-400 text-xs ml-1">— the core data structure</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">address</span><span class="text-gray-400">,</span> <span class="text-gray-600">uprn</span><span class="text-gray-400">,</span> <span class="text-gray-600">location</span><span class="text-gray-400">,</span> <span class="text-gray-600">localAuthority</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">priceInformation</span><span class="text-gray-400">,</span> <span class="text-gray-600">marketingTenure</span><span class="text-gray-400">,</span> <span class="text-gray-600">media</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">buildInformation</span><span class="text-gray-400">,</span> <span class="text-gray-600">residentialPropertyFeatures</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">ownership</span><span class="text-gray-400">,</span> <span class="text-gray-600">parking</span><span class="text-gray-400">,</span> <span class="text-gray-600">councilTax</span><span class="text-gray-400">,</span> <span class="text-gray-600">energyEfficiency</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">listingAndConservation</span><span class="text-gray-400">,</span> <span class="text-gray-600">typeOfConstruction</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">electricity</span><span class="text-gray-400">,</span> <span class="text-gray-600">waterAndDrainage</span><span class="text-gray-400">,</span> <span class="text-gray-600">heating</span><span class="text-gray-400">,</span> <span class="text-gray-600">connectivity</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">disputesAndComplaints</span><span class="text-gray-400">,</span> <span class="text-gray-600">alterationsAndChanges</span><span class="text-gray-400">,</span> <span class="text-gray-600">notices</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">insurance</span><span class="text-gray-400">,</span> <span class="text-gray-600">rightsAndInformalArrangements</span><span class="text-gray-400">,</span> <span class="text-gray-600">environmentalIssues</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">legalOwners</span><span class="text-gray-400">,</span> <span class="text-gray-600">legalBoundaries</span><span class="text-gray-400">,</span> <span class="text-gray-600">occupiers</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">guaranteesWarrantiesAndIndemnityInsurances</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">completionAndMoving</span><span class="text-gray-400">,</span> <span class="text-gray-600">fixturesAndFittings</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">titlesToBeSold</span> <span class="text-gray-400 text-xs">array</span> <span class="text-gray-400 text-xs ml-1">— HMLR title records</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">searches</span> <span class="text-gray-400 text-xs">array</span> <span class="text-gray-400 text-xs ml-1">— search enquiries</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">localSearches</span><span class="text-gray-400">,</span> <span class="text-gray-600">documents</span><span class="text-gray-400">,</span> <span class="text-gray-600">saleReadyDeclarations</span> <span class="text-gray-400 text-xs">…</span>
+          </div>
+
+          <!-- valuationComparisonData -->
+          <div class="text-gray-500 mt-1">
+            <span class="text-gray-400">└─</span> <span class="text-pdtf-navy font-semibold">valuationComparisonData</span> <span class="text-gray-400 text-xs">object</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">├─</span> <span class="text-gray-600">propertyDetails</span> <span class="text-gray-400 text-xs">array</span>
+          </div>
+          <div class="text-gray-500 ml-5">
+            <span class="text-gray-300">└─</span> <span class="text-gray-600">propertyPricing</span> <span class="text-gray-400 text-xs">object</span>
           </div>
         </div>
       </div>
-      
+
+      <p class="text-sm text-gray-500 mt-4">
+        The <code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">propertyPack</code> object contains 40+ sub-schemas covering BASPI material facts, TA6/TA7 form fields, title data, searches, and conveyancing declarations.
+      </p>
+
       <div class="mt-8 flex flex-wrap gap-4">
-        <a href="https://github.com/Property-Data-Trust-Framework/schemas" target="_blank" class="btn-primary">
-          Browse Schemas on GitHub
+        <a href="https://trust.propdata.org.uk/schemas/v3/pdtf-transaction.json" target="_blank" class="btn-primary">
+          View Full Schema (JSON)
         </a>
-        <a href="https://github.com/Property-Data-Trust-Framework/schemas/releases" target="_blank" class="btn-secondary">
-          Schema Changelog
+        <a href="https://github.com/Property-Data-Trust-Framework/schemas" target="_blank" class="btn-secondary">
+          Browse Schemas on GitHub
         </a>
       </div>
     </div>

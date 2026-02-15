@@ -148,9 +148,9 @@ import Mermaid from '../components/Mermaid.astro';
       <Mermaid
         title="How data moves through the ecosystem"
         chart={`flowchart LR
-  ASP[Attribute Service Providers\n(searches, EPC, IDV/AML)] --> OSP[Orchestration Service Providers\n(networks & pipes)]
-  OSP --> RPSP[Relying Party Software Providers\n(CMS, lender platforms)]
-  Consumer[Property owner / Consumer] --- ASP
+  ASP["Attribute Service Providers<br/>(searches, EPC, IDV/AML)"] --> OSP["Orchestration Service Providers<br/>(networks & pipes)"]
+  OSP --> RPSP["Relying Party Software Providers<br/>(CMS, lender platforms)"]
+  Consumer["Property owner / Consumer"] --- ASP
   Consumer --- RPSP
 
   style ASP fill:#E7F7EF,stroke:#38A169
@@ -332,7 +332,7 @@ import Mermaid from '../components/Mermaid.astro';
             <h3 class="text-xl font-semibold text-pdtf-navy">Accessible</h3>
           </div>
           <p class="text-gray-600">
-            Standard REST API with OpenAPI spec. POST claims, GET claims/state/provenance, manage subscriptions.
+            Standard REST API with OpenAPI spec. Create transactions, POST claims, GET state and claims, manage webhook subscriptions.
           </p>
         </div>
         

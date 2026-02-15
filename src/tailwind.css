@@ -5,30 +5,32 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    font-size: 15px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center px-6 py-3 bg-pdtf-orange text-white font-medium rounded-lg hover:bg-pdtf-orange-dark transition-colors;
+    @apply inline-flex items-center justify-center px-5 py-2.5 bg-pdtf-orange text-white font-medium rounded-lg hover:bg-pdtf-orange-dark transition-colors text-sm;
   }
-  
+
   .btn-secondary {
-    @apply inline-flex items-center justify-center px-6 py-3 border-2 border-pdtf-navy text-pdtf-navy font-medium rounded-lg hover:bg-pdtf-navy hover:text-white transition-colors;
+    @apply inline-flex items-center justify-center px-5 py-2.5 border-2 border-pdtf-navy text-pdtf-navy font-medium rounded-lg hover:bg-pdtf-navy hover:text-white transition-colors text-sm;
   }
-  
+
   .card {
     @apply bg-white rounded-xl shadow-lg p-6 border border-gray-100;
   }
-  
+
   .section-heading {
-    @apply text-3xl md:text-4xl font-bold text-pdtf-navy mb-6;
+    @apply text-3xl md:text-4xl font-bold text-pdtf-navy mb-5;
   }
-  
+
   .stat-number {
     @apply text-4xl md:text-5xl font-bold text-pdtf-orange;
   }
-  
+
   .stat-label {
     @apply text-gray-600 mt-2;
   }

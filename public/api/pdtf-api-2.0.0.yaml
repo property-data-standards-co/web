@@ -1,0 +1,603 @@
+openapi: 3.0.3
+info:
+  title: Property Data Trust Framework API
+  version: 2.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  description: This API defines how participants in the UK Property Data Trust Framework can securely share property data, together with the verifiable provenance of that data. The API is built around a variation of OpenID Connect Verified Claims schema.
+servers:
+  - url: https://api.pdtf.example.com
+    description: Example PDTF service implementation
+  - url: https://propdata.org.uk/trustframework/api
+    description: Official PDTF discovery service
+tags:
+  - name: transactions
+    description: Transaction management and property data exchange
+  - name: claims
+    description: Verified claims on transactions
+  - name: webhook
+    description: Webhook subscriptions for real-time updates
+  - name: discovery
+    description: Trust framework discovery API
+security:
+  - bearerAuth: []
+paths:
+  /pdtfService/transactions:
+    post:
+      tags:
+        - transactions
+      summary: Create a new transaction
+      operationId: createTransaction
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  $schema:
+                    type: string
+                    description: URL referencing the version of PDTF schema used
+                    example: "https://trust.propdata.org.uk/schemas/v1/pdtf-transaction.json"
+                  transactionId:
+                    type: string
+                    description: The created transaction identifier
+        "401":
+          $ref: "#/components/responses/401Error"
+        "500":
+          $ref: "#/components/responses/500Error"
+  /pdtfService/transactions/search:
+    get:
+      tags:
+        - transactions
+      summary: Search for transactions
+      operationId: searchTransactions
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/uprn"
+        - $ref: "#/components/parameters/transactionStatus"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+        "401":
+          $ref: "#/components/responses/401Error"
+        "422":
+          $ref: "#/components/responses/422Error"
+        "500":
+          $ref: "#/components/responses/500Error"
+  /pdtfService/transactions/{transactionId}/state:
+    get:
+      tags:
+        - transactions
+      summary: Get the current state of a transaction
+      description: Retrieve the computed current state of a transaction, formatted as a PDTF property pack schema with all claims applied.
+      operationId: getTransactionState
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/transactionId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  $schema:
+                    type: string
+                  transactionId:
+                    type: string
+                  status:
+                    type: string
+                  participants:
+                    type: array
+                  propertyPack:
+                    type: object
+        "401":
+          $ref: "#/components/responses/401Error"
+        "404":
+          $ref: "#/components/responses/404Error"
+        "422":
+          $ref: "#/components/responses/422Error"
+        "500":
+          $ref: "#/components/responses/500Error"
+  /pdtfService/transactions/{transactionId}/claims:
+    get:
+      tags:
+        - claims
+      summary: Retrieve claims for a transaction
+      operationId: getClaimsByTransactionId
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/transactionId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Claim"
+        "401":
+          $ref: "#/components/responses/401Error"
+        "422":
+          $ref: "#/components/responses/422Error"
+        "500":
+          $ref: "#/components/responses/500Error"
+    post:
+      tags:
+        - claims
+      summary: Create transaction claims
+      description: Submit verified claims for a specific transaction. Claims are validated against the PDTF schema and require appropriate permissions.
+      operationId: createClaimsByTransactionId
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/transactionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Claim"
+      responses:
+        "200":
+          description: Claims submitted successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Claim"
+        "401":
+          $ref: "#/components/responses/401Error"
+        "403":
+          $ref: "#/components/responses/403Error"
+        "422":
+          $ref: "#/components/responses/422Error"
+        "500":
+          $ref: "#/components/responses/500Error"
+  /pdtfService/transactions/{transactionId}/subscribe:
+    post:
+      tags:
+        - webhook
+      summary: Subscribe to new claims creation
+      operationId: subscribeToTransaction
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/transactionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                callbackUrl:
+                  type: string
+                  format: uri
+                  description: URL to receive claims update webhooks
+      responses:
+        "204":
+          description: Subscription created successfully
+        "401":
+          $ref: "#/components/responses/401Error"
+        "404":
+          $ref: "#/components/responses/404Error"
+        "422":
+          $ref: "#/components/responses/422Error"
+        "500":
+          $ref: "#/components/responses/500Error"
+    delete:
+      tags:
+        - webhook
+      summary: Cancel subscription for new claims creation
+      operationId: unsubscribeFromTransaction
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/transactionId"
+      responses:
+        "204":
+          description: Subscription cancelled successfully
+        "401":
+          $ref: "#/components/responses/401Error"
+        "404":
+          $ref: "#/components/responses/404Error"
+        "422":
+          $ref: "#/components/responses/422Error"
+        "500":
+          $ref: "#/components/responses/500Error"
+  /:
+    servers:
+      - url: https://propdata.org.uk/trustframework/api
+        description: Official PDTF discovery service
+    get:
+      summary: Get a discovery optimised representation of the trust framework
+      tags:
+        - discovery
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/tf-discovery-document"
+      operationId: getDiscoveryDocument
+  /members/{did}:
+    servers:
+      - url: https://propdata.org.uk/trustframework/api
+        description: Official PDTF discovery service
+    get:
+      tags:
+        - discovery
+      summary: Get membership information for a DID
+      parameters:
+        - required: true
+          name: did
+          in: path
+          schema:
+            type: string
+          description: Decentralised identifier of the member
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/tf-member"
+        "404":
+          description: The provided DID is not a member of this trust framework
+      operationId: getMember
+  /schemas/{type}:
+    servers:
+      - url: https://propdata.org.uk/trustframework/api
+        description: Official PDTF discovery service
+    get:
+      tags:
+        - discovery
+      summary: Get discovery information for this credential schema type
+      parameters:
+        - required: true
+          name: type
+          in: path
+          schema:
+            type: string
+          description: Type of the schema
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/tf-schema"
+        "404":
+          description: This trust framework has no schema of the provided type
+      operationId: getSchema
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    transactionId:
+      required: true
+      name: transactionId
+      in: path
+      schema:
+        type: string
+      description: Unique identifier for the transaction
+    uprn:
+      name: uprn
+      in: query
+      schema:
+        type: string
+      description: Unique Property Reference Number
+    transactionStatus:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum:
+          - active
+          - For sale
+          - Under offer
+          - Sold subject to contract
+          - Contracts exchanged
+          - Completed
+          - Cancelled
+          - To let
+          - Let agreed
+      description: Transaction status filter
+  schemas:
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - For sale
+            - Under offer
+            - Sold subject to contract
+            - Contracts exchanged
+            - Completed
+            - Cancelled
+            - To let
+            - Let agreed
+        uprn:
+          type: integer
+        udprn:
+          type: integer
+        umrrn:
+          type: integer
+        lat:
+          type: string
+        long:
+          type: integer
+        organisationId:
+          type: string
+          description: A unique identifier referencing the organisation
+        newClaimsAddedAt:
+          type: integer
+          format: timestamp
+          description: Timestamp of the latest claims update
+        createdAt:
+          type: integer
+          format: timestamp
+        updatedAt:
+          type: integer
+          format: timestamp
+    Claim:
+      type: object
+      description: A verified claim against the PDTF property pack schema. See the pdtf/schemas package documentation for full details.
+      properties:
+        id:
+          type: string
+        claims:
+          type: object
+          description: Keys are JSON pointer paths from the PDTF schema, values are data objects
+          additionalProperties:
+            type: object
+        timestamp:
+          type: integer
+          format: timestamp
+        transactionId:
+          type: string
+        verification:
+          $ref: "#/components/schemas/Verification"
+    Verification:
+      type: object
+      description: Verification metadata following the OpenID Connect verified claims standard
+      properties:
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/Evidence"
+        time:
+          type: string
+          format: date-time
+        trustFramework:
+          type: string
+    Evidence:
+      type: object
+      properties:
+        attestation:
+          type: object
+          properties:
+            type:
+              type: string
+            voucher:
+              type: object
+              properties:
+                name:
+                  type: string
+        type:
+          type: string
+        verifier:
+          type: object
+          properties:
+            organisation:
+              type: string
+        verification_method:
+          type: object
+          properties:
+            type:
+              type: string
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              desc:
+                type: string
+              digest:
+                type: object
+                properties:
+                  alg:
+                    type: string
+                  value:
+                    type: string
+              url:
+                type: string
+              accessToken:
+                type: string
+              expiresIn:
+                type: integer
+              pdtfSchemaPath:
+                type: string
+        record:
+          type: object
+          properties:
+            source:
+              type: object
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                rights:
+                  type: string
+            type:
+              type: string
+        externalAttachments:
+          type: array
+          items:
+            type: object
+            properties:
+              desc:
+                type: string
+              digest:
+                type: string
+              url:
+                type: string
+              accessToken:
+                type: string
+              expiresIn:
+                type: integer
+              pdtfSchemaPath:
+                type: string
+    tf-discovery-document:
+      type: object
+      description: Discovery information aggregated into a single document
+      properties:
+        members:
+          additionalProperties:
+            $ref: "#/components/schemas/tf-member"
+        schemas:
+          additionalProperties:
+            $ref: "#/components/schemas/tf-schema"
+    tf-member:
+      type: object
+      properties:
+        member:
+          type: object
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+          required: [name, description]
+        issuer:
+          type: object
+          properties:
+            credentials:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+          nullable: true
+        verifier:
+          type: object
+          properties:
+            credentials:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+          nullable: true
+      required: [member]
+    tf-schema:
+      type: object
+      properties:
+        tfCredentialSchema:
+          type: object
+          properties:
+            type:
+              type: string
+            schema:
+              type: string
+          required: [type, schema]
+        issuers:
+          type: array
+          items:
+            type: object
+            properties:
+              did:
+                type: string
+            required: [did]
+        verifiers:
+          type: array
+          items:
+            type: object
+            properties:
+              did:
+                type: string
+            required: [did]
+      required: [tfCredentialSchema]
+  responses:
+    401Error:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    403Error:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    404Error:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    422Error:
+      description: Unprocessable entity
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                statusCode:
+                  type: integer
+                responseData:
+                  type: array
+                  items:
+                    type: string
+    500Error:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
