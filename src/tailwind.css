@@ -8,6 +8,15 @@
     font-size: 15px;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
+  h1, h2, h3 {
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .bg-radial-gradient {
+    background: radial-gradient(ellipse at 30% 50%, rgba(233, 123, 45, 0.08) 0%, transparent 60%);
+  }
 }
 
 @layer components {
@@ -20,7 +29,7 @@
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-lg p-6 border border-gray-100;
+    @apply bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:-translate-y-1 hover:shadow-xl transition-all duration-200;
   }
 
   .section-heading {

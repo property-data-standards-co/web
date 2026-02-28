@@ -25,7 +25,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <!-- Quick Links -->
-  <section class="py-12 bg-gray-50 border-b border-gray-200">
+  <section class="py-12 bg-pdtf-stone-light border-b border-gray-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <a href="#getting-started" class="bg-white rounded-xl p-4 border border-gray-200 hover:border-pdtf-orange hover:shadow-md transition-all text-center">
@@ -49,7 +49,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <!-- Getting Started -->
-  <section id="getting-started" class="py-20 scroll-mt-20">
+  <section id="getting-started" class="py-24 md:py-32 scroll-mt-20">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 class="section-heading">Getting Started</h2>
       
@@ -57,25 +57,25 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <div>
           <h3 class="text-xl font-semibold text-pdtf-navy mb-4">Core Concepts</h3>
           <div class="space-y-4">
-            <div class="bg-gray-50 rounded-xl p-6">
+            <div class="bg-pdtf-stone-light rounded-xl p-6">
               <h4 class="font-semibold text-pdtf-navy mb-2">Claims</h4>
               <p class="text-gray-600 text-sm">
                 Data in PDTF is represented as claims — statements about a property with attached provenance. Claims are immutable; updates are made by adding new claims.
               </p>
             </div>
-            <div class="bg-gray-50 rounded-xl p-6">
+            <div class="bg-pdtf-stone-light rounded-xl p-6">
               <h4 class="font-semibold text-pdtf-navy mb-2">Transactions</h4>
               <p class="text-gray-600 text-sm">
                 The central entity in PDTF. A transaction is created for a property and tracks all claims, state, and participants. Transactions are identified by transactionId and can be searched by UPRN or status.
               </p>
             </div>
-            <div class="bg-gray-50 rounded-xl p-6">
+            <div class="bg-pdtf-stone-light rounded-xl p-6">
               <h4 class="font-semibold text-pdtf-navy mb-2">Provenance</h4>
               <p class="text-gray-600 text-sm">
                 Every claim carries provenance metadata: who made the claim, when, with what evidence, and at what trust level. This is based on the OpenID Connect 'verified claims' standard.
               </p>
             </div>
-            <div class="bg-gray-50 rounded-xl p-6">
+            <div class="bg-pdtf-stone-light rounded-xl p-6">
               <h4 class="font-semibold text-pdtf-navy mb-2">Subscriptions</h4>
               <p class="text-gray-600 text-sm">
                 Subscribe to a transaction by POSTing a callbackUrl to receive webhook notifications when new claims are added. DELETE to unsubscribe.
@@ -140,7 +140,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <!-- API Reference -->
-  <section id="api" class="py-20 bg-gray-50 scroll-mt-20">
+  <section id="api" class="py-24 md:py-32 bg-pdtf-stone-light scroll-mt-20">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 class="section-heading">API Reference</h2>
       <p class="text-lg text-gray-600 mb-8 max-w-2xl">
@@ -227,7 +227,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <!-- Schemas -->
-  <section id="schemas" class="py-20 scroll-mt-20">
+  <section id="schemas" class="py-24 md:py-32 scroll-mt-20">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 class="section-heading">Transaction Schema</h2>
       <p class="text-lg text-gray-600 mb-4 max-w-3xl">
@@ -239,7 +239,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
       <!-- Tree view -->
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div class="bg-gray-50 px-6 py-3 border-b border-gray-200 flex items-center justify-between">
+        <div class="bg-pdtf-stone-light px-6 py-3 border-b border-gray-200 flex items-center justify-between">
           <h3 class="font-semibold text-pdtf-navy text-sm">pdtf-transaction.json</h3>
           <span class="text-xs text-gray-400 font-mono">object</span>
         </div>
@@ -345,7 +345,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <!-- PDTF v2.0 -->
-  <section id="v2" class="py-20 bg-gray-50 scroll-mt-20">
+  <section id="v2" class="py-24 md:py-32 bg-pdtf-stone-light scroll-mt-20">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center gap-3 mb-4">
         <h2 class="section-heading mb-0">PDTF v2.0</h2>
@@ -457,7 +457,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <!-- Integration Guides -->
-  <section class="py-20">
+  <section class="py-24 md:py-32">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 class="section-heading">Integration Guides</h2>
       
@@ -496,7 +496,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <!-- Building AI Agents -->
-  <section class="py-20 bg-gradient-to-br from-purple-50 to-blue-50">
+  <section class="py-24 md:py-32 bg-gradient-to-br from-pdtf-teal-light to-pdtf-stone-light">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="max-w-3xl mx-auto text-center mb-12">
         <div class="inline-flex items-center gap-2 bg-purple-100 text-purple-600 px-4 py-2 rounded-full text-sm font-medium mb-4">
@@ -541,7 +541,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <!-- CTA -->
-  <section class="py-20 bg-pdtf-navy text-white">
+  <section class="py-24 md:py-32 bg-pdtf-navy text-white">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
       <h2 class="text-3xl md:text-4xl font-bold mb-6">Ready to Build?</h2>
       <p class="text-xl text-gray-200 mb-8">

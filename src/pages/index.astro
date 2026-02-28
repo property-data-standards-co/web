@@ -6,18 +6,56 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   <!-- Hero Section -->
   <section class="relative bg-gradient-to-br from-pdtf-navy to-pdtf-navy-light text-white overflow-hidden">
     <div class="absolute inset-0 opacity-10">
-      <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <svg class="w-full h-full" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
         <defs>
-          <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" stroke-width="0.5"/>
-          </pattern>
+          <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#E97B2D" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="#E97B2D" stop-opacity="0"/>
+          </radialGradient>
         </defs>
-        <rect width="100" height="100" fill="url(#grid)"/>
+        <!-- Network nodes -->
+        <circle cx="120" cy="100" r="4" fill="currentColor" opacity="0.6"/>
+        <circle cx="300" cy="80" r="5" fill="currentColor" opacity="0.8"/>
+        <circle cx="500" cy="150" r="6" fill="currentColor"/>
+        <circle cx="680" cy="90" r="4" fill="currentColor" opacity="0.5"/>
+        <circle cx="200" cy="250" r="5" fill="currentColor" opacity="0.7"/>
+        <circle cx="400" cy="300" r="7" fill="currentColor"/>
+        <circle cx="600" cy="280" r="5" fill="currentColor" opacity="0.6"/>
+        <circle cx="150" cy="400" r="4" fill="currentColor" opacity="0.4"/>
+        <circle cx="350" cy="450" r="5" fill="currentColor" opacity="0.7"/>
+        <circle cx="550" cy="420" r="6" fill="currentColor" opacity="0.8"/>
+        <circle cx="700" cy="380" r="4" fill="currentColor" opacity="0.5"/>
+        <circle cx="450" cy="520" r="5" fill="currentColor" opacity="0.6"/>
+        <circle cx="250" cy="180" r="3" fill="currentColor" opacity="0.4"/>
+        <circle cx="650" cy="200" r="3" fill="currentColor" opacity="0.4"/>
+        <circle cx="100" cy="500" r="3" fill="currentColor" opacity="0.3"/>
+        <circle cx="750" cy="500" r="3" fill="currentColor" opacity="0.3"/>
+        <!-- Connection lines -->
+        <line x1="120" y1="100" x2="300" y2="80" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+        <line x1="300" y1="80" x2="500" y2="150" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+        <line x1="500" y1="150" x2="680" y2="90" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+        <line x1="200" y1="250" x2="400" y2="300" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+        <line x1="400" y1="300" x2="600" y2="280" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+        <line x1="300" y1="80" x2="200" y2="250" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+        <line x1="500" y1="150" x2="400" y2="300" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
+        <line x1="600" y1="280" x2="680" y2="90" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+        <line x1="150" y1="400" x2="350" y2="450" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+        <line x1="350" y1="450" x2="550" y2="420" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
+        <line x1="550" y1="420" x2="700" y2="380" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+        <line x1="200" y1="250" x2="150" y2="400" stroke="currentColor" stroke-width="0.5" opacity="0.15"/>
+        <line x1="400" y1="300" x2="350" y2="450" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+        <line x1="600" y1="280" x2="550" y2="420" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+        <line x1="350" y1="450" x2="450" y2="520" stroke="currentColor" stroke-width="0.5" opacity="0.15"/>
+        <line x1="120" y1="100" x2="250" y2="180" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+        <line x1="500" y1="150" x2="650" y2="200" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+        <!-- Glow -->
+        <circle cx="400" cy="300" r="200" fill="url(#glow1)"/>
       </svg>
     </div>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32 relative">
+    <div class="absolute inset-0 bg-radial-gradient"></div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-28 md:py-40 relative">
       <div class="max-w-3xl">
-        <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+        <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
           Open Banking for Property Data
         </h1>
         <p class="text-xl md:text-2xl text-gray-200 mb-8">
@@ -36,87 +74,109 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <!-- Problem Stats -->
-  <section class="py-16 bg-gray-50">
+  <section class="py-24 md:py-32 bg-pdtf-stone-light">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-        <div class="card">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="card text-center md:mt-0">
           <div class="stat-number">30%</div>
           <div class="stat-label text-lg">of UK property sales fall through</div>
         </div>
-        <div class="card">
+        <div class="card text-center md:mt-8">
           <div class="stat-number">150</div>
           <div class="stat-label text-lg">days average completion time</div>
         </div>
-        <div class="card">
+        <div class="card text-center md:mt-4">
           <div class="stat-number">£1Bn</div>
           <div class="stat-label text-lg">annual cost to consumers</div>
         </div>
       </div>
-      <p class="text-center text-gray-600 mt-8 text-lg max-w-2xl mx-auto">
+      <p class="text-center text-gray-600 mt-10 text-lg max-w-2xl mx-auto">
         Property data isn't standardised, findable, or verifiable. <strong class="text-pdtf-navy">PDTF changes that.</strong>
       </p>
     </div>
   </section>
 
   <!-- What is PDTF -->
-  <section class="py-20">
+  <section class="py-24 md:py-32">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 class="section-heading text-center">What is PDTF?</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-12">
-        <div class="text-center">
-          <div class="w-16 h-16 bg-pdtf-orange/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-pdtf-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mt-14">
+        <!-- Left column: two cards stacked -->
+        <div class="space-y-8">
+          <div class="card border-l-4 border-pdtf-orange">
+            <div class="flex items-start gap-4">
+              <div class="w-14 h-14 bg-pdtf-orange/10 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-7 h-7 text-pdtf-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-xl font-semibold text-pdtf-navy mb-2">Not a Platform</h3>
+                <p class="text-gray-600">
+                  PDTF is a governance framework — like the Highway Code for property data. Apps can be different, networks can vary, but everyone follows the same rules.
+                </p>
+              </div>
+            </div>
           </div>
-          <h3 class="text-xl font-semibold text-pdtf-navy mb-2">Not a Platform</h3>
-          <p class="text-gray-600">
-            PDTF is a governance framework — like the Highway Code for property data. Apps can be different, networks can vary, but everyone follows the same rules.
-          </p>
+          <div class="card">
+            <div class="flex items-start gap-4">
+              <div class="w-14 h-14 bg-pdtf-orange/10 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-7 h-7 text-pdtf-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-xl font-semibold text-pdtf-navy mb-2">Open Standards</h3>
+                <p class="text-gray-600">
+                  JSON Schema, REST API, semantic versioning. Built on proven technologies that minimise integration costs and avoid vendor lock-in.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="text-center">
-          <div class="w-16 h-16 bg-pdtf-orange/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-pdtf-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+        <!-- Right column: two cards stacked -->
+        <div class="space-y-8">
+          <div class="card">
+            <div class="flex items-start gap-4">
+              <div class="w-14 h-14 bg-pdtf-orange/10 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-7 h-7 text-pdtf-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-xl font-semibold text-pdtf-navy mb-2">Trust Through Provenance</h3>
+                <p class="text-gray-600">
+                  Know who said what, when, with evidence. Every data element carries provenance metadata for verifiable trust.
+                </p>
+              </div>
+            </div>
           </div>
-          <h3 class="text-xl font-semibold text-pdtf-navy mb-2">Open Standards</h3>
-          <p class="text-gray-600">
-            JSON Schema, REST API, semantic versioning. Built on proven technologies that minimise integration costs and avoid vendor lock-in.
-          </p>
-        </div>
-        <div class="text-center">
-          <div class="w-16 h-16 bg-pdtf-orange/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-pdtf-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
+          <div class="card border-l-4 border-pdtf-teal">
+            <div class="flex items-start gap-4">
+              <div class="w-14 h-14 bg-pdtf-teal-light rounded-2xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-7 h-7 text-pdtf-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-xl font-semibold text-pdtf-navy mb-2">Agent-Ready</h3>
+                <p class="text-gray-600">
+                  As AI agents become central to property transactions, PDTF provides the structured, verified data layer they need to work reliably.
+                </p>
+              </div>
+            </div>
           </div>
-          <h3 class="text-xl font-semibold text-pdtf-navy mb-2">Trust Through Provenance</h3>
-          <p class="text-gray-600">
-            Know who said what, when, with evidence. Every data element carries provenance metadata for verifiable trust.
-          </p>
-        </div>
-        <div class="text-center">
-          <div class="w-16 h-16 bg-pdtf-orange/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-pdtf-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <h3 class="text-xl font-semibold text-pdtf-navy mb-2">Agent-Ready</h3>
-          <p class="text-gray-600">
-            As AI agents become central to property transactions, PDTF provides the structured, verified data layer they need to work reliably.
-          </p>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Who It's For -->
-  <section class="py-20 bg-gray-50">
+  <section class="py-24 md:py-32 bg-pdtf-stone">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 class="section-heading text-center">Who is PDTF for?</h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
-        <div class="card hover:shadow-xl transition-shadow">
+        <div class="card border-l-4 border-pdtf-orange">
           <h3 class="text-xl font-semibold text-pdtf-navy mb-3">Industry</h3>
           <p class="text-gray-600 mb-4">
             Estate agents, conveyancers, lenders — reduce fall-throughs, speed up completions, and cut costs with standardised data.
@@ -128,7 +188,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </svg>
           </a>
         </div>
-        <div class="card hover:shadow-xl transition-shadow">
+        <div class="card">
           <h3 class="text-xl font-semibold text-pdtf-navy mb-3">Developers</h3>
           <p class="text-gray-600 mb-4">
             Proptech builders and system integrators — connect once, work with any participant. One schema to rule them all.
@@ -140,7 +200,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </svg>
           </a>
         </div>
-        <div class="card hover:shadow-xl transition-shadow">
+        <div class="card">
           <h3 class="text-xl font-semibold text-pdtf-navy mb-3">Government</h3>
           <p class="text-gray-600 mb-4">
             Regulators and standards bodies — PDTF aligns with HMLR Strategy 2022+ and the DCMS National Data Strategy.
@@ -157,29 +217,29 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <!-- Trust Strip -->
-  <section class="py-12 border-y border-gray-200">
+  <section class="py-12 bg-pdtf-navy/5">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex flex-wrap justify-center items-center gap-8 md:gap-16 text-gray-500">
+      <div class="flex flex-wrap justify-center items-center gap-8 md:gap-16 text-gray-600 font-medium">
         <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+          <svg class="w-5 h-5 text-pdtf-teal" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
           </svg>
           <span>MIT Licensed</span>
         </div>
         <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+          <svg class="w-5 h-5 text-pdtf-teal" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
           </svg>
           <span>Industry Governed</span>
         </div>
         <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+          <svg class="w-5 h-5 text-pdtf-teal" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
           </svg>
           <span>Aligned with HMLR Strategy</span>
         </div>
         <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+          <svg class="w-5 h-5 text-pdtf-teal" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
           </svg>
           <span>Project 28 Compatible</span>
@@ -189,7 +249,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <!-- CTA -->
-  <section class="py-20">
+  <section class="py-24 md:py-32">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
       <h2 class="section-heading">Ready to get started?</h2>
       <p class="text-xl text-gray-600 mb-8">
@@ -204,4 +264,3 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </div>
   </section>
 </BaseLayout>
-

@@ -19,7 +19,7 @@ const { title, description = "A trust framework enabling standardised, verifiabl
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   </head>
   <body class="min-h-screen bg-white text-gray-800 font-sans antialiased">
     <slot name="header">
@@ -28,7 +28,7 @@ const { title, description = "A trust framework enabling standardised, verifiabl
           <div class="flex justify-between items-center h-16">
             <div class="flex items-center gap-8">
               <a href="/" class="flex items-center gap-2">
-                <span class="text-2xl font-bold text-pdtf-navy">PDTF</span>
+                <span class="text-2xl font-bold text-pdtf-navy font-heading">PDTF</span>
               </a>
               <div class="hidden md:flex items-center gap-6">
                 <a href="/why" class="text-gray-600 hover:text-pdtf-orange transition-colors">Why PDTF</a>
@@ -71,7 +71,7 @@ const { title, description = "A trust framework enabling standardised, verifiabl
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div>
-            <h3 class="text-lg font-semibold mb-4">PDTF</h3>
+            <h3 class="text-lg font-semibold mb-4 font-heading">PDTF</h3>
             <ul class="space-y-2 text-gray-300">
               <li><a href="/" class="hover:text-white transition-colors">Home</a></li>
               <li><a href="/why" class="hover:text-white transition-colors">Why PDTF</a></li>
