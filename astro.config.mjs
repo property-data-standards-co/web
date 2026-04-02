@@ -83,7 +83,11 @@ export default defineConfig({
 						{
 							label: 'Packages',
 							items: [
-								{ label: '@pdtf/core', slug: 'docs/packages/core' },
+								{ label: '@pdtf/core (TypeScript)', slug: 'docs/packages/core' },
+								{ label: 'pdtf-core (Rust)', slug: 'docs/packages/core-rs' },
+								{ label: 'pdtf-core (Python)', slug: 'docs/packages/python' },
+								{ label: 'Pdtf.Core (.NET)', slug: 'docs/packages/dotnet' },
+								{ label: 'Cross-Language Interop', slug: 'docs/packages/interop' },
 							],
 						},
 					],

@@ -1,17 +1,15 @@
 ---
-title: "@pdtf/core"
-description: "The consolidated PDTF 2.0 library — signing, verification, DIDs, status lists, TIR client, and CLI."
+title: "@pdtf/core (TypeScript)"
+description: "The TypeScript reference implementation — signing, verification, DIDs, status lists, TIR client, and CLI."
 ---
 
-# @pdtf/core
-
-The consolidated PDTF 2.0 library. All functionality that was previously split across seven packages is now available from a single dependency.
+The TypeScript reference implementation of PDTF 2.0. All core functionality in a single dependency.
 
 ```bash
 npm install @pdtf/core
 ```
 
-**Repository:** [property-data-standards-co/core](https://github.com/property-data-standards-co/core)
+**Repository:** [property-data-standards-co/core-ts](https://github.com/property-data-standards-co/core-ts)
 
 ---
 
@@ -19,96 +17,140 @@ npm install @pdtf/core
 
 ### keys
 
-Key generation, storage, and rotation for Ed25519 signing keys.
+Ed25519 key generation and `did:key` derivation.
 
 ```ts
-import { keys } from '@pdtf/core';
+import { generateKeyPair, deriveDidKey, publicKeyToMultibase } from '@pdtf/core';
 
-const keypair = await keys.generate('ed25519');
-const jwk = keys.toJwk(keypair);
+const keypair = generateKeyPair();
+// { publicKey: Uint8Array, secretKey: Uint8Array }
+
+const did = deriveDidKey(keypair.publicKey);
+// did:key:z6Mk...
+
+const multibase = publicKeyToMultibase(keypair.publicKey);
+// z6Mk...
 ```
+
+Keys use the `0xed01` multicodec prefix with base58-btc encoding (`z` prefix). All PDTF `did:key` identifiers start with `did:key:z6Mk`.
 
 ### signer
 
-Create and verify `DataIntegrityProof` signatures using `eddsa-jcs-2022`.
+Create `DataIntegrityProof` signatures using `eddsa-jcs-2022`.
 
 ```ts
-import { signer } from '@pdtf/core';
+import { VcSigner } from '@pdtf/core';
 
-const signed = await signer.sign(credential, keypair);
-const result = await signer.verify(signed);
+const signer = new VcSigner(keyProvider);
+const signed = await signer.sign(credential, {
+  keyId: 'my-key',
+  verificationMethod: 'did:key:z6Mk...#z6Mk...',
+});
 ```
+
+**Signing algorithm** (eddsa-jcs-2022):
+1. JCS-canonicalize proof options → SHA-256 hash
+2. JCS-canonicalize document (without proof) → SHA-256 hash
+3. Concatenate both hashes (64 bytes)
+4. Sign with Ed25519 (raw, not pre-hashed)
+5. Encode signature as base58-btc (`z` prefix)
 
 ### validator
 
-Validate W3C Verifiable Credentials against PDTF 2.0 schemas and proof chains.
+Verify `DataIntegrityProof` signatures.
 
 ```ts
-import { validator } from '@pdtf/core';
+import { verifyProof } from '@pdtf/core';
 
-const result = await validator.validate(credential);
-// { valid: true, checks: [...] }
+const valid = verifyProof(signedCredential, publicKey);
+// true | false
 ```
 
 ### did
 
-DID resolution and document creation for `did:key`, `did:web`, and `urn:pdtf:*`.
+DID resolution for `did:key` and URN identifiers (`urn:pdtf:uprn:*`, `urn:pdtf:titleNumber:*`).
 
 ```ts
-import { did } from '@pdtf/core';
+import { resolveDidKey, TransactionDidManager } from '@pdtf/core';
 
-const doc = await did.resolve('did:web:example.com:transactions:abc123');
-const keyDid = did.fromPublicKey(publicKey);
+// Resolve did:key to DID Document
+const doc = resolveDidKey('did:key:z6Mk...');
+
+// Transaction DID lifecycle
+const manager = new TransactionDidManager(config);
+const txDid = await manager.create({ uprn: '100023336956' });
 ```
 
 ### status
 
-Bitstring Status List v1.0 — create, publish, and check credential revocation status.
+Bitstring Status List — create, encode, decode, and check credential revocation.
 
 ```ts
-import { status } from '@pdtf/core';
+import { createStatusList, encodeStatusList, decodeStatusList, setBit, getBit } from '@pdtf/core';
 
-const list = await status.create({ length: 131072 });
-await status.revoke(list, credentialIndex);
-const isRevoked = await status.check(credential);
+const list = createStatusList(131072);  // 131,072-bit minimum
+setBit(list, 42);
+const encoded = encodeStatusList(list); // base64(gzip(bitstring))
+
+const decoded = decodeStatusList(encoded);
+const isRevoked = getBit(decoded, 42);  // true
 ```
 
 ### tir
 
-Trusted Issuer Registry client — query authorised issuers and validate entity:path permissions.
+Trusted Issuer Registry client — load and validate issuer authorisations.
 
 ```ts
-import { tir } from '@pdtf/core';
+import { loadRegistry, isAuthorised } from '@pdtf/core';
 
-const registry = await tir.load('https://github.com/property-data-standards-co/tir');
-const authorised = await tir.isAuthorised(registry, issuerDid, entityPath);
+const registry = await loadRegistry('https://github.com/property-data-standards-co/tir');
+const result = isAuthorised(registry, issuerDid, ['Property:/energyEfficiency/certificate']);
+// { trusted: true, issuerSlug: 'epc-adapter', trustLevel: 'rootIssuer', ... }
 ```
+
+**Path matching:** The TIR supports wildcard patterns:
+- `Property:/energyEfficiency/certificate` — exact match
+- `Property:/energyEfficiency/*` — matches any path under `/energyEfficiency/`
+- `Property:*` — matches any Property path
 
 ---
 
 ## CLI
 
-The package includes a CLI for common operations:
+Five commands for development and testing:
 
 ```bash
-npx @pdtf/core keygen              # Generate a new Ed25519 keypair
-npx @pdtf/core sign <file>         # Sign a credential
-npx @pdtf/core verify <file>       # Verify a credential
-npx @pdtf/core did resolve <did>   # Resolve a DID document
-npx @pdtf/core status check <cred> # Check revocation status
-npx @pdtf/core tir check <did> <path>  # Check TIR authorisation
+# Resolve a DID document
+npx @pdtf/core did-resolve did:key:z6Mk...
+
+# Initialise an organisation DID
+npx @pdtf/core org-init --domain example.com --output ./keys
+
+# Validate a TIR registry file
+npx @pdtf/core tir-validate ./registry.json
+
+# Inspect a VC (print structure without verification)
+npx @pdtf/core vc-inspect ./credential.json
+
+# Verify a VC signature
+npx @pdtf/core vc-verify ./credential.json
 ```
 
 ---
 
-## Migration from separate packages
+## Tests
 
-| Old package | New import |
-|---|---|
-| `@pdtf/key-manager` | `import { keys } from '@pdtf/core'` |
-| `@pdtf/vc-validator` | `import { validator } from '@pdtf/core'` |
-| `@pdtf/did-resolver` | `import { did } from '@pdtf/core'` |
-| `@pdtf/did-tools` | `import { did } from '@pdtf/core'` |
-| `@pdtf/status-list` | `import { status } from '@pdtf/core'` |
-| `@pdtf/tir-tools` | `import { tir } from '@pdtf/core'` |
-| `@pdtf/cli` | `npx @pdtf/core <command>` |
+68 tests covering all modules:
+
+| Module | Tests | Coverage |
+|--------|-------|----------|
+| keys | 5 | Key generation, did:key derivation, roundtrip, multibase encoding |
+| signer | 3 | Proof creation, deterministic signing, proof structure |
+| did | 29 | Transaction DID manager, URN parsing, did:key resolution |
+| status | 7 | Create, encode/decode, set/get bits, roundtrip |
+| tir | 7 | Path matching, wildcard semantics, edge cases |
+| vectors | 17 | Cross-language vector generation and self-validation |
+
+```bash
+npm test
+```
