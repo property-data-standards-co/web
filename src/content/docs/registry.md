@@ -3,11 +3,6 @@ title: Trusted Issuer Registry
 description: The public registry of organisations authorised to issue PDTF Verifiable Credentials.
 ---
 
-:::note[Coming Soon]
-The Trusted Issuer Registry is under development. It will be published as a version-controlled JSON file in the [property-data-standards-co](https://github.com/property-data-standards-co) GitHub organisation.
-
-When live, this page will display the current registry contents — authorised issuers, their trust levels, and the entity types they're permitted to credential.
-:::
 
 ## What is the TIR?
 
@@ -19,7 +14,7 @@ Each registry entry specifies:
 
 - The issuer's DID
 - Authorised entity:path combinations (e.g. `property:energyPerformance`, `title:registerExtract`)
-- Trust level: **root issuer**, **accredited issuer**, or **trusted proxy**
+- Trust level: **root issuer**, **account provider**, or **trusted proxy**
 - Status: active, planned, deprecated, or revoked
 - Proxy relationships (which root issuer a proxy acts on behalf of)
 
@@ -34,4 +29,4 @@ Verifiers fetch the TIR as part of credential verification:
 3. Confirm the issuer is authorised for this entity type and data path
 4. Check the issuer's status is active
 
-[Read the full TIR specification →](/webv2/specs/04-trusted-issuer-registry/)
+[Read the full TIR specification →](/specs/04-trusted-issuer-registry/)
