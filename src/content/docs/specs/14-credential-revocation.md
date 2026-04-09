@@ -1279,7 +1279,7 @@ PDTF v1/v3 does not have credential revocation (claims are asserted through OIDC
 - [Sub-spec 02 — VC Data Model](/web/specs/02-vc-data-model/) (credential structure)
 - [Sub-spec 03 — DID Methods & Identifiers](/web/specs/03-did-methods/) (issuer DIDs)
 - [Sub-spec 04 — Trusted Issuer Registry](/web/specs/04-trusted-issuer-registry/) (issuer trust)
-- [Sub-spec 05 — Hosted Adapter Services](/web/specs/05-hosted-adapter-services/) (adapter-hosted status lists)
+- Sub-spec 05 — Hosted Adapter Services (Coming Soon) (adapter-hosted status lists)
 - [Sub-spec 07 — State Assembly](/web/specs/07-state-assembly/) (dual-state assembly)
 
 ---

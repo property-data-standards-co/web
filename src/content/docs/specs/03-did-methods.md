@@ -38,7 +38,7 @@ It does **not** cover:
 
 - Verifiable Credential data model (see [Sub-spec 02: VC Data Model](/web/specs/02-vc-data-model/))
 - Trusted Issuer Registry design (see [Sub-spec 04: Trusted Issuer Registry](/web/specs/04-trusted-issuer-registry/))
-- Access control and credential presentation protocols (see [Sub-spec 12: Adapter Access Control](/web/specs/12-adapter-access-control/))
+- Access control and credential presentation protocols (see Sub-spec 12: Adapter Access Control (Coming Soon))
 
 ### 1.2 Normative References
 
@@ -1183,7 +1183,7 @@ This generates the key pair, constructs the DID document with regulatory metadat
 | [01 — Entity Graph & Schema](/web/specs/01-entity-graph/) | Entity types that these identifiers address |
 | [02 — VC Data Model](/web/specs/02-vc-data-model/) | How DIDs appear in `issuer` and `credentialSubject.id` fields |
 | [04 — Trusted Issuer Registry](/web/specs/04-trusted-issuer-registry/) | TIR registration of `did:web` entities |
-| [12 — Adapter Access Control](/web/specs/12-adapter-access-control/) | DID Auth and credential presentation protocols |
+| 12 — Adapter Access Control (Coming Soon) | DID Auth and credential presentation protocols |
 | [07 — State Assembly](/web/specs/07-state-assembly/) | How identifiers are used in graph composition |
 
 ---
