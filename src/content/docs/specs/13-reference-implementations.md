@@ -8,7 +8,7 @@ description: "PDTF 2.0 specification document."
 **Date:** 1 April 2026
 **Author:** Ed Molyneux / Moverly
 **Status:** Draft
-**Parent:** [00 — Architecture Overview](../00-architecture-overview/)
+**Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
 
 ---
 
@@ -890,13 +890,13 @@ Anticipated but out of scope for initial release:
 - [Data Integrity EdDSA Cryptosuites v1.0](https://www.w3.org/TR/vc-di-eddsa/)
 - [RFC 8785 — JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785)
 - [Bitstring Status List v1.0](https://www.w3.org/TR/vc-bitstring-status-list/)
-- [Sub-spec 01 — Entity Graph & Schema](../01-entity-graph/)
-- [Sub-spec 02 — VC Data Model](../02-vc-data-model/)
-- [Sub-spec 03 — DID Methods & Identifiers](../03-did-methods/)
-- [Sub-spec 04 — Trusted Issuer Registry](../04-trusted-issuer-registry/)
-- [Sub-spec 06 — Key Management](../06-key-management/)
-- [Sub-spec 07 — State Assembly](../07-state-assembly/)
-- [Sub-spec 14 — Credential Revocation](../14-credential-revocation/)
+- [Sub-spec 01 — Entity Graph & Schema](/web/specs/01-entity-graph/)
+- [Sub-spec 02 — VC Data Model](/web/specs/02-vc-data-model/)
+- [Sub-spec 03 — DID Methods & Identifiers](/web/specs/03-did-methods/)
+- [Sub-spec 04 — Trusted Issuer Registry](/web/specs/04-trusted-issuer-registry/)
+- [Sub-spec 06 — Key Management](/web/specs/06-key-management/)
+- [Sub-spec 07 — State Assembly](/web/specs/07-state-assembly/)
+- [Sub-spec 14 — Credential Revocation](/web/specs/14-credential-revocation/)
 
 ---
 
@@ -909,4 +909,4 @@ Anticipated but out of scope for initial release:
 
 ---
 
-*This specification is part of the PDTF 2.0 suite. For the full architecture, see [00 — Architecture Overview](../00-architecture-overview/).*
+*This specification is part of the PDTF 2.0 suite. For the full architecture, see [00 — Architecture Overview](/web/specs/00-architecture-overview/).*
