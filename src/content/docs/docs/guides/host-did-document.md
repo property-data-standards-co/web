@@ -3,6 +3,129 @@ title: "Host a DID Document"
 description: "Hosting a did:web DID document for your organisation or adapter."
 ---
 
-:::note[Coming Soon]
-This page is under development. Check back soon or follow our progress on [GitHub](https://github.com/property-data-standards-co).
-:::
+A `did:web` DID is only useful if the document is actually hosted at the URL implied by the DID. In PDTF, organisations, transactions, and adapters use `did:web` because they need discoverable keys and service endpoints.
+
+The two important rules are:
+
+- the DID must resolve to HTTPS
+- the document `id` must exactly match the DID being resolved
+
+## 1. Understand the URL mapping
+
+`@pdtf/core` exposes the same mapping the verifier uses via `didWebToUrl`.
+
+```ts
+import { didWebToUrl } from '@pdtf/core';
+
+console.log(didWebToUrl('did:web:smithandjones.co.uk'));
+// https://smithandjones.co.uk/.well-known/did.json
+
+console.log(didWebToUrl('did:web:adapters.propdata.org.uk:epc'));
+// https://adapters.propdata.org.uk/epc/did.json
+```
+
+For a root domain DID, host `/.well-known/did.json`. For a path-based DID, host `/path/.../did.json`.
+
+## 2. Generate a starter DID document
+
+The CLI in `@pdtf/core` can generate a simple organisation DID document and local private key:
+
+```bash
+pdtf org init --domain smithandjones.co.uk --output ./did
+```
+
+That writes:
+
+- `did.json`
+- `private-key.jwk`
+
+The generated DID document uses `did:web:smithandjones.co.uk` with `#key-1` and includes the key in both `authentication` and `assertionMethod`.
+
+## 3. Example DID document
+
+A minimal PDTF-compatible organisation document looks like this:
+
+```json
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/security/suites/ed25519-2020/v1"
+  ],
+  "id": "did:web:smithandjones.co.uk",
+  "verificationMethod": [
+    {
+      "id": "did:web:smithandjones.co.uk#key-1",
+      "type": "Ed25519VerificationKey2020",
+      "controller": "did:web:smithandjones.co.uk",
+      "publicKeyMultibase": "z6Mkr7JAFsC4K5Zmq3RqtEZjTNz9e3o8yBPyqGMpKVqZv2R"
+    }
+  ],
+  "authentication": ["did:web:smithandjones.co.uk#key-1"],
+  "assertionMethod": ["did:web:smithandjones.co.uk#key-1"]
+}
+```
+
+If you plan to issue credentials, `assertionMethod` is mandatory in practice because PDTF verifiers check that the proof key is authorised for assertions.
+
+## 4. Add service endpoints where useful
+
+Adapters and transaction DIDs usually expose services.
+
+```json
+{
+  "service": [
+    {
+      "id": "did:web:adapters.propdata.org.uk:epc#vc-issuance",
+      "type": "VcIssuanceEndpoint",
+      "serviceEndpoint": "https://adapters.propdata.org.uk/epc/credentials/issue"
+    },
+    {
+      "id": "did:web:adapters.propdata.org.uk:epc#status",
+      "type": "BitstringStatusListEndpoint",
+      "serviceEndpoint": "https://adapters.propdata.org.uk/status/epc"
+    }
+  ]
+}
+```
+
+These endpoints are not decorative. They let clients discover where to request credentials and where revocation data lives.
+
+## 5. Verify hosting end to end
+
+Once the file is live, test it with the same resolver that PDTF verifiers use.
+
+```ts
+import { DidResolver } from '@pdtf/core';
+
+const resolver = new DidResolver();
+const doc = await resolver.resolve('did:web:smithandjones.co.uk');
+
+console.log(doc.id);
+console.log(doc.assertionMethod);
+```
+
+If the hosted JSON does not match the DID exactly, `resolveDidWeb` will reject it.
+
+## 6. Production checklist
+
+Before you rely on the DID in live issuance:
+
+1. serve the document over HTTPS only
+2. make sure `id` exactly matches the DID string
+3. include the signing key in `verificationMethod`
+4. include that same key in `assertionMethod`
+5. keep the key fragment stable, typically `#key-1`
+6. update the DID document during key rotation before using the new key
+7. register the issuer DID in the TIR
+
+## 7. Common failure modes
+
+The most common problems are simple:
+
+- hosting the file at the wrong path
+- `id` mismatch between document and DID
+- missing `assertionMethod`
+- rotating the signing key without updating the DID document
+- using HTTP or a redirect chain that breaks fetches
+
+If a credential signed by your DID is failing verification, the DID document is one of the first things to check. PDTF trust depends on the resolver being able to fetch the right key from the right HTTPS location.
