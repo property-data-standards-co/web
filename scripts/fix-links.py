@@ -18,7 +18,7 @@ def fix_links(content, in_impl=False):
         if clean_url.endswith('/'):
             clean_url = clean_url[:-1]
             
-        if clean_url in ['00-architecture-overview', '01-entity-graph', '02-vc-data-model', '03-did-methods', '04-trusted-issuer-registry', '06-key-management', '07-state-assembly', '13-reference-implementations', '14-credential-revocation']:
+        if clean_url in ['00-architecture-overview', '01-entity-graph', '02-vc-data-model', '03-did-methods', '04-trusted-issuer-registry', '06-key-management', '07-state-assembly', '13-reference-implementations', '14-credential-revocation', '15-conformance-testing']:
             return f'[{text}](/web/specs/{clean_url}/)'
             
         if clean_url in ['05-hosted-adapter-services', '12-adapter-access-control']:

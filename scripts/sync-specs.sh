@@ -76,7 +76,7 @@ LLMS_FULL="$(dirname "$0")/../public/llms-full.txt"
   echo ""
   echo "# Full Specification Text"
   echo ""
-  for spec in "$SPEC_DIR"/00-*.md "$SPEC_DIR"/01-*.md "$SPEC_DIR"/02-*.md "$SPEC_DIR"/03-*.md "$SPEC_DIR"/04-*.md "$SPEC_DIR"/06-*.md "$SPEC_DIR"/07-*.md "$SPEC_DIR"/13-*.md "$SPEC_DIR"/14-*.md; do
+  for spec in "$SPEC_DIR"/00-*.md "$SPEC_DIR"/01-*.md "$SPEC_DIR"/02-*.md "$SPEC_DIR"/03-*.md "$SPEC_DIR"/04-*.md "$SPEC_DIR"/06-*.md "$SPEC_DIR"/07-*.md "$SPEC_DIR"/13-*.md "$SPEC_DIR"/14-*.md "$SPEC_DIR"/15-*.md; do
     [ -f "$spec" ] || continue
     echo "---"
     echo ""
