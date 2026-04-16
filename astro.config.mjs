@@ -15,8 +15,9 @@ export default defineConfig({
 			},
 
 			logo: {
-				src: './public/logo.png',
-				alt: 'PDTF Logo',
+				src: './public/wordmark.svg',
+				alt: 'PDTF 2.0',
+				replacesTitle: true,
 			},
 			favicon: '/favicon.png',
 			social: [

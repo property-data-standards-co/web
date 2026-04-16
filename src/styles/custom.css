@@ -196,9 +196,11 @@ header.header {
 	background: rgba(17, 17, 19, 0.72);
 }
 
-.site-title {
-	font-weight: 700;
-	letter-spacing: var(--sl-letter-spacing-headings);
+/* Wordmark replaces title text — keep it compact */
+.site-title img {
+	height: 2rem;
+	width: auto;
+	max-width: none;
 }
 
 /* ──────────── Sidebar ──────────── */
@@ -233,14 +235,20 @@ header.header {
 	color: var(--sl-color-text-accent);
 }
 
-/* ──────────── Buttons / Pills (Fern-style) ──────────── */
+/* ──────────── Buttons / Pills (Fern-style, compact) ──────────── */
+.sl-link-button {
+	padding: 0.5rem 0.875rem;
+	font-size: 0.875rem;
+	border-radius: var(--sl-radius-small);
+	font-weight: 500;
+	letter-spacing: 0;
+	line-height: 1.2;
+}
+
 .sl-link-button.primary {
 	background: var(--sl-color-accent);
 	color: #ffffff;
 	border: 1px solid var(--sl-color-accent);
-	border-radius: var(--sl-radius-small);
-	font-weight: 500;
-	letter-spacing: 0;
 	box-shadow:
 		0 1.5em 1.375em 0 rgba(0, 135, 0, 0.04),
 		0 0.5em 0.5em rgba(0, 135, 0, 0.06),
@@ -251,18 +259,18 @@ header.header {
 .sl-link-button.primary:hover {
 	background: var(--sl-color-accent-high);
 	border-color: var(--sl-color-accent-high);
+	color: #ffffff;
 }
 
 .sl-link-button.secondary {
 	color: var(--sl-color-text);
 	background: var(--sl-color-bg);
-	border: 1px solid var(--sl-color-text);
-	border-radius: var(--sl-radius-small);
-	font-weight: 500;
+	border: 1px solid var(--sl-color-hairline-shade);
 }
 
 .sl-link-button.secondary:hover {
 	background: var(--sl-color-bg-shaded);
+	border-color: var(--sl-color-gray-4);
 }
 
 /* ──────────── Tables ──────────── */
@@ -316,28 +324,102 @@ header.header {
 }
 
 /* ──────────── Hero (splash) page ──────────── */
+/* Centred layout with Fern-style soft radial tinting in the background */
+.hero {
+	text-align: center;
+	justify-items: center;
+	align-items: center;
+	position: relative;
+	padding-top: 4rem;
+	padding-bottom: 4rem;
+}
+
+.hero > .stack,
+.hero > .copy {
+	text-align: center;
+	align-items: center;
+}
+
+.hero .actions {
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	margin-top: 1.75rem;
+}
+
 .hero h1 {
 	font-size: 4rem;
 	font-weight: 700;
 	letter-spacing: -0.04em;
-	line-height: 1.1;
-	background: linear-gradient(180deg, var(--sl-color-text) 60%, rgba(30, 31, 36, 0.7));
+	line-height: 1.05;
+	margin: 0 auto;
+	max-width: 22ch;
+	background: linear-gradient(180deg, var(--sl-color-text) 50%, rgba(30, 31, 36, 0.55));
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+:root[data-theme='dark'] .hero h1 {
+	background: linear-gradient(180deg, var(--sl-color-white) 50%, rgba(252, 252, 253, 0.55));
 	-webkit-background-clip: text;
 	background-clip: text;
 	-webkit-text-fill-color: transparent;
 }
 
 .hero .tagline {
-	font-size: 1.375rem;
+	font-size: 1.25rem;
 	color: var(--sl-color-text-accent);
-	font-weight: 300;
+	font-weight: 400;
 	max-width: 36rem;
 	letter-spacing: -0.01em;
+	margin: 0 auto;
+}
+
+/* Fern-style soft radial tinting in the page background.
+   Two coloured "glows" — one green (brand), one navy (logo) — heavily
+   blurred behind the hero content. Pointer-events disabled. */
+.hero::before,
+.hero::after {
+	content: '';
+	position: absolute;
+	border-radius: 50%;
+	filter: blur(7rem);
+	opacity: 0.55;
+	pointer-events: none;
+	z-index: -1;
+}
+
+.hero::before {
+	width: 26rem;
+	height: 26rem;
+	background: radial-gradient(circle, #c3fbb7 0%, rgba(195, 251, 183, 0) 70%);
+	top: -6rem;
+	left: -4rem;
+}
+
+.hero::after {
+	width: 22rem;
+	height: 22rem;
+	background: radial-gradient(circle, #d9e3f4 0%, rgba(217, 227, 244, 0) 70%);
+	top: 2rem;
+	right: -4rem;
+}
+
+:root[data-theme='dark'] .hero::before {
+	background: radial-gradient(circle, rgba(81, 194, 51, 0.35) 0%, rgba(81, 194, 51, 0) 70%);
+	opacity: 0.6;
+}
+
+:root[data-theme='dark'] .hero::after {
+	background: radial-gradient(circle, rgba(27, 57, 109, 0.5) 0%, rgba(27, 57, 109, 0) 70%);
+	opacity: 0.5;
 }
 
 @media (max-width: 768px) {
 	.hero h1 { font-size: 2.75rem; }
-	.hero .tagline { font-size: 1.125rem; }
+	.hero .tagline { font-size: 1.0625rem; }
+	.hero::before, .hero::after { width: 14rem; height: 14rem; filter: blur(4rem); }
 }
 
 /* ──────────── Banner (e.g. candidate spec) ──────────── */
