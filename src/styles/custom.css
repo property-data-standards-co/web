@@ -406,6 +406,29 @@ header.header {
 	text-decoration: underline;
 }
 
+/* ──────────── Splash page texture ──────────── */
+/* Subtle dot grid that suggests data points / structured information.
+   Scoped to splash pages only via html[data-has-hero]. Dots fade out
+   towards the bottom so they don't compete with content below the hero. */
+html[data-has-hero] body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	z-index: 0;
+	background-image: radial-gradient(circle, rgba(30, 31, 36, 0.18) 1px, transparent 1px);
+	background-size: 22px 22px;
+	background-position: 0 0;
+	/* Fade out as you scroll down: dots strongest at top, gone by 90% */
+	-webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.6) 40%, rgba(0, 0, 0, 0) 90%);
+	mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.6) 40%, rgba(0, 0, 0, 0) 90%);
+}
+
+:root[data-theme='dark'] html[data-has-hero] body::before,
+html[data-has-hero][data-theme='dark'] body::before {
+	background-image: radial-gradient(circle, rgba(252, 252, 253, 0.10) 1px, transparent 1px);
+}
+
 /* ──────────── Hero (splash) page ──────────── */
 /* Centred layout with Fern-style soft radial tinting in the background */
 .hero {
