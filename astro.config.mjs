@@ -37,6 +37,12 @@ export default defineConfig({
 					],
 				},
 				{
+					label: 'Consultation',
+					items: [
+						{ label: 'Industry Consultation', slug: 'consultation' },
+					],
+				},
+				{
 					label: 'Architecture',
 					items: [
 						{ label: 'Overview', slug: 'architecture/overview' },

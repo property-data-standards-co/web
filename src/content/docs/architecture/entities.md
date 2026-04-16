@@ -22,12 +22,34 @@ PDTF 2.0 solves this by decomposing the monolithic schema into nine distinct ent
 | **Title** | `urn:pdtf:titleNumber:{number}` | The legal title: register extract, ownership type, leasehold terms, encumbrances |
 | **Person** | `did:key:z6Mkh...` | A natural person: name, contact details, verification status. Role-free. |
 | **Organisation** | `did:web:smithandco.law` | A legal entity: law firm, estate agency, lender |
-| **SellerCapacity** | `urn:pdtf:capacity:{id}` | A signed assertion linking a Person to a Title — "this person owns this title" |
-| **Representation** | `urn:pdtf:representation:{id}` | Delegated authority from a party to an Organisation — "this firm acts for this seller" |
+| **SellerCapacity** | `urn:pdtf:capacity:{id}` | A self-asserted claim linking a Person/Organisation to a Title ("acting as registered owner") |
+| **Representation** | `urn:pdtf:representation:{id}` | Delegated authority linking a representative (Organisation) to a represented party (Person/Organisation) |
 | **DelegatedConsent** | `urn:pdtf:consent:{id}` | Authorised data access for entities with a legitimate need (e.g. lenders) |
-| **Offer** | `urn:pdtf:offer:{id}` | Links buyer Person(s) to a Transaction with amount, status, and conditions |
+| **Offer** | `urn:pdtf:offer:{id}` | The intent to buy. Links buyer(s) to a Transaction with amount, status, and conditions |
 
 Each entity becomes the `credentialSubject` of a W3C Verifiable Credential, signed by an authorised issuer and independently verifiable.
+
+## The Two Intents: Selling and Buying
+
+A core design principle of the graph is partitioning entities by intent:
+
+1. **Transaction = Intent to Sell.** The `Transaction` entity represents the seller's active intent to sell the referenced `Property` and `Title`(s).
+2. **Offer = Intent to Buy.** The `Offer` entity represents a buyer's intent to purchase them.
+
+**Relationship credentials orbit these intents:**
+- The Estate Agent and Seller's Conveyancer hold `Representation` credentials orbiting the **Transaction** (they are representing the intent to sell).
+- The Buyer's Conveyancer and Mortgage Broker hold `Representation` credentials orbiting the **Offer** (they are supporting the intent to buy).
+
+Buyers participate *only* through Offers until exchange of contracts.
+
+### Access Control and Traversal
+
+Because relationships orbit the intent, the graph itself becomes the access control model. No central ACL is required.
+
+If a mortgage lender needs to view property data to issue a formal mortgage offer:
+1. The buyer holds a `MortgagePromise` VC issued by the lender, presented to the agent as part of their `Offer`.
+2. To grant the lender access to the transaction data, the buyer issues a `DelegatedConsent` credential to the lender.
+3. The `DelegatedConsent` acts as a capability token. The lender presents it to the agent's MCP server, which validates the chain: "This lender holds consent from the buyer, who holds an accepted `Offer` on this `Transaction`." The lender is then authorised to traverse the graph and read the `Property` and `Title` VCs.
 
 ## The governing principle
 
@@ -41,7 +63,7 @@ Ask: *"Does this fact travel with the property, the title, or the sale?"*
 - **Transaction** = this-sale facts. Who's involved, what's the price, what stage has it reached, what's the completion date. Irrelevant to the next owner.
 :::
 
-Relationship entities (SellerCapacity, Representation, DelegatedConsent, Offer) are **thin assertions** linking people and organisations to the transaction. They carry minimal data — just enough to express the relationship — and are revocable when circumstances change.
+Relationship entities (SellerCapacity, Representation, DelegatedConsent, Offer) are **thin assertions** linking people and organisations to the intents. They carry minimal data — just enough to express the relationship — and are revocable when circumstances change.
 
 ## Transaction-centric graph
 
@@ -151,10 +173,10 @@ Representation is another thin credential that delegates authority from a transa
 {
   "credentialSubject": {
     "id": "urn:pdtf:representation:def456",
-    "party": "did:key:z6MkhSellerDID",
-    "organisation": "did:web:smithandco.law",
+    "representative": "did:web:smithandco.law",
+    "representedParty": "did:key:z6MkhSellerDID",
     "role": "seller-conveyancer",
-    "scope": ["full-transaction"]
+    "transaction": "did:web:moverly.com:transactions:abc123"
   }
 }
 ```
