@@ -34,7 +34,7 @@ PDTF 2.0 decomposes the monolithic property data pack into nine distinct entitie
 | **Title** | `urn:pdtf:titleNumber:{number}` | Legal title: register extract, ownership type, leasehold terms, encumbrances. |
 | **Person** | `did:key` | Natural person: name, contact details, verification status. Role-free. |
 | **Organisation** | `did:web` | Legal entity: law firm, estate agency, lender. |
-| **Ownership** | URN (generated) | Signed assertion linking a Person to a Title. Revocable. |
+| **SellerCapacity** | URN (generated) | Signed assertion linking a Person to a Title. Revocable. |
 | **Representation** | URN (generated) | Delegated authority from seller/buyer to an Organisation. Revocable. |
 | **DelegatedConsent** | URN (generated) | Authorised data access for entities like lenders. |
 | **Offer** | URN (generated) | Links buyer Person(s) to Transaction with amount, status, conditions. |
@@ -45,7 +45,7 @@ This decomposition means:
 
 - **Property data travels with the property**, not the transaction. When a sale falls through, the next buyer inherits verified property data.
 - **Each entity is independently credentialed**. An EPC credential about the Property can be verified without any knowledge of the Transaction.
-- **Relationship entities are thin and revocable**. Ownership and Representation are signed assertions, not duplicated data.
+- **Relationship entities are thin and revocable**. SellerCapacity and Representation are signed assertions, not duplicated data.
 
 [Read the full entity graph specification →](/web/specs/01-entity-graph/)
 
@@ -132,7 +132,7 @@ All credentials support revocation via W3C Bitstring Status List. Each credentia
 
 This is particularly critical for:
 
-- **Ownership credentials** — when a property is sold, the previous ownership credential must be revoked
+- **SellerCapacity credentials** — when a property is sold, the previous ownership credential must be revoked
 - **Representation credentials** — when a client changes solicitor, the old representation must be revoked
 - **Time-sensitive data** — EPCs, search results, and other data that expires or becomes outdated
 

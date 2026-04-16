@@ -1,10 +1,10 @@
 ---
-title: "PDTF 2.0 — Sub-spec 07: State Assembly"
+title: "07 State Assembly"
 description: "PDTF 2.0 specification document."
 ---
 
 
-**Version:** 0.2 (Draft)
+**Version:** 0.1 (Draft)
 **Date:** 1 April 2026
 **Author:** Ed Molyneux / Moverly
 **Status:** Draft
@@ -198,7 +198,7 @@ The composer must determine which entity type each credential targets. This is r
 1. **`credentialSubject.id` prefix** — URN scheme reveals entity type:
    - `urn:pdtf:uprn:*` → Property
    - `urn:pdtf:titleNumber:*` / `urn:pdtf:unregisteredTitle:*` → Title
-   - `urn:pdtf:ownership:*` → Ownership
+   - `urn:pdtf:capacity:*` → SellerCapacity
    - `urn:pdtf:representation:*` → Representation
    - `urn:pdtf:consent:*` → DelegatedConsent
    - `urn:pdtf:offer:*` → Offer
@@ -514,12 +514,12 @@ The composed v4 state follows the structure defined in [Sub-spec 01 §6](/web/sp
   },
 
   "ownership": {
-    "urn:pdtf:ownership:own-1": {
+    "urn:pdtf:capacity:own-1": {
       "personId": "did:key:z6Mkh...seller1",
       "titleId": "urn:pdtf:titleNumber:AB12345",
       "status": "verified"
     },
-    "urn:pdtf:ownership:own-2": {
+    "urn:pdtf:capacity:own-2": {
       "personId": "did:key:z6Mkh...seller2",
       "titleId": "urn:pdtf:titleNumber:AB12345",
       "status": "verified"
@@ -623,7 +623,7 @@ The most complex transformation. V4 decomposes v3's `participants[]` array into 
 function reconstructParticipants(v4State: ComposedStateV4): Participant[] {
   const participants: Participant[] = [];
 
-  // 1. Sellers — persons with Ownership credentials
+  // 1. Sellers — persons with SellerCapacity credentials
   for (const [ownId, ownership] of Object.entries(v4State.ownership)) {
     const person = v4State.persons[ownership.personId];
     if (!person) continue;
@@ -631,9 +631,9 @@ function reconstructParticipants(v4State: ComposedStateV4): Participant[] {
     participants.push({
       ...person,
       role: "Seller",
-      participantStatus: mapOwnershipStatus(ownership.status),
+      participantStatus: mapSellerCapacityStatus(ownership.status),
       // Preserve the ownership credential ID for round-trip
-      _ownershipId: ownId
+      _sellerCapacityId: ownId
     });
   }
 
@@ -1004,7 +1004,7 @@ interface Branch {
 }
 ```
 
-### 6.6 Another Example — Ownership Type Discriminator
+### 6.6 Another Example — SellerCapacity Type Discriminator
 
 **Before pruning:**
 ```json
@@ -1373,7 +1373,7 @@ V3: participants[] (mixed array of all participant types)
     ↕
 V4: persons{}            — keyed by did:key
     organisations{}      — keyed by did:web
-    ownership{}          — keyed by urn:pdtf:ownership:*
+    ownership{}          — keyed by urn:pdtf:capacity:*
     representation{}     — keyed by urn:pdtf:representation:*
     delegatedConsent{}   — keyed by urn:pdtf:consent:*
 ```
@@ -1418,11 +1418,11 @@ function decomposeParticipants(
       result.persons[personDid] = extractPersonFields(p);
 
       if (p.role === 'Seller') {
-        const ownUrn = generateOwnershipUrn();
+        const ownUrn = generateSellerCapacityUrn();
         result.ownership[ownUrn] = {
           personId: personDid,
           titleId: resolveSellerTitle(p),
-          status: mapOwnershipStatus(p.participantStatus)
+          status: mapSellerCapacityStatus(p.participantStatus)
         };
       }
       // Buyers: handled via offers (offerId on participant)
@@ -2109,13 +2109,4 @@ A non-exhaustive list of discriminator patterns in the PDTF schema that the prun
 
 ---
 
-## Changelog
 
-| Version | Date | Changes |
-|---------|------|---------|
-| v0.2 | 1 April 2026 | Added §6.10 "Assembler Pruning Obligation" — assembler MUST apply schema dependency rules if MERGE semantics adopted. Issuers are stateless; pruning is assembly-time only. Schema `if/then/else` and `oneOf` discriminators define rules. |
-| v0.1 | 24 March 2026 | Initial draft. composeV4StateFromGraph and composeV3StateFromGraph algorithms, dependency pruning, conflict resolution, v3 backward compatibility, dual state assembly, trust-level-aware composition. |
-
----
-
-*This is a living document. Decisions made here relate to D5, D10, and D15 in the [Architecture Overview](/web/specs/00-architecture-overview/). As the implementation progresses, this spec will be updated to reflect actual code and any design changes.*

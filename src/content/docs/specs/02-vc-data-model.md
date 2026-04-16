@@ -1,11 +1,11 @@
 ---
-title: "PDTF 2.0 — Sub-spec 02: Verifiable Credentials Data Model"
+title: "02 Verifiable Credentials Data Model"
 description: "PDTF 2.0 specification document."
 ---
 
 
-**Version:** 0.3 (Draft)
-**Date:** 1 April 2026
+**Version:** 0.1 (Draft)
+**Date:** 9 April 2026
 **Author:** Ed Molyneux / Moverly
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
@@ -60,7 +60,7 @@ Every PDTF credential MUST include:
 
 | Property | PDTF Usage | Notes |
 |----------|-----------|-------|
-| `id` | Optional | Credential identifier URI. MAY be omitted for privacy. When present, uses `urn:pdtf:vc:{uuid}` format. |
+| `id` | Required | Credential identifier URI. REQUIRED for deduplication (Q3.3 resolved). Format: `urn:pdtf:vc:{uuid}`. |
 | `validUntil` | Optional | Expiry datetime. Used for time-limited credentials (e.g. EPC with known expiry). |
 | `evidence` | Used | Simplified evidence model — see §6 |
 | `termsOfUse` | Used | PdtfAccessPolicy — see §7 |
@@ -120,7 +120,7 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](/web/specs/
 |----------------|--------|-------------------|--------|-------------|
 | `PropertyCredential` | Property | `urn:pdtf:uprn:{uprn}` | Trusted proxy / root issuer / user | Property facts: EPC, flood, build info, legal questions, fixtures, searches |
 | `TitleCredential` | Title | `urn:pdtf:titleNumber:{n}` or `urn:pdtf:unregisteredTitle:{id}` | HMLR proxy / root issuer | Register extract, ownership type, leasehold terms, encumbrances |
-| `OwnershipCredential` | Ownership | `urn:pdtf:ownership:{id}` | Account provider (Moverly) | Thin assertion: Person/Org DID → Title URN, status, verification level |
+| `SellerCapacityCredential` | SellerCapacity | `urn:pdtf:capacity:{id}` | Account provider (Moverly) | Thin assertion: Person/Org DID → Title URN, status, verification level |
 | `RepresentationCredential` | Representation | `urn:pdtf:representation:{id}` | Person (seller/buyer) | Organisation DID, role, granted by instructing party |
 | `DelegatedConsentCredential` | DelegatedConsent | `urn:pdtf:consent:{id}` | Person (granting party) | Authorised entity, access scope, terms |
 | `OfferCredential` | Offer | `urn:pdtf:offer:{id}` | Buyer (Person) or platform | Buyer DID, amount, status, conditions |
@@ -286,27 +286,27 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](/web/specs/
   "validFrom": "2026-03-24T08:15:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:titleNumber:AB12345",
-    "registerExtract": {
-      "proprietorship": {
-        "owners": [
+    "ownershipType": "Freehold",
+    "title": {
+      "registerExtract": {
+        "proprietorship": {
+          "owners": [
+            {
+              "name": "John Smith",
+              "address": "1 Example Street, London, SW1A 1AA"
+            }
+          ],
+          "priceStatedPaid": 350000,
+          "dateOfRegistration": "2018-06-15"
+        },
+        "restrictions": [],
+        "charges": [
           {
-            "name": "John Smith",
-            "address": "1 Example Street, London, SW1A 1AA"
+            "chargee": "Nationwide Building Society",
+            "dateOfCharge": "2018-06-15"
           }
-        ],
-        "priceStatedPaid": 350000,
-        "dateOfRegistration": "2018-06-15"
-      },
-      "restrictions": [],
-      "charges": [
-        {
-          "chargee": "Nationwide Building Society",
-          "dateOfCharge": "2018-06-15"
-        }
-      ]
-    },
-    "ownership": {
-      "ownershipType": "Freehold"
+        ]
+      }
     }
   },
   "evidence": [{
@@ -345,35 +345,36 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](/web/specs/
 {
   "credentialSubject": {
     "id": "urn:pdtf:titleNumber:CD67890",
-    "ownership": {
-      "ownershipType": "Leasehold",
-      "leaseholdDetails": {
-        "originalLeaseLength": 125,
-        "remainingLeaseLength": 98,
-        "leaseStartDate": "2001-03-01",
-        "groundRent": {
-          "amount": 250,
-          "frequency": "Annual",
-          "reviewType": "Fixed"
-        },
-        "serviceCharge": {
-          "annualAmount": 1800,
-          "managingAgent": "ABC Property Management Ltd"
-        },
-        "freeholderName": "Freehold Estates Ltd"
-      }
+    "ownershipType": "Leasehold",
+    "leaseholdDetails": {
+      "originalLeaseLength": 125,
+      "remainingLeaseLength": 98,
+      "leaseStartDate": "2001-03-01",
+      "groundRent": {
+        "amount": 250,
+        "frequency": "Annual",
+        "reviewType": "Fixed"
+      },
+      "serviceCharge": {
+        "annualAmount": 1800,
+        "managingAgent": "ABC Property Management Ltd"
+      },
+      "freeholderName": "Freehold Estates Ltd"
+    },
+    "title": {
+      "registerExtract": { ... }
     }
   }
 }
 ```
 
-### 3.4 OwnershipCredential
+### 3.4 SellerCapacityCredential
 
 **Purpose:** A thin signed assertion linking a Person or Organisation DID to a Title URN. States "this person/organisation owns this title" with a status and verification level.
 
-**Key design decision (D28):** The OwnershipCredential does NOT duplicate title register details. Those belong on the TitleCredential. The ownership claim is verified by cross-referencing against `Title.registerExtract.proprietorship` — **claim-vs-evidence separation**. The OwnershipCredential says "X owns Y". The TitleCredential provides the evidence from HMLR that proves it.
+**Key design decision (D28):** The SellerCapacityCredential does NOT duplicate title register details. Those belong on the TitleCredential. The ownership claim is verified by cross-referencing against `Title.registerExtract.proprietorship` — **claim-vs-evidence separation**. The SellerCapacityCredential says "X owns Y". The TitleCredential provides the evidence from HMLR that proves it.
 
-**Subject ID:** `urn:pdtf:ownership:{id}` — a generated URN for this ownership assertion.
+**Subject ID:** `urn:pdtf:capacity:{id}` — a generated URN for this ownership assertion.
 
 **Issuer:** The account provider (currently Moverly) that verified the user's identity and cross-referenced against the title register.
 
@@ -383,11 +384,11 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](/web/specs/
     "https://www.w3.org/ns/credentials/v2",
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
-  "type": ["VerifiableCredential", "OwnershipCredential"],
+  "type": ["VerifiableCredential", "SellerCapacityCredential"],
   "issuer": "did:web:moverly.com",
   "validFrom": "2026-03-18T09:00:00Z",
   "credentialSubject": {
-    "id": "urn:pdtf:ownership:own-a1b2c3",
+    "id": "urn:pdtf:capacity:own-a1b2c3",
     "personId": "did:key:z6MkhSellerAbc123",
     "titleId": "urn:pdtf:titleNumber:AB12345",
     "status": "verified",
@@ -424,7 +425,7 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](/web/specs/
 }
 ```
 
-**OwnershipCredential fields:**
+**SellerCapacityCredential fields:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -442,9 +443,9 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](/web/specs/
 - `professionallyVerified` — conveyancer has confirmed identity + ownership (manual)
 
 **Why thin?** A verifier who wants to confirm ownership checks:
-1. The OwnershipCredential links Person DID X to Title URN Y with `status: "verified"`
+1. The SellerCapacityCredential links Person DID X to Title URN Y with `status: "verified"`
 2. The TitleCredential for URN Y has `registerExtract.proprietorship` showing the registered owner
-3. The two are consistent — the OwnershipCredential's `evidence` points back to the register cross-reference
+3. The two are consistent — the SellerCapacityCredential's `evidence` points back to the register cross-reference
 4. Both credentials are signed and not revoked
 
 This separation means ownership can be revoked (sale completes, mandate withdrawn) without affecting the title register data. And title data can be updated (charge removed) without re-issuing the ownership assertion.
@@ -684,6 +685,8 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
 
 **Issuer:** The platform hosting the transaction (Moverly).
 
+*Note: The `saleContext` fields were previously part of the monolithic v1 `ownership` object and have been decomposed per Q7.1.*
+
 ```json
 {
   "@context": [
@@ -747,7 +750,7 @@ The `credentialSubject.id` field identifies the entity the credential makes asse
 |----------------|-------------------|---------|
 | PropertyCredential | `urn:pdtf:uprn:{uprn}` | `urn:pdtf:uprn:100023456789` |
 | TitleCredential | `urn:pdtf:titleNumber:{n}` | `urn:pdtf:titleNumber:AB12345` |
-| OwnershipCredential | `urn:pdtf:ownership:{id}` | `urn:pdtf:ownership:own-a1b2c3` |
+| SellerCapacityCredential | `urn:pdtf:capacity:{id}` | `urn:pdtf:capacity:own-a1b2c3` |
 | RepresentationCredential | `urn:pdtf:representation:{id}` | `urn:pdtf:representation:rep-d4e5f6` |
 | DelegatedConsentCredential | `urn:pdtf:consent:{id}` | `urn:pdtf:consent:dc-g7h8i9` |
 | OfferCredential | `urn:pdtf:offer:{id}` | `urn:pdtf:offer:off-j1k2l3` |
@@ -1295,11 +1298,11 @@ Every PDTF credential SHOULD include a `termsOfUse` entry defining its access po
 
 ### 7.4 Role Identifiers
 
-Role identifiers correspond to `RepresentationCredential.role` values plus the implicit roles from Ownership and Offer credentials:
+Role identifiers correspond to `RepresentationCredential.role` values plus the implicit roles from SellerCapacity and Offer credentials:
 
 | Role | Source | Description |
 |------|--------|-------------|
-| `seller` | OwnershipCredential | Person who owns the title |
+| `seller` | SellerCapacityCredential | Person who owns the title |
 | `buyer` | OfferCredential (accepted) | Person with an accepted offer |
 | `sellerConveyancer` | RepresentationCredential | Seller's instructed law firm |
 | `buyerConveyancer` | RepresentationCredential | Buyer's instructed law firm |
@@ -1313,7 +1316,7 @@ Role identifiers correspond to `RepresentationCredential.role` values plus the i
 
 When a requester queries transaction state (either via the API or through the graph composer), the system applies `termsOfUse` filtering:
 
-1. **Determine requester's roles** — from their presented credentials (Ownership → `seller`, Representation → role value, Offer → `buyer`, DelegatedConsent → `lender`).
+1. **Determine requester's roles** — from their presented credentials (SellerCapacity → `seller`, Representation → role value, Offer → `buyer`, DelegatedConsent → `lender`).
 
 2. **Filter credentials** — for each credential in the entity graph:
    - If `confidentiality` is `public` → include
@@ -1437,7 +1440,7 @@ The `encodedList` is a GZIP-compressed, base64url-encoded bitstring. Each bit po
 |----------|-------------------|---------|
 | New EPC issued | Old PropertyCredential (EPC paths) | New EPC VC replaces old |
 | Seller changes conveyancer | Old RepresentationCredential | Seller instructs new firm |
-| Sale completes | OwnershipCredential, RepresentationCredential, OfferCredential | Transaction closes |
+| Sale completes | SellerCapacityCredential, RepresentationCredential, OfferCredential | Transaction closes |
 | Sale falls through | OfferCredential | Offer withdrawn |
 | Data correction | Any credential with incorrect data | Error discovered |
 | Consent withdrawn | DelegatedConsentCredential | Buyer withdraws lender consent |
@@ -1542,7 +1545,7 @@ The PDTF v2 JSON-LD context defines:
 **Credential types:**
 - `PropertyCredential`
 - `TitleCredential`
-- `OwnershipCredential`
+- `SellerCapacityCredential`
 - `RepresentationCredential`
 - `DelegatedConsentCredential`
 - `OfferCredential`
@@ -1560,7 +1563,7 @@ The PDTF v2 JSON-LD context defines:
 **Credential subject properties:**
 - All Property entity paths (e.g. `energyEfficiency`, `environmentalIssues`, `heating`, `buildInformation`)
 - All Title entity paths (e.g. `registerExtract`, `ownership`, `titleExtents`)
-- Ownership entity fields (`personId`, `titleId`, `status`, `verificationLevel`)
+- SellerCapacity entity fields (`personId`, `titleId`, `status`, `verificationLevel`)
 - Representation entity fields (`organisationId`, `role`, `grantedBy`)
 - DelegatedConsent entity fields (`scope`, `purpose`)
 - Offer entity fields (`buyerIds`, `amount`, `buyerCircumstances`)
@@ -1596,7 +1599,7 @@ Minor additions (new optional fields) can be added without version bumps, follow
     
     "PropertyCredential": "pdtf:PropertyCredential",
     "TitleCredential": "pdtf:TitleCredential",
-    "OwnershipCredential": "pdtf:OwnershipCredential",
+    "SellerCapacityCredential": "pdtf:SellerCapacityCredential",
     "RepresentationCredential": "pdtf:RepresentationCredential",
     "DelegatedConsentCredential": "pdtf:DelegatedConsentCredential",
     "OfferCredential": "pdtf:OfferCredential",
@@ -1742,7 +1745,7 @@ A complete EPC credential issued by Moverly's EPC adapter (trusted proxy for MHC
 }
 ```
 
-### 11.2 OwnershipCredential (Thin Claim)
+### 11.2 SellerCapacityCredential (Thin Claim)
 
 A complete ownership credential — thin assertion only, no duplicated title data:
 
@@ -1753,11 +1756,11 @@ A complete ownership credential — thin assertion only, no duplicated title dat
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
   "id": "urn:pdtf:vc:own-3a2b1c7f-4e9d-6a5f-7c8b-1e0d2f3a4b5c",
-  "type": ["VerifiableCredential", "OwnershipCredential"],
+  "type": ["VerifiableCredential", "SellerCapacityCredential"],
   "issuer": "did:web:moverly.com",
   "validFrom": "2026-03-18T09:00:00Z",
   "credentialSubject": {
-    "id": "urn:pdtf:ownership:own-a1b2c3",
+    "id": "urn:pdtf:capacity:own-a1b2c3",
     "personId": "did:key:z6MkhRqN4v5sW8xZ1bD4gJ6kM9nP2qS0tSellerAbc",
     "titleId": "urn:pdtf:titleNumber:AB12345",
     "status": "verified",
@@ -1775,7 +1778,7 @@ A complete ownership credential — thin assertion only, no duplicated title dat
       "type": "UserAttestation",
       "source": "did:key:z6MkhRqN4v5sW8xZ1bD4gJ6kM9nP2qS0tSellerAbc",
       "attestedAt": "2026-03-18T08:50:00Z",
-      "method": "Ownership declaration during onboarding"
+      "method": "SellerCapacity declaration during onboarding"
     }
   ],
   "termsOfUse": [{
@@ -2052,8 +2055,8 @@ Estimated credential sizes (JSON, uncompressed):
 | PropertyCredential (seller form section) | 0.5–3 KB | Varies by section |
 | PropertyCredential (full seller form) | 8–15 KB | All BASPI sections combined |
 | TitleCredential | 2–5 KB | Register extract + ownership type |
-| OwnershipCredential | 0.8–1 KB | Thin — smallest credential type |
-| RepresentationCredential | 0.8–1 KB | Thin — similar to Ownership |
+| SellerCapacityCredential | 0.8–1 KB | Thin — smallest credential type |
+| RepresentationCredential | 0.8–1 KB | Thin — similar to SellerCapacity |
 | DelegatedConsentCredential | 1–1.5 KB | Includes scope array |
 | OfferCredential | 1–2 KB | Amount, conditions, buyer circumstances |
 | TransactionCredential | 1.5–3 KB | Status, milestones, sale context |
@@ -2128,7 +2131,7 @@ A typical transaction might have 20–40 credentials totalling 30–80 KB of VC 
 | D14 | Digital ID wallet binding (future, custodial for now) | ✅ Confirmed | §3.2 note on custodial signing |
 | D16 | Ed25519 key algorithm | ✅ Confirmed | §9 — eddsa-jcs-2022 cryptosuite |
 | D18 | Bitstring Status List revocation mandatory | ✅ Confirmed | §8 — credentialStatus required on all VCs |
-| D28 | Ownership credential is thin (claim-vs-evidence separation) | ✅ Confirmed | §3.4 — OwnershipCredential design |
+| D28 | SellerCapacity credential is thin (claim-vs-evidence separation) | ✅ Confirmed | §3.4 — SellerCapacityCredential design |
 
 ---
 
@@ -2145,8 +2148,8 @@ TitleCredential
   claims: register extract, ownership type, leasehold terms
   issuer: HMLR proxy / HMLR root issuer
 
-OwnershipCredential
-  subject: urn:pdtf:ownership:{id}
+SellerCapacityCredential
+  subject: urn:pdtf:capacity:{id}
   claims: personId/organisationId → titleId, status, verificationLevel
   issuer: account provider (Moverly)
   NOTE: thin — no title details, just the link
@@ -2174,14 +2177,4 @@ TransactionCredential
 
 ---
 
-## Changelog
 
-| Version | Date | Changes |
-|---------|------|---------|
-| v0.3 | 1 April 2026 | Added §5.6 "Design Constraint: Issuers Are Stateless" — issuers have no visibility of assembled state, pruning is an assembly concern. Frames REPLACE vs MERGE vs hybrid tradeoff for consensus. |
-| v0.2 | 30 March 2026 | Added §6.6 Source Documents — `sourceDocument` schema, `pdtf://` retrieval protocol via DID service discovery, confidentiality tiers, VP-authenticated fetch. |
-| v0.1 | 24 March 2026 | Initial draft. 7 credential types with JSON examples, evidence model (4 types), termsOfUse filtering, BitstringStatusList, DataIntegrityProof (eddsa-jcs-2022), JSON-LD context, migration from verified claims. |
-
----
-
-*This is a living document. As implementation progresses and LMS consensus is reached on D5, this spec will be updated accordingly.*

@@ -1,11 +1,11 @@
 ---
-title: "PDTF 2.0 — Sub-spec 01: Entity Graph & Schema"
+title: "01 Entity Graph & Schema"
 description: "PDTF 2.0 specification document."
 ---
 
 
-**Version:** 0.3 (Draft)
-**Date:** 1 April 2026
+**Version:** 0.1 (Draft)
+**Date:** 9 April 2026
 **Author:** Ed Molyneux / Moverly
 **Status:** Draft for review (LMS collaboration)
 **Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
@@ -32,7 +32,7 @@ The governing principle for entity assignment:
 >
 > **Transaction entity** = facts about this particular sale — who's involved, financing, milestones, status. Irrelevant to the next owner.
 >
-> **Relationship entities** (Ownership, Representation, DelegatedConsent, Offer) = who claims what role, verified how, with what authority. These are signed assertions linking persons/organisations to the transaction.
+> **Relationship entities** (SellerCapacity, Representation, DelegatedConsent, Offer) = who claims what role, verified how, with what authority. These are signed assertions linking persons/organisations to the transaction.
 
 ### 2.2 ID-Keyed Collections
 
@@ -77,7 +77,7 @@ v4/combined.json (ID-keyed maps — single dev artifact)
 | **Title** | `urn:pdtf:titleNumber:{number}` or `urn:pdtf:unregisteredTitle:{id}` | `v4/Title.json` | Legal title: register extract, ownership type (freehold/leasehold), leasehold terms, encumbrances. |
 | **Person** | `did:key` | `v4/Person.json` | Natural person: name, contact, address, verification status. Role-free — role is contextual via relationship entities. |
 | **Organisation** | `did:key` or `did:web` | `v4/Organisation.json` | Legal entity: law firm, estate agency, lender. Access and representation are managed at org level, not individual level. |
-| **Ownership** | URN (generated) | `v4/Ownership.json` | Thin signed assertion: "Person/Org X is the owner of Title Y". Verified against title register. Revocable. |
+| **SellerCapacity** | URN (generated) | `v4/SellerCapacity.json` | Thin signed assertion: "Person/Org X is the owner of Title Y". Verified against title register. Revocable. |
 | **Representation** | URN (generated) | `v4/Representation.json` | Delegated authority from seller/buyer to an Organisation (conveyancer, estate agent). Issued by the instructing party. Revocable. |
 | **DelegatedConsent** | URN (generated) | `v4/DelegatedConsent.json` | Authorised data access for entities with legitimate need (lenders, etc.). Part of terms of use. |
 | **Offer** | URN (generated) | `v4/Offer.json` | Links buyer Person(s) to Transaction. Contains offer amount, status, conditions, buyer circumstances. |
@@ -96,7 +96,7 @@ Transaction (did:web:moverly.com:transactions:{id})
     │   }
     │
     ├── ownership: {
-    │     "urn:pdtf:ownership:{id}": {
+    │     "urn:pdtf:capacity:{id}": {
     │         personId: "did:key:z6Mkh...",
     │         titleId: "urn:pdtf:titleNumber:AB12345",
     │         status: "verified"
@@ -142,7 +142,7 @@ Transaction (did:web:moverly.com:transactions:{id})
 
 **D27: Organisation as first-class entity.** Estate agents, conveyancers, and lenders participate as Organisations, not named individuals. The firm is the instructed party; internal delegation to individual fee earners is the Organisation's concern, not the transaction graph's. This reflects reality — if your solicitor goes on holiday, the firm still has access.
 
-**D28: Thin Ownership credentials.** The Ownership entity is a signed assertion linking a Person/Org to a Title — "X owns Y". It does not duplicate title details (leasehold terms, restrictions). Those belong on the Title entity. The Ownership claim is verified by cross-referencing against `Title.registerExtract.proprietorship` from HMLR.
+**D28: Thin SellerCapacity credentials.** The SellerCapacity entity is a signed assertion linking a Person/Org to a Title — "X owns Y". It does not duplicate title details (leasehold terms, restrictions). Those belong on the Title entity. The SellerCapacity claim is verified by cross-referencing against `Title.registerExtract.proprietorship` from HMLR.
 
 **D29: Buyers through Offers.** Buyers exist in the transaction only through Offer entities. This models reality: a buyer doesn't participate until they make an offer, multiple competing offers can exist simultaneously, and each offer has its own status and conditions. The existing `offerId` on v3 participants provides the migration path.
 
@@ -218,7 +218,7 @@ The Property entity corresponds to `propertyPack` in v3, minus titles and minus 
 | `propertyPack.ownership.hasHelpToBuyEquityLoan` | **Transaction** | Discharged on completion |
 | `propertyPack.ownership.isFirstRegistration` | **Title** | Property of the title itself |
 | `propertyPack.ownership.isLimitedCompanySale` | **Transaction** | About the seller entity type |
-| `propertyPack.legalOwners` | **Person/Organisation** entities + **Ownership** credentials | Becomes structured entities with DIDs |
+| `propertyPack.legalOwners` | **Person/Organisation** entities + **SellerCapacity** credentials | Becomes structured entities with DIDs |
 | `propertyPack.confirmationOfAccuracyByOwners` | **Transaction** | Seller signatures for this sale |
 | `propertyPack.saleReadyDeclarations` | **Transaction** | Seller declarations for this sale |
 | `propertyPack.completionAndMoving` | **Transaction** | Completion date, key arrangements — this sale |
@@ -231,13 +231,32 @@ Each title in `propertyPack.titlesToBeSold[]` becomes a Title entity, keyed by `
 |--------|-------------|-------|
 | `titlesToBeSold[].titleNumber` | Title identifier (part of URN) | Becomes the entity key |
 | `titlesToBeSold[].titleExtents` | `titleExtents` | GeoJSON boundary |
-| `titlesToBeSold[].registerExtract` | `registerExtract` | OC1 summary + register data from HMLR |
-| `titlesToBeSold[].additionalDocuments` | `additionalDocuments` | Filed copies, plans, etc. |
-| `ownership.ownershipsToBeTransferred[].ownershipType` | `ownership.ownershipType` | Freehold/Leasehold/etc. — matched by titleNumber |
-| `ownership.ownershipsToBeTransferred[].{leasehold details}` | `ownership.{leasehold details}` | Lease terms, ground rent, etc. (via discriminator) |
+| `titlesToBeSold[].registerExtract` | `title.registerExtract` | OC1 summary + register data from HMLR |
+| `titlesToBeSold[].additionalDocuments` | `title.additionalDocuments` | Filed copies, plans, etc. |
+| `ownership.ownershipsToBeTransferred[].ownershipType` | `ownershipType` | Freehold/Leasehold/etc. — matched by titleNumber |
+| `ownership.ownershipsToBeTransferred[].{leasehold details}` | `{leasehold details}` | Lease terms, ground rent, etc. (via discriminator) |
 | `ownership.isFirstRegistration` | `isFirstRegistration` | Title registration status |
 
 **Unregistered titles:** Use `urn:pdtf:unregisteredTitle:{generated-id}`. The title may gain a `titleNumber` after first registration, at which point the URN updates. The graph must handle this transition.
+
+**ownershipToBeTransferred (moved to top level):**
+Because a `TitleCredential` fundamentally represents an ownership interest being conveyed, the fields previously inside `ownershipsToBeTransferred[]` move to the top level of the Title entity, and the register evidence moves into a `title` sub-object:
+
+```json
+Title (credential subject):
+{
+  "ownershipType": "Freehold" | "Leasehold" | "CommonholdUnit",
+  // additional interest-specific fields (e.g. leaseholdDetails)
+  "title": {
+    "registerExtract": { ... },
+    "additionalDocuments": [ ... ]
+  }
+}
+```
+Note that this applies to both registered (`urn:pdtf:titleNumber:*`) and unregistered (`urn:pdtf:unregisteredTitle:*`) titles.
+
+*These fields represent the decomposition of the v1 monolithic `ownership` schema object per Q7.1 (architecture overview §14.2.1). Unregistered title identifier resolution is tracked as Q7.2 — the schema is stable for both cases but the identifier format is pending.*
+
 
 ### 4.3 Transaction Entity
 
@@ -262,6 +281,21 @@ The Transaction is the root entity and container for sale-specific data.
 | `saleReadyDeclarations` | `sellerConfirmations.saleReady` | Sale-specific declarations |
 | `completionAndMoving` | `completion` | Completion date, arrangements |
 
+### `saleContext` details
+| Field | Type | Description |
+|-------|------|-------------|
+| `numberOfSellers` | integer | Total number of individual sellers |
+| `numberOfNonUkResidentSellers` | integer | Number of sellers not UK resident for tax purposes |
+| `outstandingMortgage` | enum `Yes` \| `No` | Whether the sellers have an outstanding mortgage on any title being sold |
+| `existingLender` | string | Name of the existing mortgage lender (if applicable) |
+| `hasHelpToBuyEquityLoan` | enum `Yes` \| `No` | Help to Buy equity loan flag |
+| `isLimitedCompanySale` | enum `Yes` \| `No` | Whether the sale is from a limited company |
+
+These are transaction-scoped facts — they describe the sale context and are re-asserted per transaction. They are not title-level facts.
+
+*These fields represent the decomposition of the v1 monolithic `ownership` schema object per Q7.1 (architecture overview §14.2.1). Unregistered title identifier resolution is tracked as Q7.2 — the schema is stable for both cases but the identifier format is pending.*
+
+
 ### 4.4 Person Entity
 
 Extracted from `participants[]` where the participant is a natural person (seller, buyer).
@@ -276,7 +310,7 @@ Extracted from `participants[]` where the participant is a natural person (selle
 | `participants[].verification` | `verification` | Identity, AML, source of funds |
 | `participants[].externalIds` | `externalIds` | |
 
-**Not included:** `role` and `participantStatus` — these move to relationship entities (Ownership, Representation, Offer). `organisation` and `organisationReference` move to Organisation entities.
+**Not included:** `role` and `participantStatus` — these move to relationship entities (SellerCapacity, Representation, Offer). `organisation` and `organisationReference` move to Organisation entities.
 
 Also extracted from `propertyPack.legalOwners.namesOfLegalOwners[]` where `ownerType` = "Private individual".
 
@@ -296,7 +330,7 @@ Extracted from `participants[]` where the participant represents an organisation
 
 **Identity note:** Most organisations will use provider-managed `did:key` identifiers issued by their case management platform (e.g. LMS). Self-hosted `did:web` is available for firms that want direct control of their identity, but adoption is expected to be gradual. The account provider is trusted to verify the organisation's identity and regulatory status before issuing a `did:key`.
 
-### 4.6 Ownership Entity
+### 4.6 SellerCapacity Entity
 
 A thin signed assertion linking a Person or Organisation to a Title.
 
@@ -308,7 +342,7 @@ A thin signed assertion linking a Person or Organisation to a Title.
 | `status` | `claimed`, `verified`, `disputed` |
 | `verifiedAgainst` | Reference to Title.registerExtract.proprietorship (evidence) |
 
-**What it is NOT:** The Ownership entity does not contain leasehold terms, ownership type (freehold/leasehold), or title register details. Those are properties of the Title itself. The Ownership entity is purely the relationship: "X owns Y".
+**What it is NOT:** The SellerCapacity entity does not contain leasehold terms, ownership type (freehold/leasehold), or title register details. Those are properties of the Title itself. The SellerCapacity entity is purely the relationship: "X owns Y".
 
 ### 4.7 Representation Entity
 
@@ -367,7 +401,7 @@ Links buyer(s) to the Transaction. Buyers exist only through Offers.
 | Title (unregistered) | `urn:pdtf:unregisteredTitle:{id}` | `urn:pdtf:unregisteredTitle:ut-7f3a` | Generated, may transition to registered |
 | Person | `did:key` | `did:key:z6Mkhabc123...` | Generated from key material |
 | Organisation | `did:key` or `did:web` | `did:key:z6MkpJ...` or `did:web:smithandco.law` | Provider-managed or self-hosted |
-| Ownership | `urn:pdtf:ownership:{id}` | `urn:pdtf:ownership:own-1a2b` | Generated |
+| SellerCapacity | `urn:pdtf:capacity:{id}` | `urn:pdtf:capacity:own-1a2b` | Generated |
 | Representation | `urn:pdtf:representation:{id}` | `urn:pdtf:representation:rep-3c4d` | Generated |
 | DelegatedConsent | `urn:pdtf:consent:{id}` | `urn:pdtf:consent:dc-5e6f` | Generated |
 | Offer | `urn:pdtf:offer:{id}` | `urn:pdtf:offer:off-7g8h` | Generated (or migrated from v3 offer key) |
@@ -442,7 +476,7 @@ The v4 combined.json uses the same top-level structure but with ID-keyed maps re
   },
   
   "ownership": {
-    "urn:pdtf:ownership:own-1": {
+    "urn:pdtf:capacity:own-1": {
       "personId": "did:key:z6Mkh...abc",
       "titleId": "urn:pdtf:titleNumber:AB12345",
       "status": "verified"
@@ -487,8 +521,8 @@ The v4 combined.json uses the same top-level structure but with ID-keyed maps re
 | Participants | `participants[]` array | `persons{}`, `organisations{}`, relationship entities | Yes — structural |
 | Titles | `propertyPack.titlesToBeSold[]` | `titles{}` (top-level, ID-keyed) | Yes — moved + restructured |
 | Property pack | `propertyPack` | `properties{}` (ID-keyed by UPRN) | Yes — wrapped in map |
-| Ownership fields | `propertyPack.ownership` | Split across Title, Transaction, Ownership entity | Yes — decomposed |
-| Legal owners | `propertyPack.legalOwners` | Person/Org entities + Ownership credentials | Yes — restructured |
+| SellerCapacity fields | `propertyPack.ownership` | Split across Title, Transaction, SellerCapacity entity | Yes — decomposed |
+| Legal owners | `propertyPack.legalOwners` | Person/Org entities + SellerCapacity credentials | Yes — restructured |
 | Seller confirmations | `propertyPack.confirmationOfAccuracyByOwners`, `saleReadyDeclarations` | `sellerConfirmations` (top-level) | Yes — moved |
 | Completion | `propertyPack.completionAndMoving` | `completion` (top-level) | Yes — moved |
 | Offers | `offers{}` (ID-keyed) | `offers{}` (ID-keyed, adds `buyerIds`) | Minor — additive |
@@ -521,7 +555,7 @@ Transforms v4 combined.json to v3 combined.json for backward compatibility.
 
 1. **persons + organisations + ownership + representation** → `participants[]` array
    - Each Person/Org becomes a participant
-   - `role` derived from relationship entities (Ownership → "Seller", Representation → role mapping)
+   - `role` derived from relationship entities (SellerCapacity → "Seller", Representation → role mapping)
    - `participantStatus` derived from relationship `status`
 2. **properties{} → propertyPack** — unwrap from ID-keyed map (single property assumed for v3)
 3. **titles{} → propertyPack.titlesToBeSold[]** — convert to array
@@ -530,6 +564,10 @@ Transforms v4 combined.json to v3 combined.json for backward compatibility.
 6. **sellerConfirmations → propertyPack.{confirmationOfAccuracyByOwners, saleReadyDeclarations}** — move back
 7. **completion → propertyPack.completionAndMoving** — move back
 8. **offers{} → offers{}** — remove `buyerIds` (link maintained via participant `offerId`)
+
+**Note on `ownership` path composition:**
+v3 `/propertyPack/ownership/*` paths are composed from both Transaction `saleContext` and Title top-level ownership fields during state assembly. See Sub-spec 07 for detailed state assembly instructions.
+
 
 ### 7.3 Graph Composition (entity VCs → v4 state)
 
@@ -541,7 +579,7 @@ Assembles full transaction state from individual entity Verifiable Credentials. 
 2. Resolve Property references → merge Property VC `credentialSubject` data
 3. Resolve Title references → merge Title VC data
 4. Resolve Person/Org DIDs → merge identity data
-5. Collect Ownership, Representation, DelegatedConsent, Offer VCs → populate relationship maps
+5. Collect SellerCapacity, Representation, DelegatedConsent, Offer VCs → populate relationship maps
 6. Verify credential signatures and revocation status during composition
 7. Output: complete v4 state object (or further downgrade to v3)
 
@@ -613,7 +651,7 @@ The following are *value lists*, not entity collections. They remain as arrays:
 
 8. **Overlay compatibility** — Current overlays (BASPI, NTS, TA, CON29R) reference v3 paths. Need overlay migration strategy or dual-path overlay resolution.
 
-9. **Existing branch 263 reconciliation** — Branch 263's entity extraction needs updating to match this spec. Key changes: Participation → Ownership/Representation/DelegatedConsent/Offer, Organisation entity, field reassignment per logbook test.
+9. **Existing branch 263 reconciliation** — Branch 263's entity extraction needs updating to match this spec. Key changes: Participation → SellerCapacity/Representation/DelegatedConsent/Offer, Organisation entity, field reassignment per logbook test.
 
 ---
 
@@ -628,7 +666,7 @@ The following are *value lists*, not entity collections. They remain as arrays:
 ### Phase 2: Entity Extraction
 5. Update `decomposeSchema.js` for v4 structure
 6. Generate entity schemas: Property, Title, Transaction, Person, Organisation
-7. Generate relationship schemas: Ownership, Representation, DelegatedConsent, Offer
+7. Generate relationship schemas: SellerCapacity, Representation, DelegatedConsent, Offer
 8. Validate: extracted entities cover all v4 combined paths
 
 ### Phase 3: Graph Composition
@@ -647,7 +685,7 @@ The following are *value lists*, not entity collections. They remain as arrays:
 
 | v3 Role | v4 Entity | v4 Relationship | Notes |
 |---------|-----------|----------------|-------|
-| `Seller` | Person | Ownership | Ownership credential links to Title |
+| `Seller` | Person | SellerCapacity | SellerCapacity credential links to Title |
 | `Seller's Conveyancer` | Organisation | Representation (`sellerConveyancer`) | Firm, not individual |
 | `Prospective Buyer` | Person | Offer (status: Pending) | Buyer exists through Offer |
 | `Buyer` | Person | Offer (status: Accepted) | |
@@ -657,19 +695,9 @@ The following are *value lists*, not entity collections. They remain as arrays:
 | `Surveyor` | Organisation | Representation (`surveyor`) | Or Person for sole practitioners? |
 | `Mortgage Broker` | Organisation | Representation (`mortgageBroker`) | |
 | `Lender` | Organisation | DelegatedConsent | Access, not representation |
-| `Landlord` | Person | Ownership (variant) | Leasehold context |
+| `Landlord` | Person | SellerCapacity (variant) | Leasehold context |
 | `Tenant` | Person | *(TBD)* | Occupancy, not ownership |
 
 ---
 
-## Changelog
 
-| Version | Date | Changes |
-|---------|------|---------|
-| v0.3 | 1 April 2026 | Organisation supports `did:key` (provider-managed) or `did:web` (self-hosted). Identity note added to Organisation entity section. Identifier system table updated. |
-| v0.2 | 24 March 2026 | Author attribution corrected. Ownership field assignment via logbook test incorporated. |
-| v0.1 | 24 March 2026 | Initial draft. 9 core entities, field mapping from v3 combined.json, identifier system (DIDs + URNs), collection conversion rules, transformation pipeline. |
-
----
-
-*This is a living document. Decisions made here are logged as D26–D30 in the [Architecture Overview](/web/specs/00-architecture-overview/).*

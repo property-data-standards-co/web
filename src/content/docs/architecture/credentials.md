@@ -22,7 +22,7 @@ State assembly combines many sparse credentials into a composed view, applying p
 Credential types align with the entity graph:
 
 - `PropertyCredential` and `TitleCredential` for facts about those entities.
-- Relationship credentials (`OwnershipCredential`, `RepresentationCredential`, `DelegatedConsentCredential`, `OfferCredential`) to express authority, access, and process.
+- Relationship credentials (`SellerCapacityCredential`, `RepresentationCredential`, `DelegatedConsentCredential`, `OfferCredential`) to express authority, access, and process.
 - `TransactionCredential` for sale-specific lifecycle state.
 
 ## Access control

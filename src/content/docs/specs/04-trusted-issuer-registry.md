@@ -1,11 +1,11 @@
 ---
-title: "PDTF 2.0 — Sub-spec 04: Trusted Issuer Registry"
+title: "04 Trusted Issuer Registry"
 description: "PDTF 2.0 specification document."
 ---
 
 
-**Version:** 0.2 (Draft)
-**Date:** 1 April 2026
+**Version:** 0.1 (Draft)
+**Date:** 9 April 2026
 **Author:** Ed Molyneux / Moverly
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
@@ -492,7 +492,7 @@ Entity:/json/pointer/path
 ```
 
 Where:
-- **Entity** is the PDTF entity type name, capitalised as per the entity graph (e.g. `Property`, `Title`, `Person`, `Organisation`, `Ownership`, `Representation`, `Transaction`)
+- **Entity** is the PDTF entity type name, capitalised as per the entity graph (e.g. `Property`, `Title`, `Person`, `Organisation`, `SellerCapacity`, `Representation`, `Transaction`)
 - The colon `:` separates entity from path
 - **Path** is a JSON Pointer (RFC 6901) referencing a location in the entity's schema, prefixed with `/`
 
@@ -607,6 +607,10 @@ A single Verifiable Credential maps to one or more entity:path combinations base
 
 The verifier derives the entity:path as `Property:/energyEfficiency/certificate` and checks it against the issuer's `authorisedPaths` in the TIR.
 
+### 5.6 Multiple Issuers Per Path
+
+**Multiple issuers per path are permitted** (Q5.2 resolved, see architecture overview §14.1). Multiple commercial providers — search services, valuations, environmental data — will legitimately issue credentials against the same entity:path combinations. The TIR does not enforce exclusivity, and state assembly merges credentials from multiple issuers for the same path using timestamp-ordered semantics.
+
 ---
 
 ## 6. Trust Levels
@@ -645,7 +649,7 @@ Trusted proxies are the **Phase 1** mechanism for PDTF 2.0 adoption. They bridge
 | **Requirements** | Must describe its identity verification methods. Must maintain the binding between real-world identity and DID. Listed in `userAccountProviders`, not `issuers`. |
 | **proxyFor** | Not applicable. |
 
-Account providers answer a different question from data issuers: "Was this person's DID created by a platform I trust to have verified their identity?" This matters for Ownership and Representation credentials, where the credential's validity depends partly on the legitimacy of the subject's DID.
+Account providers answer a different question from data issuers: "Was this person's DID created by a platform I trust to have verified their identity?" This matters for SellerCapacity and Representation credentials, where the credential's validity depends partly on the legitimacy of the subject's DID.
 
 ### 6.4 Trust Level Comparison
 
@@ -1312,7 +1316,6 @@ Verifiers SHOULD implement a policy for handling credentials from deprecated iss
 | Q3 | How should "multi-path" credentials be handled? | A single VC covering data from multiple entity:path combinations — should ALL paths be authorised, or is partial coverage acceptable? | Leaning: ALL paths must be covered |
 | Q4 | Should there be a TIR for test/staging environments? | Separate registry for non-production issuers, or a `test` status in the main registry? | Open |
 | Q5 | Should trust levels have numeric weights for programmatic comparison? | e.g. rootIssuer=3, trustedProxy=2, accountProvider=1 — or is the enum sufficient? | Leaning: enum is sufficient |
-| Q6 | How should verifiers handle the case where two issuers are authorised for the same entity:path? | Multiple trusted proxies for the same data source — is this allowed? Should there be conflict resolution? | Leaning: allowed, verifier accepts any matching entry |
 | Q7 | Should the TIR include a `revokedAt` timestamp when an entry is revoked? | Useful for audit: "this issuer was revoked at X, any credentials issued after X are suspect" | Open |
 | Q8 | Should the `environment-agency` root issuer entry exist at launch? | It was not in the original architecture overview `issuers` map — added here for completeness. The `moverly-ea` proxy needs a `proxyFor` target. | Needs confirmation |
 
@@ -1422,13 +1425,13 @@ Common entity:path combinations referenced across PDTF 2.0 sub-specs:
 | `Title:/registerExtract/proprietorship` | Proprietorship register | HMLR (via proxy) |
 | `Title:/registerExtract/charges` | Charges register | HMLR (via proxy) |
 | `Title:/registerExtract/restrictions` | Restrictions | HMLR (via proxy) |
-| `Title:/ownership/*` | Ownership assertions | HMLR (via proxy) |
+| `Title:/ownership/*` | SellerCapacity assertions | HMLR (via proxy) |
 | `Property:/energyEfficiency/certificate` | EPC certificate | MHCLG (via proxy) |
 | `Property:/energyEfficiency/recommendation` | EPC recommendations | MHCLG (via proxy) |
 | `Property:/environmentalIssues/flooding/*` | Flood risk data | EA (via proxy) |
 | `Property:/councilTax/*` | Council tax band + valuation | VOA (via proxy) |
 | `Property:/address` | Property address | Multiple sources |
-| `Ownership:/status` | Ownership claim status | Account provider |
+| `SellerCapacity:/status` | SellerCapacity claim status | Account provider |
 | `Representation:/role` | Representation role | Account provider |
 
 ---
@@ -1448,13 +1451,4 @@ Common entity:path combinations referenced across PDTF 2.0 sub-specs:
 
 ---
 
-## Changelog
 
-| Version | Date | Changes |
-|---------|------|---------|
-| v0.2 | 1 April 2026 | `managedOrganisations` field added to `accountProvider` entries — URL to signed JSON listing verified Organisation `did:key` identifiers. JSON Schema updated. Initial registry entry for Moverly updated. |
-| v0.1 | 24 March 2026 | Initial draft. GitHub-hosted registry, entity:path authorisation, trust levels (rootIssuer/trustedProxy/accountProvider), status lifecycle, caching, CI validation, governance model, initial registry entries. |
-
----
-
-*This document is part of the PDTF 2.0 specification suite. See [00 — Architecture Overview](/web/specs/00-architecture-overview/) for the full sub-spec index.*

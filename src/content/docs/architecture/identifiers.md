@@ -27,7 +27,7 @@ PDTF uses `urn:pdtf:*` identifiers for the entity graph and credentials, for exa
 - `urn:pdtf:uprn:{uprn}` for properties
 - `urn:pdtf:titleNumber:{number}` for registered titles
 - `urn:pdtf:unregisteredTitle:{id}` for unregistered titles
-- `urn:pdtf:ownership:{id}` / `urn:pdtf:representation:{id}` / `urn:pdtf:consent:{id}` / `urn:pdtf:offer:{id}` for relationship entities
+- `urn:pdtf:capacity:{id}` / `urn:pdtf:representation:{id}` / `urn:pdtf:consent:{id}` / `urn:pdtf:offer:{id}` for relationship entities
 - `urn:pdtf:vc:{uuid}` for credential IDs (when present)
 
 URNs identify the subject of a claim. They do not resolve to DID documents.

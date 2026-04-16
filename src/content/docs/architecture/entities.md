@@ -22,7 +22,7 @@ PDTF 2.0 solves this by decomposing the monolithic schema into nine distinct ent
 | **Title** | `urn:pdtf:titleNumber:{number}` | The legal title: register extract, ownership type, leasehold terms, encumbrances |
 | **Person** | `did:key:z6Mkh...` | A natural person: name, contact details, verification status. Role-free. |
 | **Organisation** | `did:web:smithandco.law` | A legal entity: law firm, estate agency, lender |
-| **Ownership** | `urn:pdtf:ownership:{id}` | A signed assertion linking a Person to a Title — "this person owns this title" |
+| **SellerCapacity** | `urn:pdtf:capacity:{id}` | A signed assertion linking a Person to a Title — "this person owns this title" |
 | **Representation** | `urn:pdtf:representation:{id}` | Delegated authority from a party to an Organisation — "this firm acts for this seller" |
 | **DelegatedConsent** | `urn:pdtf:consent:{id}` | Authorised data access for entities with a legitimate need (e.g. lenders) |
 | **Offer** | `urn:pdtf:offer:{id}` | Links buyer Person(s) to a Transaction with amount, status, and conditions |
@@ -41,7 +41,7 @@ Ask: *"Does this fact travel with the property, the title, or the sale?"*
 - **Transaction** = this-sale facts. Who's involved, what's the price, what stage has it reached, what's the completion date. Irrelevant to the next owner.
 :::
 
-Relationship entities (Ownership, Representation, DelegatedConsent, Offer) are **thin assertions** linking people and organisations to the transaction. They carry minimal data — just enough to express the relationship — and are revocable when circumstances change.
+Relationship entities (SellerCapacity, Representation, DelegatedConsent, Offer) are **thin assertions** linking people and organisations to the transaction. They carry minimal data — just enough to express the relationship — and are revocable when circumstances change.
 
 ## Transaction-centric graph
 
@@ -52,7 +52,7 @@ Transaction (did:web)
 ├── propertyIds → Property (urn:pdtf:uprn)
 ├── titleIds → Title (urn:pdtf:titleNumber)
 ├── ownerships
-│   └── Ownership → links Person (did:key) to Title
+│   └── SellerCapacity → links Person (did:key) to Title
 ├── representations
 │   └── Representation → links Person to Organisation (did:web)
 ├── offers
@@ -109,7 +109,7 @@ A single Property can have multiple Titles (e.g. the freehold and a long leaseho
 
 A Person entity represents a natural person. Critically, it is **role-free**. A Person has no inherent role in a transaction — their role is determined entirely by the relationship entities that reference them:
 
-- Referenced by an **Ownership** → they're a property owner
+- Referenced by an **SellerCapacity** → they're a property owner
 - Referenced by an **Offer** → they're a buyer
 - Referenced by a **Representation** → they've instructed a firm
 
@@ -123,14 +123,14 @@ An Organisation represents a legal entity — a law firm, estate agency, lender,
 A key design decision: Representation credentials are issued to **Organisations**, not to individual solicitors. The firm is the instructed party. Individual solicitors act under the authority of their firm's representation credential. This reflects how conveyancing actually works — clients instruct firms, not specific people.
 :::
 
-### Ownership
+### SellerCapacity
 
-Ownership is a **thin credential** — a signed assertion that links a Person (or Organisation) to a Title:
+SellerCapacity is a **thin credential** — a signed assertion of the capacity under which a person or organisation is acting to transfer title — includes registered owners, executors under probate, attorneys acting under power of attorney, etc.
 
 ```json
 {
   "credentialSubject": {
-    "id": "urn:pdtf:ownership:abc123",
+    "id": "urn:pdtf:capacity:abc123",
     "owner": "did:key:z6MkhPersonDID",
     "title": "urn:pdtf:titleNumber:ABC12345",
     "status": "verified",
@@ -139,9 +139,9 @@ Ownership is a **thin credential** — a signed assertion that links a Person (o
 }
 ```
 
-It carries no duplicated data from either the Person or the Title. It simply asserts the relationship. Verification happens by cross-referencing the Ownership claim against the Title's register extract (proprietorship data).
+It carries no duplicated data from either the Person or the Title. It simply asserts the relationship. Verification happens by cross-referencing the SellerCapacity claim against the Title's register extract (proprietorship data).
 
-Ownership credentials are **revocable** via Bitstring Status List — essential for when property changes hands.
+SellerCapacity credentials are **revocable** via Bitstring Status List — essential for when property changes hands.
 
 ### Representation
 
@@ -159,7 +159,7 @@ Representation is another thin credential that delegates authority from a transa
 }
 ```
 
-Like Ownership, it's revocable — because clients can and do change solicitors mid-transaction.
+Like SellerCapacity, it's revocable — because clients can and do change solicitors mid-transaction.
 
 ### DelegatedConsent
 

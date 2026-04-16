@@ -48,7 +48,7 @@ PDTF 2.0 decomposes the monolithic document into nine entity types. The governin
 | Travels with the property | **Property** | EPC rating, flood risk, building materials, fixtures, TA6 responses |
 | Is intrinsic to the legal title | **Title** | Register extract, ownership type, leasehold terms, encumbrances |
 | Is specific to this sale | **Transaction** | Price, completion date, chain position, status |
-| Asserts a relationship | **Ownership / Representation / Offer / DelegatedConsent** | "X owns Y", "X instructs Z", "X offers £N" |
+| Asserts a relationship | **SellerCapacity / Representation / Offer / DelegatedConsent** | "X owns Y", "X instructs Z", "X offers £N" |
 
 ### Property: the logbook
 
@@ -70,14 +70,14 @@ The Transaction uses `did:web` as its identifier, which means it has a resolvabl
 
 ### Relationship entities: thin and revocable
 
-The four relationship entities — Ownership, Representation, DelegatedConsent, and Offer — are deliberately **thin**. They contain just enough data to express the relationship:
+The four relationship entities — SellerCapacity, Representation, DelegatedConsent, and Offer — are deliberately **thin**. They contain just enough data to express the relationship:
 
-- **Ownership**: "Person X owns Title Y" (with verification level)
+- **SellerCapacity**: "Person X owns Title Y" (with verification level)
 - **Representation**: "Person X has instructed Organisation Y" (with scope)
 - **Offer**: "Person X offers £N on Transaction Y" (with conditions)
 - **DelegatedConsent**: "Entity X may access data of type Y" (with constraints)
 
-Each is a separate Verifiable Credential, independently revocable. When a client changes solicitor, the old Representation credential is revoked and a new one issued. When property changes hands, the Ownership credential is revoked. Clean, auditable, verifiable.
+Each is a separate Verifiable Credential, independently revocable. When a client changes solicitor, the old Representation credential is revoked and a new one issued. When property changes hands, the SellerCapacity credential is revoked. Clean, auditable, verifiable.
 
 ## What the decomposition enables
 
