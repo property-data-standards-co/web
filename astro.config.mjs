@@ -50,6 +50,7 @@ export default defineConfig({
 						{ label: 'Credentials', slug: 'architecture/credentials' },
 						{ label: 'Identifiers', slug: 'architecture/identifiers' },
 						{ label: 'Trust', slug: 'architecture/trust' },
+						{ label: 'Auth & Exchange', slug: 'architecture/exchange' },
 						{ label: 'Migration', slug: 'architecture/migration' },
 					],
 				},
