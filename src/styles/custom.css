@@ -407,26 +407,28 @@ header.header {
 }
 
 /* ──────────── Splash page texture ──────────── */
-/* Subtle dot grid that suggests data points / structured information.
-   Scoped to splash pages only via html[data-has-hero]. Dots fade out
-   towards the bottom so they don't compete with content below the hero. */
+/* Subtle entity-graph SVG behind the splash content — scattered nodes
+   connected by thin lines, evoking the PDTF entity graph. Fades out
+   toward the bottom so it doesn't compete with content sections. */
 html[data-has-hero] body::before {
 	content: '';
 	position: fixed;
 	inset: 0;
 	pointer-events: none;
 	z-index: 0;
-	background-image: radial-gradient(circle, rgba(30, 31, 36, 0.18) 1px, transparent 1px);
-	background-size: 22px 22px;
-	background-position: 0 0;
-	/* Fade out as you scroll down: dots strongest at top, gone by 90% */
-	-webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.6) 40%, rgba(0, 0, 0, 0) 90%);
-	mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.6) 40%, rgba(0, 0, 0, 0) 90%);
+	background-image: url('/web/entity-graph.svg');
+	background-size: cover;
+	background-position: center top;
+	background-repeat: no-repeat;
+	color: #1b396d; /* the SVG inherits via currentColor through `color`, but on body::before currentColor is body text colour */
+	/* Apply colour by tinting the (currentColor-based) SVG via mask + bg below. */
+	opacity: 0.7;
+	-webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0) 90%);
+	mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0) 90%);
 }
 
-:root[data-theme='dark'] html[data-has-hero] body::before,
-html[data-has-hero][data-theme='dark'] body::before {
-	background-image: radial-gradient(circle, rgba(252, 252, 253, 0.10) 1px, transparent 1px);
+:root[data-theme='dark'] html[data-has-hero] body::before {
+	opacity: 0.4;
 }
 
 /* ──────────── Hero (splash) page ──────────── */
@@ -521,13 +523,15 @@ html[data-has-hero][data-theme='dark'] body::before {
 	z-index: -1;
 }
 
-/* LEFT side — soft blue-grey glow (primary) */
+/* LEFT side — soft blue-grey glow (primary)
+   Positioned relative to the viewport so it sits at the page edge —
+   only visible on wider screens. */
 .hero::before {
 	width: 28rem;
 	height: 28rem;
 	background: radial-gradient(circle, rgba(150, 175, 210, 0.45) 0%, rgba(150, 175, 210, 0) 65%);
 	top: -6rem;
-	left: -12rem;
+	left: max(-30rem, calc(50% - 50vw - 6rem));
 }
 
 /* LEFT side — secondary pale green wash, lower & more inset */
@@ -536,7 +540,7 @@ html[data-has-hero][data-theme='dark'] body::before {
 	height: 22rem;
 	background: radial-gradient(circle, rgba(195, 251, 183, 0.35) 0%, rgba(195, 251, 183, 0) 65%);
 	top: 6rem;
-	left: -4rem;
+	left: max(-22rem, calc(50% - 50vw + 4rem));
 }
 
 /* Use a wrapping pseudo on the splash content to add the right-side glows.
@@ -555,13 +559,14 @@ html[data-has-hero][data-theme='dark'] body::before {
 	z-index: -1;
 }
 
-/* RIGHT side — soft blue-grey glow (primary) */
+/* RIGHT side — soft blue-grey glow (primary)
+   Positioned at the viewport edge — only visible on wider screens. */
 .hero .stack::before {
 	width: 28rem;
 	height: 28rem;
 	background: radial-gradient(circle, rgba(150, 175, 210, 0.45) 0%, rgba(150, 175, 210, 0) 65%);
 	top: -10rem;
-	right: -16rem;
+	right: max(-30rem, calc(50% - 50vw - 6rem));
 }
 
 /* RIGHT side — secondary pale green wash, lower */
@@ -570,7 +575,7 @@ html[data-has-hero][data-theme='dark'] body::before {
 	height: 22rem;
 	background: radial-gradient(circle, rgba(195, 251, 183, 0.30) 0%, rgba(195, 251, 183, 0) 65%);
 	top: 4rem;
-	right: -8rem;
+	right: max(-22rem, calc(50% - 50vw + 4rem));
 }
 
 /* Dark mode — toned down */
