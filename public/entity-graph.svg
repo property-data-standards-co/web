@@ -50,28 +50,28 @@
       <line x1="600" y1="720" x2="800" y2="800"/>
       <line x1="1260" y1="720" x2="800" y2="800"/>
     </g>
-    <g fill="none" stroke="#000" stroke-width="1.5">
-      <circle cx="120"  cy="180" r="6"/>
-      <circle cx="320"  cy="120" r="9"/>
-      <circle cx="280"  cy="320" r="7"/>
-      <circle cx="540"  cy="240" r="11"/>
-      <circle cx="460"  cy="480" r="8"/>
-      <circle cx="780"  cy="180" r="7"/>
-      <circle cx="700"  cy="420" r="12"/>
-      <circle cx="380"  cy="640" r="7"/>
-      <circle cx="980"  cy="120" r="9"/>
-      <circle cx="900"  cy="380" r="10"/>
-      <circle cx="820"  cy="600" r="7"/>
-      <circle cx="600"  cy="720" r="8"/>
-      <circle cx="1180" cy="240" r="11"/>
-      <circle cx="1240" cy="100" r="6"/>
-      <circle cx="1120" cy="480" r="8"/>
-      <circle cx="1040" cy="660" r="7"/>
-      <circle cx="1320" cy="380" r="10"/>
-      <circle cx="1440" cy="220" r="7"/>
-      <circle cx="1480" cy="500" r="7"/>
-      <circle cx="1260" cy="720" r="8"/>
-      <circle cx="800"  cy="800" r="6"/>
+    <g fill="#000" stroke="none">
+      <circle cx="120"  cy="180" r="5"/>
+      <circle cx="320"  cy="120" r="8"/>
+      <circle cx="280"  cy="320" r="6"/>
+      <circle cx="540"  cy="240" r="10"/>
+      <circle cx="460"  cy="480" r="7"/>
+      <circle cx="780"  cy="180" r="6"/>
+      <circle cx="700"  cy="420" r="11"/>
+      <circle cx="380"  cy="640" r="6"/>
+      <circle cx="980"  cy="120" r="8"/>
+      <circle cx="900"  cy="380" r="9"/>
+      <circle cx="820"  cy="600" r="6"/>
+      <circle cx="600"  cy="720" r="7"/>
+      <circle cx="1180" cy="240" r="10"/>
+      <circle cx="1240" cy="100" r="5"/>
+      <circle cx="1120" cy="480" r="7"/>
+      <circle cx="1040" cy="660" r="6"/>
+      <circle cx="1320" cy="380" r="9"/>
+      <circle cx="1440" cy="220" r="6"/>
+      <circle cx="1480" cy="500" r="6"/>
+      <circle cx="1260" cy="720" r="7"/>
+      <circle cx="800"  cy="800" r="5"/>
     </g>
   </g>
 </svg>
