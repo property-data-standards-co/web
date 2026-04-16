@@ -1047,7 +1047,7 @@ The status list credential MUST be signed by the same DID — using the same sig
 - Forge a status list showing revoked credentials as active
 - Forge a status list showing active credentials as revoked
 
-**Mitigation:** Key rotation procedures, monitoring for unexpected status list changes, and the TIR (Trusted Issuer Registry) providing an additional layer of issuer authentication.
+**Mitigation:** Key rotation procedures, monitoring for unexpected status list changes, and OpenID Federation trust resolution providing an additional layer of issuer authentication.
 
 ### Cache Poisoning
 
@@ -1278,7 +1278,7 @@ PDTF v1/v3 does not have credential revocation (claims are asserted through OIDC
 - [W3C Verifiable Credentials Data Model v2.0](https://www.w3.org/TR/vc-data-model-2.0/)
 - [Sub-spec 02 — VC Data Model](/web/specs/02-vc-data-model/) (credential structure)
 - [Sub-spec 03 — DID Methods & Identifiers](/web/specs/03-did-methods/) (issuer DIDs)
-- [Sub-spec 04 — Trusted Issuer Registry](/web/specs/04-trusted-issuer-registry/) (issuer trust)
+- [Sub-spec 04 — OpenID Federation](/web/specs/04-openid-federation/) (issuer trust)
 - Sub-spec 05 — Hosted Adapter Services (Coming Soon) (adapter-hosted status lists)
 - [Sub-spec 07 — State Assembly](/web/specs/07-state-assembly/) (dual-state assembly)
 

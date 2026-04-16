@@ -110,7 +110,7 @@ export default defineConfig({
 								{ label: '01 — Entity Graph', slug: 'specs/01-entity-graph' },
 								{ label: '02 — VC Data Model', slug: 'specs/02-vc-data-model' },
 								{ label: '03 — DID Methods', slug: 'specs/03-did-methods' },
-								{ label: '04 — Trusted Issuer Registry', slug: 'specs/04-trusted-issuer-registry' },
+								{ label: '04 — OpenID Federation', slug: 'specs/04-openid-federation' },
 								{ label: '06 — Key Management', slug: 'specs/06-key-management' },
 								{ label: '07 — State Assembly', slug: 'specs/07-state-assembly' },
 								{ label: '13 — Reference Implementations', slug: 'specs/13-reference-implementations' },

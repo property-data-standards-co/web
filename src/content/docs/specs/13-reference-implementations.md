@@ -103,7 +103,7 @@ The validator executes a sequential pipeline. Each stage can short-circuit on fa
 
 ```
 1. Structure Validation  →  2. Resolve Issuer DID  →  3. Verify Signature
-        →  4. TIR Lookup  →  5. Expiry Check  →  6. Revocation Check  →  Result
+        →  4. Federation Lookup  →  5. Expiry Check  →  6. Revocation Check  →  Result
 ```
 
 **Stage 1 — Structure Validation.** Validates the VC JSON against W3C VC Data Model 2.0 structure and PDTF-specific requirements: `@context` includes the PDTF context URL, `type` includes a recognised PDTF credential type, `credentialSubject` conforms to the entity schema, and `proof` is present with a supported cryptosuite.
@@ -112,7 +112,7 @@ The validator executes a sequential pipeline. Each stage can short-circuit on fa
 
 **Stage 3 — Signature Verification.** Canonicalises the credential using JCS (RFC 8785), then verifies the `eddsa-jcs-2022` proof against the resolved public key.
 
-**Stage 4 — TIR Lookup.** Queries the Trusted Issuer Registry to confirm the issuer DID is authorised for the specific `entity:path` combination claimed by the credential. When verifying a credential issued by or about an Organisation with a `did:key` identifier, the validator MUST check the TIR `accountProvider` entries' `managedOrganisations` registries to confirm the `did:key` is managed by a trusted provider.
+**Stage 4 — Federation Lookup.** Resolves the issuer's trust chain via OpenID Federation to the PDTF Trust Anchor, verifies the `pdtf-verified-issuer` Trust Mark, and confirms its `delegation.authorised_paths` covers the specific `entity:path` combination claimed by the credential. When verifying a credential issued by or about an Organisation with a `did:key` identifier, the validator MUST consult the relevant `account-provider` Trust Mark's `delegation.managed_organisations` document to confirm the `did:key` is managed by a trusted provider.
 
 **Stage 5 — Expiry Check.** Validates `validFrom` ≤ now ≤ `validUntil` (if present). Configurable clock skew tolerance (default: 60 seconds).
 
@@ -124,7 +124,7 @@ The validator executes a sequential pipeline. Each stage can short-circuit on fa
 interface ValidationResult {
   /** Overall validity — true only if all checks pass. */
   valid: boolean;
-  /** Trust level derived from TIR lookup. */
+  /** Trust level derived from Trust Mark delegation claim. */
   trustLevel: TrustLevel;
   /** Resolved issuer information. */
   issuer: ResolvedIssuer | null;
@@ -141,7 +141,7 @@ type TrustLevel =
   | 'delegated'     // Issuer with explicit delegation from root
   | 'proxy'         // Trusted proxy (e.g., Moverly aggregating data)
   | 'self-asserted' // Seller/owner self-declaration
-  | 'unknown';      // Issuer not found in TIR
+  | 'unknown';      // Issuer not found in federation
 
 interface ResolvedIssuer {
   did: string;
@@ -189,10 +189,10 @@ type ValidationErrorCode =
   // Signature errors
   | 'INVALID_SIGNATURE'
   | 'CANONICALIZATION_ERROR'
-  // TIR errors
-  | 'ISSUER_NOT_IN_TIR'
+  // Federation errors
+  | 'ISSUER_NOT_IN_FEDERATION'
   | 'UNTRUSTED_PATH'
-  | 'TIR_NETWORK_ERROR'
+  | 'FEDERATION_NETWORK_ERROR'
   | 'ORG_DID_KEY_NOT_IN_MANAGED_ORGS'
   // Temporal errors
   | 'CREDENTIAL_NOT_YET_VALID'
@@ -208,11 +208,11 @@ type ValidationErrorCode =
 ```typescript
 interface ValidatorConfig {
   /** URL of the Trusted Issuer Registry API. */
-  tirUrl: string;
+  trustAnchor: string;
   /** DID resolver instance. If not provided, a default resolver is created. */
   didResolver?: DIDResolver;
-  /** Cache TTL for TIR lookups in milliseconds. Default: 300_000 (5 min). */
-  tirCacheTtlMs?: number;
+  /** Cache TTL for federation metadata in milliseconds. Default: 300_000 (5 min). */
+  federationCacheTtlMs?: number;
   /** Cache TTL for status list fetches in milliseconds. Default: 60_000 (1 min). */
   statusListCacheTtlMs?: number;
   /** Clock skew tolerance in seconds for expiry checks. Default: 60. */
@@ -231,7 +231,7 @@ import { createValidator } from '@pdtf/vc-validator';
 import { createResolver } from '@pdtf/did-resolver';
 
 const validator = createValidator({
-  tirUrl: 'https://tir.pdtf.org/api/v1',
+  trustAnchor: 'https://trust.pdtf.org',
   didResolver: createResolver({ cacheTtlMs: 600_000 }),
 });
 
@@ -666,7 +666,7 @@ describe('round-trip', () => {
     });
 
     const validator = createValidator({
-      tirUrl: 'mock://tir',
+      trustAnchor: 'mock://trust-anchor',
       skipStages: ['tir-lookup', 'revocation'],
     });
     const result = await validator.validate(vc);
@@ -774,7 +774,7 @@ Explicitly excluded: `jsonld` (too heavy), `node-forge` (native crypto preferred
 ### 9.3 Network Security
 
 - **TLS-only for `did:web`.** No HTTP fallback. `allowInsecure` gated behind explicit opt-in with warning.
-- **Timeout enforcement.** All network operations have configurable timeouts (10s DID resolution, 10s status list fetch, 30s TIR queries).
+- **Timeout enforcement.** All network operations have configurable timeouts (10s DID resolution, 10s status list fetch, 30s federation resolution).
 
 ### 9.4 Input Validation
 
@@ -893,7 +893,7 @@ Anticipated but out of scope for initial release:
 - [Sub-spec 01 — Entity Graph & Schema](/web/specs/01-entity-graph/)
 - [Sub-spec 02 — VC Data Model](/web/specs/02-vc-data-model/)
 - [Sub-spec 03 — DID Methods & Identifiers](/web/specs/03-did-methods/)
-- [Sub-spec 04 — Trusted Issuer Registry](/web/specs/04-trusted-issuer-registry/)
+- [Sub-spec 04 — OpenID Federation](/web/specs/04-openid-federation/)
 - [Sub-spec 06 — Key Management](/web/specs/06-key-management/)
 - [Sub-spec 07 — State Assembly](/web/specs/07-state-assembly/)
 - [Sub-spec 14 — Credential Revocation](/web/specs/14-credential-revocation/)

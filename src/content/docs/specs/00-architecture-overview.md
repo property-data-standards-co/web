@@ -442,7 +442,7 @@ PDTF 2.0 uses **OpenID Federation (RFC 9396)** as its trust infrastructure. The 
 
 ### 6.2 Property Trust Marks
 
-Trust marks are the PDTF-specific mechanism for expressing what an entity is authorised to do within the property ecosystem. They replace the custom TIR accreditation entries from v0.8, using the OpenID Federation trust mark standard.
+Trust marks are the PDTF-specific mechanism for expressing what an entity is authorised to do within the property ecosystem. They use the OpenID Federation trust mark standard (see [Sub-spec 04](/web/specs/04-openid-federation/)).
 
 Each trust mark is a signed JWT issued by the trust anchor (or a delegated trust mark issuer), asserting that an entity meets the requirements for a specific role:
 
@@ -478,7 +478,7 @@ Each trust mark is a signed JWT issued by the trust anchor (or a delegated trust
 }
 ```
 
-The `delegation` claim is a PDTF extension to the standard trust mark. It carries the **entity:path authorisation** concept from the original TIR — specifying exactly which credential subject paths an issuer is authorised to populate. This is PDTF's domain-specific contribution to the trust mark: not just "this entity is a title data provider" but "this entity is authorised to issue credentials covering these specific data paths."
+The `delegation` claim is a PDTF extension to the standard trust mark. It carries the **entity:path authorisation** — specifying exactly which credential subject paths an issuer is authorised to populate. This is PDTF's domain-specific contribution to the trust mark: not just "this entity is a title data provider" but "this entity is authorised to issue credentials covering these specific data paths."
 
 ### 6.3 Issuer Accreditation
 
@@ -495,34 +495,23 @@ How an entity obtains trust marks and joins the federation:
 2. Multiple trust mark issuers may exist (e.g. SRA issues `regulated-conveyancer` trust marks directly)
 3. Trust chains can be deeper — a sector authority issues subordinate statements for categories of issuers
 
-The **GitHub-based TIR** from v0.8 survives as a **bootstrap and reference implementation**. During Phase 1, the federation metadata is generated from the TIR registry file, providing a migration path. The TIR JSON format maps directly to federation entity statements and trust marks:
-
-| TIR concept | OpenID Federation equivalent |
-|-------------|------------------------------|
-| TIR entry | Subordinate entity statement |
-| `authorisedPaths` | Trust mark `delegation.authorised_paths` claim |
-| `trustLevel: rootIssuer` | Trust mark with `trust_level: root_issuer` |
-| `trustLevel: trustedProxy` | Trust mark with `trust_level: trusted_proxy` + `proxy_for` |
-| `userAccountProviders` | Trust mark `account-provider` |
-| TIR validation CI | Federation metadata validation |
+All federation metadata is signed-JWT-based: Entity Configurations, Subordinate Entity Statements, and Trust Marks. See [Sub-spec 04: OpenID Federation](/web/specs/04-openid-federation/) for the full trust architecture.
 
 ### 6.4 Trust Infrastructure Comparison
 
-| | GitHub TIR (v0.8) | OpenID Federation (v0.9) | EBSI Root-TAO / TAO |
-|---|---|---|---|
-| Trust anchor | GitHub-hosted registry JSON | Trust Anchor Entity Statement | Root TAO (governmental) |
-| Authority scope | entity:path combos in JSON | Trust marks + metadata_policy | VerifiableAccreditation VC |
-| Discovery | Fetch registry, lookup issuer DID | HTTP `.well-known/openid-federation` chain resolution | DID resolution + on-chain registry |
-| Chain depth | Flat (anchor → issuer) | Flexible (n levels) | Fixed 3-tier (Root TAO → TAO → TI) |
-| Chain format | Plain JSON | Signed JWTs (Entity Statements) | VCs (accreditations are VCs) |
-| Revocation of trust | Remove entry from registry | Expire/withdraw Entity Statement | Revoke the accreditation VC |
-| Governance | PR-based, human review | Federated (each anchor sets policy) | Centralised (EU institutional) |
-| Infrastructure | Git + HTTPS | HTTPS endpoints | Permissioned blockchain (EBSI ledger) |
-| UK ecosystem fit | Medium (simple but bespoke) | **High** (OIDC-native, UK gov direction) | Low (EU-centric, blockchain dependency) |
+| | OpenID Federation (PDTF) | EBSI Root-TAO / TAO |
+|---|---|---|
+| Trust anchor | Trust Anchor Entity Statement | Root TAO (governmental) |
+| Authority scope | Trust marks + metadata_policy | VerifiableAccreditation VC |
+| Discovery | HTTP `.well-known/openid-federation` chain resolution | DID resolution + on-chain registry |
+| Chain depth | Flexible (n levels) | Fixed 3-tier (Root TAO → TAO → TI) |
+| Chain format | Signed JWTs (Entity Statements) | VCs (accreditations are VCs) |
+| Revocation of trust | Expire/withdraw Entity Statement | Revoke the accreditation VC |
+| Governance | Federated (each anchor sets policy) | Centralised (EU institutional) |
+| Infrastructure | HTTPS endpoints | Permissioned blockchain (EBSI ledger) |
+| UK ecosystem fit | **High** (OIDC-native, UK gov direction) | Low (EU-centric, blockchain dependency) |
 
 **Why OpenID Federation is the right choice:**
-
-The v0.8 TIR was the simplest correct solution for a small issuer ecosystem. But external review feedback identified a critical flaw: it reinvents OpenID Federation with different vocabulary and weaker guarantees (unsigned JSON vs signed JWTs). As the issuer count grows and primary sources join, the TIR's flat model breaks down — HMLR will not submit PRs to a third-party GitHub repo.
 
 OpenID Federation provides:
 - **Signed trust chains** — every level of the chain is cryptographically verifiable, not just the leaf credentials
@@ -541,7 +530,7 @@ EBSI's Root-TAO/TAO hierarchy is conceptually elegant — trust chains are VCs a
 - Moverly operates the trust anchor at `propdata.org.uk`
 - Existing collectors become OID4VCI credential issuers (adapters) as leaf entities
 - Each adapter holds trust marks issued by the trust anchor
-- Federation metadata generated from the bootstrap TIR registry
+- Federation metadata served from the PDTF Trust Anchor at `trust.pdtf.org`
 - Moverly is the sole account provider for user DIDs
 - "Map-and-wrap": call existing APIs (HMLR OC1, EPC API, EA flood), issue as signed VCs via OID4VCI
 
@@ -1002,7 +991,7 @@ Because `did:web` encodes the domain into the identifier itself, a staging crede
 
 #### Local development
 
-For local development and unit testing, `did:key` eliminates all infrastructure dependencies. The `MemoryKeyProvider` generates ephemeral keys, the `VcValidator` resolves `did:key` DIDs locally without network access, and a local `registry.json` file serves as a mock federation. This means a developer can sign, verify, and compose credentials on a laptop with zero cloud access.
+For local development and unit testing, `did:key` eliminates all infrastructure dependencies. The `MemoryKeyProvider` generates ephemeral keys, the `VcValidator` resolves `did:key` DIDs locally without network access, and an in-memory mock federation (Entity Statements + Trust Marks signed by a dev-only Trust Anchor key) replaces the live `trust.pdtf.org` endpoints. This means a developer can sign, verify, and compose credentials on a laptop with zero cloud access.
 
 ---
 
@@ -1014,7 +1003,7 @@ For local development and unit testing, `did:key` eliminates all infrastructure 
 | 01 | `01-entity-graph.md` | DRAFTED | V4 schema decomposition, ID-keyed collections, entity relationships |
 | 02 | `02-vc-data-model.md` | DRAFTED | W3C VC mapping, evidence model, termsOfUse, claims representation |
 | 03 | `03-did-methods.md` | DRAFTED | did:key, did:web, URN schemes, DID document structure |
-| 04 | `04-property-trust-profile.md` | **REWRITE NEEDED** | Property Trust Profile for OpenID Federation: trust marks, entity:path authorisation, federation metadata. *(Replaces `04-trusted-issuer-registry.md`)* |
+| 04 | [`04-openid-federation.md`](/web/specs/04-openid-federation/) | Drafted | OpenID Federation trust architecture: Trust Anchor, Entity Statements, Trust Marks, entity:path `delegation` claim. |
 | 05 | `05-hosted-adapter-services.md` | TODO | Adapter architecture as OID4VCI issuers, federation leaf entities, issuance flow, deployment |
 | 06 | `06-key-management.md` | DRAFTED | Google Cloud KMS, key hierarchy, rotation, wallet binding, federation key handling. X25519 encryption key management deferred to Sub-spec 12. |
 | 07 | `07-state-assembly.md` | DRAFTED | composeV3/V4StateFromGraph, dependency pruning, migration |
@@ -1071,7 +1060,7 @@ Reordered to reflect the OpenID ecosystem alignment:
 
 1. **Entity graph spec** (01) — formalise v4 schemas, build on existing branch work
 2. **VC data model** (02) — define the credential format, evidence, termsOfUse
-3. **Property Trust Profile** (04) — OpenID Federation trust marks, entity:path authorisation, federation metadata generation from bootstrap TIR
+3. **OpenID Federation** (04) — Trust Anchor, Entity Statements, Trust Marks, entity:path `delegation` authorisation
 4. **DID methods** (03) — key generation, DID document hosting, federation entity configuration
 5. **Key management** (06) — Google Cloud KMS setup, federation key handling
 6. **One adapter PoC** (05) — EPC adapter as OID4VCI credential issuer with federation entity configuration

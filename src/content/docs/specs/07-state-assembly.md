@@ -174,7 +174,7 @@ The composer's input is a set of Verifiable Credentials associated with a transa
 |----------|-----------------|
 | `credentialSubject.id` | Groups credential to entity — the entity identifier (DID or URN) |
 | `credentialSubject.*` | The sparse data to merge into entity state |
-| `issuer` | Determines trust level via TIR lookup (§7) |
+| `issuer` | Determines trust level via OpenID Federation trust resolution (§7) |
 | `validFrom` | Temporal ordering — latest wins for conflicting paths |
 | `type` | Entity type classification (PropertyCredential, TitleCredential, etc.) |
 | `credentialStatus` | Revocation check — revoked credentials are excluded from assembly |
@@ -187,7 +187,7 @@ Before composition begins, credentials are filtered:
 1. **Signature verification** — invalid proofs are rejected
 2. **Revocation check** — revoked credentials (Bitstring Status List) are excluded
 3. **Expiry check** — credentials past `validUntil` are excluded
-4. **TIR lookup** — issuer must be listed in the Trusted Issuer Registry for the entity:path combinations they claim
+4. **OpenID Federation trust resolution** — issuer must hold a Trust Mark whose `delegation.authorised_paths` covers the entity:path combinations they claim
 
 Only credentials passing all four checks enter the composition pipeline.
 
@@ -229,7 +229,7 @@ Output: ComposedStateV4
 1. Group credentials by credentialSubject.id
 2. For each entity group:
    a. Sort credentials by validFrom (ascending — latest applied last, so latest wins)
-   b. Resolve trust levels from TIR
+   b. Resolve trust levels from Trust Mark delegation claims
    c. For conflicting paths: apply conflict resolution (§7)
    d. Deep-merge credentialSubject sparse objects (in sorted order)
    e. Apply dependency pruning against entity schema (§6)
@@ -318,9 +318,9 @@ All three target `urn:pdtf:uprn:100023456789` → one entity group.
 VC 1 (2026-03-18) → VC 2 (2026-03-20) → VC 3 (2026-03-22)
 
 **Step 2b — Resolve trust levels:**
-- VC 1: `adapters.propdata.org.uk:epc` → TIR lookup → `trustedProxy` for `Property:/energyEfficiency/*`
-- VC 2: `did:key:z6Mkh...seller` → TIR lookup → `accountProvider` (user attestation)
-- VC 3: `adapters.propdata.org.uk:epc` → TIR lookup → `trustedProxy` for `Property:/energyEfficiency/*`
+- VC 1: `adapters.propdata.org.uk:epc` → OpenID Federation trust resolution → `trusted_proxy` for `Property:/energyEfficiency/*`
+- VC 2: `did:key:z6Mkh...seller` → OpenID Federation trust resolution → `account_provider` (user attestation)
+- VC 3: `adapters.propdata.org.uk:epc` → OpenID Federation trust resolution → `trusted_proxy` for `Property:/energyEfficiency/*`
 
 **Step 2c — Conflict resolution:**
 VC 1 and VC 3 both claim `energyEfficiency.certificate.*`. Same trust level (trustedProxy), so latest validFrom wins. VC 3 supersedes VC 1 for all `energyEfficiency` paths.
@@ -1120,7 +1120,7 @@ rootIssuer > trustedProxy > accountProvider
 When two VCs have the same trust level, the later `validFrom` wins:
 
 ```typescript
-function resolveConflict(vc1: VC, vc2: VC, tir: TIR): VC {
+function resolveConflict(vc1: VC, vc2: VC, federation: FederationResolver): VC {
   const trust1 = tir.getTrustLevel(vc1.issuer);
   const trust2 = tir.getTrustLevel(vc2.issuer);
 
@@ -1160,7 +1160,7 @@ VC from seller (accountProvider):
   address.postcode = "EH45 8AB"                             ← wins (authorised for address paths)
 ```
 
-The TIR's `authorisedPaths` determine whether an issuer is even *permitted* to claim a given path. Claims outside an issuer's authorised paths are ignored during assembly (they can still be stored for audit, but don't contribute to composed state).
+The Trust Mark's `delegation.authorised_paths` determines whether an issuer is even *permitted* to claim a given path. Claims outside an issuer's authorised paths are ignored during assembly (they can still be stored for audit, but don't contribute to composed state).
 
 ### 7.5 Provenance Tracking
 
@@ -1196,7 +1196,7 @@ Some conflicts should be flagged rather than silently resolved:
 
 - **Trust level conflicts** — a seller claims a different EPC rating than the EPC adapter. The adapter wins, but the discrepancy should be logged.
 - **Stale data** — a VC with `validFrom` more than N days old is superseded by a much newer VC. May indicate the old data was never updated.
-- **Multi-issuer conflicts** — two different trusted proxies claim the same path with different values. This shouldn't happen (TIR authorisedPaths should prevent it) but must be detected.
+- **Multi-issuer conflicts** — two different trusted proxies claim the same path with different values. This shouldn't happen (Trust Mark `delegation.authorised_paths` should prevent overlap) but must be detected.
 
 These alerts feed into the diligence engine's quality assessment layer.
 
@@ -1588,7 +1588,7 @@ For a typical transaction with ~50 VCs and ~4,000 paths total: estimated <50ms f
 
 Composed state should be cached because:
 - Most reads are of the same state (VCs don't change between reads)
-- Composition involves signature verification, TIR lookups, and deep merging
+- Composition involves signature verification, OpenID Federation trust resolution, and deep merging
 - Multiple consumers may request state for the same transaction concurrently
 
 **Cache design:**
@@ -1616,7 +1616,7 @@ The cache is invalidated when:
 
 1. **New VC arrives** — any new credential for any entity in the transaction
 2. **VC revoked** — a credential in `contributingVcIds` is revoked
-3. **TIR updated** — trust levels may change, affecting conflict resolution
+3. **Trust Mark updated** — trust levels may change, affecting conflict resolution
 4. **TTL expiry** — background refresh after configurable TTL (e.g. 5 minutes)
 
 **Invalidation strategy:** Event-driven. When a new VC is stored, emit an event that invalidates the cache for the affected transaction. Don't recompose eagerly — wait for the next read.
@@ -1678,7 +1678,7 @@ For performance optimisation (future), the composer could support incremental up
 
 1. **`dependencyPruning.js`** — Start here. It's the most novel component and needs the most validation. Build the schema walker, extract discriminators from real PDTF schemas, write extensive tests.
 
-2. **`conflictResolution.js`** — Trust level lookup and temporal ordering. Depends on TIR format being stable (Sub-spec 04).
+2. **`conflictResolution.js`** — Trust level lookup and temporal ordering. Depends on the Trust Mark `delegation` claim format being stable (Sub-spec 04).
 
 3. **`composeV4StateFromGraph.js`** — Core composer. Once pruning and conflict resolution are solid, this is straightforward deep merging with orchestration.
 
@@ -1713,7 +1713,7 @@ For performance optimisation (future), the composer could support incremental up
 | VC with unknown entity type | Log warning, skip VC, continue composition |
 | VC with invalid `credentialSubject.id` | Log error, skip VC |
 | Schema not found for entity type | Log error, skip entity (cannot prune without schema) |
-| TIR lookup failure | Fall back to `accountProvider` trust level |
+| Federation trust resolution failure | Fall back to `account_provider` trust level |
 | Merge produces invalid state (fails schema validation) | Log error, return last valid state, alert |
 | Collection conversion loses data | Fatal error — this should never happen in production |
 
@@ -1737,7 +1737,7 @@ State assembly is a critical path. Every composition should log:
 | D5 — Sparse objects + pruning | §6 (pruning algorithm), §8 (migration) | 🟡 Needs LMS consensus |
 | D10 — Dual state assembly | §2 (three composers), §8 (migration phases) | ✅ Confirmed |
 | D15 — ID-keyed collections | §10 (conversion rules), §4.4 (v4 output shape) | ✅ Confirmed |
-| D20 — TIR entity:path combos | §7 (conflict resolution), §3.3 (pre-assembly filtering) | ✅ Confirmed |
+| D20 — Trust Mark entity:path combos | §7 (conflict resolution), §3.3 (pre-assembly filtering) | ✅ Confirmed |
 | D27 — Logbook test | §5.4 (field reassignment) | ✅ Confirmed |
 
 ---

@@ -97,7 +97,7 @@ It's a public, version-controlled JSON file that maps issuer DIDs to the entity 
 
 Verifiers check the OpenID Federation as part of credential verification — confirming not just that the signature is valid, but that the issuer is authorised for this specific type of data.
 
-[Read the OpenID Federation specification →](/web/specs/04-trusted-issuer-registry/)
+[Read the OpenID Federation specification →](/web/specs/04-openid-federation/)
 
 ## Trust evolution
 
@@ -148,7 +148,7 @@ The complete PDTF 2.0 specification is organised into focused sub-specifications
 | [01](/web/specs/01-entity-graph/) | Entity Graph & Schema | Entity definitions, schemas, field mapping |
 | [02](/web/specs/02-vc-data-model/) | VC Data Model | Credential format, evidence, terms of use |
 | [03](/web/specs/03-did-methods/) | DID Methods & Identifiers | `did:key`, `did:web`, URN schemes |
-| [04](/web/specs/04-trusted-issuer-registry/) | OpenID Federation | Registry schema, trust levels, verification |
+| [04](/web/specs/04-openid-federation/) | OpenID Federation | Registry schema, trust levels, verification |
 | [06](/web/specs/06-key-management/) | Key Management | Key generation, storage, rotation |
 | [07](/web/specs/07-state-assembly/) | State Assembly | Graph composition, v3 compatibility |
 | [13](/web/specs/13-reference-implementations/) | Reference Implementations | Package architecture, CLI tools |

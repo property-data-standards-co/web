@@ -32,7 +32,7 @@ Every piece of property data in PDTF 2.0 — from an EPC rating to an ownership 
 **Out of scope:**
 - Entity graph structure and field mapping (see [01 — Entity Graph](/web/specs/01-entity-graph/))
 - DID methods and resolution (see 03 — DID Methods)
-- Trusted Issuer Registry schema and validation (see 04 — TIR)
+- OpenID Federation trust architecture and Trust Mark schema (see 04 — OpenID Federation)
 - State assembly algorithms (see 07 — State Assembly)
 - Bitstring Status List hosting infrastructure (see 14 — Credential Revocation)
 
@@ -591,12 +591,12 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
 | `organisationId` | DID string | Required | `did:web` of the entity receiving access |
 | `grantedBy` | DID string | Required | DID of the person granting consent |
 | `transactionId` | DID string | Required | Transaction scope |
-| `scope` | string[] | Required | Array of `Entity:path` patterns (same format as TIR authorised paths) |
+| `scope` | string[] | Required | Array of `Entity:path` patterns (same format as the Trust Mark `delegation.authorised_paths` claim) |
 | `purpose` | string | Required | Human-readable reason for access |
 | `status` | enum | Required | `active`, `revoked` |
 | `validUntil` | ISO datetime | Optional | Consent expiry (auto-revoke after this date) |
 
-**Scope patterns** use the same `Entity:path` format as the TIR (see 04 — TIR). Wildcard patterns are permitted: `Property:*` grants access to all Property paths. Specific patterns restrict access: `Property:energyEfficiency` grants access only to EPC data.
+**Scope patterns** use the same `Entity:path` format as the Trust Mark `delegation.authorised_paths` claim (see 04 — OpenID Federation). Wildcard patterns are permitted: `Property:*` grants access to all Property paths. Specific patterns restrict access: `Property:energyEfficiency` grants access only to EPC data.
 
 ### 3.7 OfferCredential
 
@@ -1873,7 +1873,7 @@ This section provides a detailed mapping to guide the migration.
 |------------------------|------------------|-------|
 | `claimPath` | Position within `credentialSubject` object | e.g. `/propertyPack/heating/heatingType` → `credentialSubject.heating.heatingSystem.heatingType` |
 | `claimValue` | Value at the corresponding path in `credentialSubject` | Direct value assignment |
-| `verification.trust_framework` | `issuer` DID + TIR lookup | Trust is cryptographic, not framework-declared |
+| `verification.trust_framework` | `issuer` DID + OpenID Federation trust resolution | Trust is cryptographic, not framework-declared |
 | `verification.time` | `validFrom` | When the verification/assertion was made |
 | `verification.evidence` | `evidence` | Simplified — see §6 |
 | `verification.evidence[].type` (`electronic_record`) | `evidence[].type` (`ElectronicRecord`) | PascalCase, simplified fields |
@@ -2041,7 +2041,7 @@ Input: VC document
       → Verify status list credential's own proof
       → Check bit at statusListIndex
   → Check validFrom ≤ now ≤ validUntil (if present)
-  → Optionally: check issuer against TIR for authorised paths
+  → Optionally: resolve issuer trust chain to the Trust Anchor and check Trust Mark delegation claim for authorised paths
   → Output: { valid, revoked, expired, issuerTrust, errors[] }
 ```
 
@@ -2098,7 +2098,7 @@ A typical transaction might have 20–40 credentials totalling 30–80 KB of VC 
 |----------|-------------|
 | 01 — Entity Graph | Defines the entity schemas that shape `credentialSubject`. This spec wraps those shapes in VCs. |
 | 03 — DID Methods | Defines how `issuer` DIDs and `verificationMethod` DIDs resolve. This spec references them. |
-| 04 — TIR | Defines which issuers are trusted for which entity:path combos. This spec's credentials are validated against TIR entries. |
+| 04 — OpenID Federation | Defines which issuers are trusted for which entity:path combos, via Trust Mark `delegation` claims. This spec's credentials are validated against those Trust Marks. |
 | 07 — State Assembly | Implements the MERGE + prune semantics defined in §5 of this spec. |
 | 08 — DE Migration | Maps DE evaluation paths to credential `credentialSubject` paths. |
 | 14 — Credential Revocation | Details the hosting, caching, and operational aspects of BitstringStatusList referenced in §8. |
@@ -2109,7 +2109,7 @@ A typical transaction might have 20–40 credentials totalling 30–80 KB of VC 
 
 2. **Status list freshness.** A cached status list may not reflect recent revocations. For security-critical checks (e.g. verifying a representation credential before granting data access), use short cache TTL or force-refresh.
 
-3. **Issuer impersonation.** `did:web` resolution depends on DNS. An attacker who compromises a domain could issue fraudulent credentials. Mitigation: TIR entries provide a second check (the issuer DID must be in the TIR for the relevant paths). Monitor DID document changes.
+3. **Issuer impersonation.** `did:web` resolution depends on DNS. An attacker who compromises a domain could issue fraudulent credentials. Mitigation: OpenID Federation trust resolution provides a second check — the issuer must hold a valid Trust Mark whose `delegation.authorised_paths` covers the relevant paths, and the Subordinate Entity Statement from the Trust Anchor pins the expected JWKS. Monitor DID document changes.
 
 4. **Credential correlation.** Credentials with `id` fields create correlation vectors — the same credential ID appearing in different contexts links those contexts. For privacy-sensitive credentials, omit the `id` field.
 

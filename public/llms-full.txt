@@ -11,7 +11,7 @@
 - Entity Graph: Transaction, Property, Title, Person, Organisation, Ownership, Representation, DelegatedConsent, Offer
 - Credentials: W3C Verifiable Credentials v2.0 with DataIntegrityProof (eddsa-jcs-2022, Ed25519)
 - Identity: did:key (persons), did:web (organisations, transactions), urn:pdtf:* (properties, titles, relationships)
-- Trust: Trusted Issuer Registry (TIR) — git-hosted, entity:path authorisation
+- Trust: OpenID Federation (TIR) — git-hosted, entity:path authorisation
 - Revocation: W3C Bitstring Status List v1.0
 - Three trust phases: Moverly trusted proxies → hosted adapters → primary source root issuers
 
@@ -20,7 +20,7 @@
 - [Entity Graph](https://property-data-standards-co.github.io/web/specs/01-entity-graph/)
 - [VC Data Model](https://property-data-standards-co.github.io/web/specs/02-vc-data-model/)
 - [DID Methods](https://property-data-standards-co.github.io/web/specs/03-did-methods/)
-- [Trusted Issuer Registry](https://property-data-standards-co.github.io/web/specs/04-trusted-issuer-registry/)
+- [OpenID Federation](https://property-data-standards-co.github.io/web/specs/04-openid-federation/)
 - [Key Management](https://property-data-standards-co.github.io/web/specs/06-key-management/)
 - [State Assembly](https://property-data-standards-co.github.io/web/specs/07-state-assembly/)
 - [Reference Implementations](https://property-data-standards-co.github.io/web/specs/13-reference-implementations/)
@@ -28,7 +28,7 @@
 
 ## Implementation
 - [@pdtf/core](https://github.com/property-data-standards-co/core) — signing, verification, DIDs, status lists, TIR client
-- [Trusted Issuer Registry](https://github.com/property-data-standards-co/tir) — live registry data
+- [OpenID Federation](https://github.com/property-data-standards-co/tir) — live registry data
 - [Schemas](https://github.com/property-data-standards-co/schemas) — JSON Schemas
 
 ## Consensus Questions
@@ -480,7 +480,7 @@ PDTF 2.0 uses **OpenID Federation (RFC 9396)** as its trust infrastructure. The 
 
 ### 6.2 Property Trust Marks
 
-Trust marks are the PDTF-specific mechanism for expressing what an entity is authorised to do within the property ecosystem. They replace the custom TIR accreditation entries from v0.8, using the OpenID Federation trust mark standard.
+Trust marks are the PDTF-specific mechanism for expressing what an entity is authorised to do within the property ecosystem. They use the OpenID Federation trust mark standard (see [Sub-spec 04](./04-openid-federation.md)).
 
 Each trust mark is a signed JWT issued by the trust anchor (or a delegated trust mark issuer), asserting that an entity meets the requirements for a specific role:
 
@@ -516,7 +516,7 @@ Each trust mark is a signed JWT issued by the trust anchor (or a delegated trust
 }
 ```
 
-The `delegation` claim is a PDTF extension to the standard trust mark. It carries the **entity:path authorisation** concept from the original TIR — specifying exactly which credential subject paths an issuer is authorised to populate. This is PDTF's domain-specific contribution to the trust mark: not just "this entity is a title data provider" but "this entity is authorised to issue credentials covering these specific data paths."
+The `delegation` claim is a PDTF extension to the standard trust mark. It carries the **entity:path authorisation** — specifying exactly which credential subject paths an issuer is authorised to populate. This is PDTF's domain-specific contribution to the trust mark: not just "this entity is a title data provider" but "this entity is authorised to issue credentials covering these specific data paths."
 
 ### 6.3 Issuer Accreditation
 
@@ -533,34 +533,23 @@ How an entity obtains trust marks and joins the federation:
 2. Multiple trust mark issuers may exist (e.g. SRA issues `regulated-conveyancer` trust marks directly)
 3. Trust chains can be deeper — a sector authority issues subordinate statements for categories of issuers
 
-The **GitHub-based TIR** from v0.8 survives as a **bootstrap and reference implementation**. During Phase 1, the federation metadata is generated from the TIR registry file, providing a migration path. The TIR JSON format maps directly to federation entity statements and trust marks:
-
-| TIR concept | OpenID Federation equivalent |
-|-------------|------------------------------|
-| TIR entry | Subordinate entity statement |
-| `authorisedPaths` | Trust mark `delegation.authorised_paths` claim |
-| `trustLevel: rootIssuer` | Trust mark with `trust_level: root_issuer` |
-| `trustLevel: trustedProxy` | Trust mark with `trust_level: trusted_proxy` + `proxy_for` |
-| `userAccountProviders` | Trust mark `account-provider` |
-| TIR validation CI | Federation metadata validation |
+All federation metadata is signed-JWT-based: Entity Configurations, Subordinate Entity Statements, and Trust Marks. See [Sub-spec 04: OpenID Federation](./04-openid-federation.md) for the full trust architecture.
 
 ### 6.4 Trust Infrastructure Comparison
 
-| | GitHub TIR (v0.8) | OpenID Federation (v0.9) | EBSI Root-TAO / TAO |
-|---|---|---|---|
-| Trust anchor | GitHub-hosted registry JSON | Trust Anchor Entity Statement | Root TAO (governmental) |
-| Authority scope | entity:path combos in JSON | Trust marks + metadata_policy | VerifiableAccreditation VC |
-| Discovery | Fetch registry, lookup issuer DID | HTTP `.well-known/openid-federation` chain resolution | DID resolution + on-chain registry |
-| Chain depth | Flat (anchor → issuer) | Flexible (n levels) | Fixed 3-tier (Root TAO → TAO → TI) |
-| Chain format | Plain JSON | Signed JWTs (Entity Statements) | VCs (accreditations are VCs) |
-| Revocation of trust | Remove entry from registry | Expire/withdraw Entity Statement | Revoke the accreditation VC |
-| Governance | PR-based, human review | Federated (each anchor sets policy) | Centralised (EU institutional) |
-| Infrastructure | Git + HTTPS | HTTPS endpoints | Permissioned blockchain (EBSI ledger) |
-| UK ecosystem fit | Medium (simple but bespoke) | **High** (OIDC-native, UK gov direction) | Low (EU-centric, blockchain dependency) |
+| | OpenID Federation (PDTF) | EBSI Root-TAO / TAO |
+|---|---|---|
+| Trust anchor | Trust Anchor Entity Statement | Root TAO (governmental) |
+| Authority scope | Trust marks + metadata_policy | VerifiableAccreditation VC |
+| Discovery | HTTP `.well-known/openid-federation` chain resolution | DID resolution + on-chain registry |
+| Chain depth | Flexible (n levels) | Fixed 3-tier (Root TAO → TAO → TI) |
+| Chain format | Signed JWTs (Entity Statements) | VCs (accreditations are VCs) |
+| Revocation of trust | Expire/withdraw Entity Statement | Revoke the accreditation VC |
+| Governance | Federated (each anchor sets policy) | Centralised (EU institutional) |
+| Infrastructure | HTTPS endpoints | Permissioned blockchain (EBSI ledger) |
+| UK ecosystem fit | **High** (OIDC-native, UK gov direction) | Low (EU-centric, blockchain dependency) |
 
 **Why OpenID Federation is the right choice:**
-
-The v0.8 TIR was the simplest correct solution for a small issuer ecosystem. But external review feedback identified a critical flaw: it reinvents OpenID Federation with different vocabulary and weaker guarantees (unsigned JSON vs signed JWTs). As the issuer count grows and primary sources join, the TIR's flat model breaks down — HMLR will not submit PRs to a third-party GitHub repo.
 
 OpenID Federation provides:
 - **Signed trust chains** — every level of the chain is cryptographically verifiable, not just the leaf credentials
@@ -579,7 +568,7 @@ EBSI's Root-TAO/TAO hierarchy is conceptually elegant — trust chains are VCs a
 - Moverly operates the trust anchor at `propdata.org.uk`
 - Existing collectors become OID4VCI credential issuers (adapters) as leaf entities
 - Each adapter holds trust marks issued by the trust anchor
-- Federation metadata generated from the bootstrap TIR registry
+- Federation metadata served from the PDTF Trust Anchor at `trust.pdtf.org`
 - Moverly is the sole account provider for user DIDs
 - "Map-and-wrap": call existing APIs (HMLR OC1, EPC API, EA flood), issue as signed VCs via OID4VCI
 
@@ -1040,7 +1029,7 @@ Because `did:web` encodes the domain into the identifier itself, a staging crede
 
 #### Local development
 
-For local development and unit testing, `did:key` eliminates all infrastructure dependencies. The `MemoryKeyProvider` generates ephemeral keys, the `VcValidator` resolves `did:key` DIDs locally without network access, and a local `registry.json` file serves as a mock federation. This means a developer can sign, verify, and compose credentials on a laptop with zero cloud access.
+For local development and unit testing, `did:key` eliminates all infrastructure dependencies. The `MemoryKeyProvider` generates ephemeral keys, the `VcValidator` resolves `did:key` DIDs locally without network access, and an in-memory mock federation (Entity Statements + Trust Marks signed by a dev-only Trust Anchor key) replaces the live `trust.pdtf.org` endpoints. This means a developer can sign, verify, and compose credentials on a laptop with zero cloud access.
 
 ---
 
@@ -1052,7 +1041,7 @@ For local development and unit testing, `did:key` eliminates all infrastructure 
 | 01 | `01-entity-graph.md` | DRAFTED | V4 schema decomposition, ID-keyed collections, entity relationships |
 | 02 | `02-vc-data-model.md` | DRAFTED | W3C VC mapping, evidence model, termsOfUse, claims representation |
 | 03 | `03-did-methods.md` | DRAFTED | did:key, did:web, URN schemes, DID document structure |
-| 04 | `04-property-trust-profile.md` | **REWRITE NEEDED** | Property Trust Profile for OpenID Federation: trust marks, entity:path authorisation, federation metadata. *(Replaces `04-trusted-issuer-registry.md`)* |
+| 04 | [`04-openid-federation.md`](./04-openid-federation.md) | Drafted | OpenID Federation trust architecture: Trust Anchor, Entity Statements, Trust Marks, entity:path `delegation` claim. |
 | 05 | `05-hosted-adapter-services.md` | TODO | Adapter architecture as OID4VCI issuers, federation leaf entities, issuance flow, deployment |
 | 06 | `06-key-management.md` | DRAFTED | Google Cloud KMS, key hierarchy, rotation, wallet binding, federation key handling. X25519 encryption key management deferred to Sub-spec 12. |
 | 07 | `07-state-assembly.md` | DRAFTED | composeV3/V4StateFromGraph, dependency pruning, migration |
@@ -1109,7 +1098,7 @@ Reordered to reflect the OpenID ecosystem alignment:
 
 1. **Entity graph spec** (01) — formalise v4 schemas, build on existing branch work
 2. **VC data model** (02) — define the credential format, evidence, termsOfUse
-3. **Property Trust Profile** (04) — OpenID Federation trust marks, entity:path authorisation, federation metadata generation from bootstrap TIR
+3. **OpenID Federation** (04) — Trust Anchor, Entity Statements, Trust Marks, entity:path `delegation` authorisation
 4. **DID methods** (03) — key generation, DID document hosting, federation entity configuration
 5. **Key management** (06) — Google Cloud KMS setup, federation key handling
 6. **One adapter PoC** (05) — EPC adapter as OID4VCI credential issuer with federation entity configuration
@@ -1859,7 +1848,7 @@ Every piece of property data in PDTF 2.0 — from an EPC rating to an ownership 
 **Out of scope:**
 - Entity graph structure and field mapping (see [01 — Entity Graph](./01-entity-graph.md))
 - DID methods and resolution (see 03 — DID Methods)
-- Trusted Issuer Registry schema and validation (see 04 — TIR)
+- OpenID Federation trust architecture and Trust Mark schema (see 04 — OpenID Federation)
 - State assembly algorithms (see 07 — State Assembly)
 - Bitstring Status List hosting infrastructure (see 14 — Credential Revocation)
 
@@ -2418,12 +2407,12 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
 | `organisationId` | DID string | Required | `did:web` of the entity receiving access |
 | `grantedBy` | DID string | Required | DID of the person granting consent |
 | `transactionId` | DID string | Required | Transaction scope |
-| `scope` | string[] | Required | Array of `Entity:path` patterns (same format as TIR authorised paths) |
+| `scope` | string[] | Required | Array of `Entity:path` patterns (same format as the Trust Mark `delegation.authorised_paths` claim) |
 | `purpose` | string | Required | Human-readable reason for access |
 | `status` | enum | Required | `active`, `revoked` |
 | `validUntil` | ISO datetime | Optional | Consent expiry (auto-revoke after this date) |
 
-**Scope patterns** use the same `Entity:path` format as the TIR (see 04 — TIR). Wildcard patterns are permitted: `Property:*` grants access to all Property paths. Specific patterns restrict access: `Property:energyEfficiency` grants access only to EPC data.
+**Scope patterns** use the same `Entity:path` format as the Trust Mark `delegation.authorised_paths` claim (see 04 — OpenID Federation). Wildcard patterns are permitted: `Property:*` grants access to all Property paths. Specific patterns restrict access: `Property:energyEfficiency` grants access only to EPC data.
 
 ### 3.7 OfferCredential
 
@@ -3700,7 +3689,7 @@ This section provides a detailed mapping to guide the migration.
 |------------------------|------------------|-------|
 | `claimPath` | Position within `credentialSubject` object | e.g. `/propertyPack/heating/heatingType` → `credentialSubject.heating.heatingSystem.heatingType` |
 | `claimValue` | Value at the corresponding path in `credentialSubject` | Direct value assignment |
-| `verification.trust_framework` | `issuer` DID + TIR lookup | Trust is cryptographic, not framework-declared |
+| `verification.trust_framework` | `issuer` DID + OpenID Federation trust resolution | Trust is cryptographic, not framework-declared |
 | `verification.time` | `validFrom` | When the verification/assertion was made |
 | `verification.evidence` | `evidence` | Simplified — see §6 |
 | `verification.evidence[].type` (`electronic_record`) | `evidence[].type` (`ElectronicRecord`) | PascalCase, simplified fields |
@@ -3868,7 +3857,7 @@ Input: VC document
       → Verify status list credential's own proof
       → Check bit at statusListIndex
   → Check validFrom ≤ now ≤ validUntil (if present)
-  → Optionally: check issuer against TIR for authorised paths
+  → Optionally: resolve issuer trust chain to the Trust Anchor and check Trust Mark delegation claim for authorised paths
   → Output: { valid, revoked, expired, issuerTrust, errors[] }
 ```
 
@@ -3925,7 +3914,7 @@ A typical transaction might have 20–40 credentials totalling 30–80 KB of VC 
 |----------|-------------|
 | 01 — Entity Graph | Defines the entity schemas that shape `credentialSubject`. This spec wraps those shapes in VCs. |
 | 03 — DID Methods | Defines how `issuer` DIDs and `verificationMethod` DIDs resolve. This spec references them. |
-| 04 — TIR | Defines which issuers are trusted for which entity:path combos. This spec's credentials are validated against TIR entries. |
+| 04 — OpenID Federation | Defines which issuers are trusted for which entity:path combos, via Trust Mark `delegation` claims. This spec's credentials are validated against those Trust Marks. |
 | 07 — State Assembly | Implements the MERGE + prune semantics defined in §5 of this spec. |
 | 08 — DE Migration | Maps DE evaluation paths to credential `credentialSubject` paths. |
 | 14 — Credential Revocation | Details the hosting, caching, and operational aspects of BitstringStatusList referenced in §8. |
@@ -3936,7 +3925,7 @@ A typical transaction might have 20–40 credentials totalling 30–80 KB of VC 
 
 2. **Status list freshness.** A cached status list may not reflect recent revocations. For security-critical checks (e.g. verifying a representation credential before granting data access), use short cache TTL or force-refresh.
 
-3. **Issuer impersonation.** `did:web` resolution depends on DNS. An attacker who compromises a domain could issue fraudulent credentials. Mitigation: TIR entries provide a second check (the issuer DID must be in the TIR for the relevant paths). Monitor DID document changes.
+3. **Issuer impersonation.** `did:web` resolution depends on DNS. An attacker who compromises a domain could issue fraudulent credentials. Mitigation: OpenID Federation trust resolution provides a second check — the issuer must hold a valid Trust Mark whose `delegation.authorised_paths` covers the relevant paths, and the Subordinate Entity Statement from the Trust Anchor pins the expected JWKS. Monitor DID document changes.
 
 4. **Credential correlation.** Credentials with `id` fields create correlation vectors — the same credential ID appearing in different contexts links those contexts. For privacy-sensitive credentials, omit the `id` field.
 
@@ -4043,7 +4032,7 @@ This spec covers:
 It does **not** cover:
 
 - Verifiable Credential data model (see [Sub-spec 02: VC Data Model](./02-vc-data-model.md))
-- Trusted Issuer Registry design (see [Sub-spec 04: Trusted Issuer Registry](./04-trusted-issuer-registry.md))
+- OpenID Federation trust architecture (see [Sub-spec 04: OpenID Federation](./04-openid-federation.md))
 - Access control and credential presentation protocols (see [Sub-spec 12: Adapter Access Control](./12-adapter-access-control.md))
 
 ### 1.2 Normative References
@@ -4181,10 +4170,10 @@ Percent-encoded characters:
 
 Hosting a DID document at a domain constitutes proof of domain control. This has implications:
 
-- **Organisations (did:web):** A conveyancer firm at `did:web:smithandjones.co.uk` has proven they control the `smithandjones.co.uk` domain. Combined with TIR registration (which cross-references SRA number and Companies House number), this provides a strong identity binding.
-- **Organisations (did:key):** A provider-managed Organisation's identity is verified by the account provider. Verifiers confirm the `did:key` is listed in the provider's `managedOrganisations` registry (referenced from the TIR `accountProvider` entry).
-- **Transactions:** A transaction DID like `did:web:moverly.com:transactions:abc123` is inherently scoped to the platform hosting it. The platform's TIR registration establishes its authority to host transactions.
-- **Adapters:** An adapter at `did:web:adapters.propdata.org.uk:hmlr` is controlled by whoever operates the `adapters.propdata.org.uk` domain. TIR registration binds this to an authorised adapter operator.
+- **Organisations (did:web):** A conveyancer firm at `did:web:smithandjones.co.uk` has proven they control the `smithandjones.co.uk` domain. Combined with a `regulated-conveyancer` Trust Mark (which cross-references SRA number and Companies House number), this provides a strong identity binding.
+- **Organisations (did:key):** A provider-managed Organisation's identity is verified by the account provider. Verifiers confirm the `did:key` is listed in the provider's `managedOrganisations` document (referenced from the account provider's `account-provider` Trust Mark).
+- **Transactions:** A transaction DID like `did:web:moverly.com:transactions:abc123` is inherently scoped to the platform hosting it. The platform's Entity Statement in the federation establishes its authority to host transactions.
+- **Adapters:** An adapter at `did:web:adapters.propdata.org.uk:hmlr` is controlled by whoever operates the `adapters.propdata.org.uk` domain. A `pdtf-verified-issuer` Trust Mark binds this to an authorised adapter operator.
 
 > **Security note:** `did:web` security depends entirely on DNS and TLS. See [Section 9: Security Considerations](#9-security-considerations) for threat analysis and mitigations.
 
@@ -4342,7 +4331,7 @@ For `did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK`:
 
 ### 4.2 Organisation DID Documents
 
-Organisations may use either `did:key` (provider-managed) or `did:web` (self-hosted). When managed by an account provider, an Organisation receives a `did:key` identifier generated by the provider. The provider verifies the organisation's identity (SRA number, Companies House registration, etc.) before issuing the DID. The provider's TIR `accountProvider` entry includes the organisation's DID in its `managedOrganisations` registry, enabling verifiers to trace the `did:key` back to a trusted source. This is expected to be the dominant model — most conveyancer firms and estate agencies will not self-host `did:web` infrastructure.
+Organisations may use either `did:key` (provider-managed) or `did:web` (self-hosted). When managed by an account provider, an Organisation receives a `did:key` identifier generated by the provider. The provider verifies the organisation's identity (SRA number, Companies House registration, etc.) before issuing the DID. The provider's `account-provider` Trust Mark includes (via the `delegation.managed_organisations` URL) a signed document listing the organisation's DID, enabling verifiers to trace the `did:key` back to a trusted source. This is expected to be the dominant model — most conveyancer firms and estate agencies will not self-host `did:web` infrastructure.
 
 #### 4.2.1 Organisation DID Document — Provider-Managed (did:key)
 
@@ -4377,7 +4366,7 @@ For a conveyancer firm `Smith & Jones LLP` managed by LMS, the Organisation rece
 
 - No service endpoints — the Organisation's regulatory registrations and contact details live in the entity graph (Organisation entity), not in the DID document.
 - The account provider (e.g. LMS) manages the key material on behalf of the Organisation.
-- Verifiers trace this `did:key` back to a trusted provider via the TIR `accountProvider` entry's `managedOrganisations` registry.
+- Verifiers trace this `did:key` back to a trusted provider via the `account-provider` Trust Mark's `delegation.managed_organisations` document.
 - The Organisation's identity (SRA number, Companies House registration) is verified by the account provider before the DID is issued.
 
 #### 4.2.2 Organisation DID Document — Self-Hosted (did:web)
@@ -4433,7 +4422,7 @@ For firms that want direct control of their identity, hosted at the firm's domai
 
 **Key points:**
 
-- The `#sra` and `#companies-house` service endpoints provide machine-readable links to regulatory registrations. The TIR cross-references these when verifying the Organisation's identity.
+- The `#sra` and `#companies-house` service endpoints provide machine-readable links to regulatory registrations. The Trust Anchor cross-references these when issuing the Organisation's Trust Mark.
 - `assertionMethod` is included because Organisations may issue credentials (e.g., a conveyancer firm issuing a Representation credential confirmation).
 - The firm controls key rotation by updating the DID document at their domain.
 
@@ -4697,7 +4686,7 @@ Used by Trusted Adapters to advertise their credential issuance capability.
 
 **Request flow:**
 
-1. Consumer discovers adapter DID via TIR lookup
+1. Consumer discovers adapter DID via OpenID Federation trust resolution
 2. Resolves adapter DID document → finds `VcIssuanceEndpoint`
 3. Sends issuance request to `serviceEndpoint`:
 
@@ -4713,7 +4702,7 @@ Used by Trusted Adapters to advertise their credential issuance capability.
 4. Adapter fetches data from primary source (e.g., HMLR API)
 5. Adapter signs and returns VC
 
-**`credentialTypes`** — array of VC type strings this adapter can issue. Enables automated discovery: a platform can enumerate all adapters in the TIR and determine which one to call for a given credential type.
+**`credentialTypes`** — array of VC type strings this adapter can issue. Enables automated discovery: a platform can enumerate all subordinate entities from the Trust Anchor's `federation_list_endpoint` and determine which adapter to call for a given credential type.
 
 ### 6.4 Additional Service Endpoint Types
 
@@ -4823,7 +4812,7 @@ DID documents (especially for Organisations and Adapters) should be cached to av
 `did:web` security ultimately depends on DNS integrity. PDTF 2.0 **recommends** but does not **require** DNSSEC for `did:web` hosts, because:
 
 - Many UK domains (.co.uk) do not yet support DNSSEC
-- The TIR cross-check (binding DID to regulatory registration) provides a secondary trust anchor
+- The Trust Mark cross-check (binding DID to regulatory registration) provides a secondary trust anchor
 - Requiring DNSSEC would be a barrier to adoption
 
 However, Trusted Adapter hosts (e.g., `adapters.propdata.org.uk`) **SHOULD** deploy DNSSEC, as they are high-value targets in the trust infrastructure.
@@ -4838,9 +4827,9 @@ However, Trusted Adapter hosts (e.g., `adapters.propdata.org.uk`) **SHOULD** dep
 |-------------|------------------|
 | Person (`did:key`) | Generate Ed25519 key pair (client-side). Derive DID from public key. No registration needed. |
 | Organisation (`did:key`) | Account provider generates Ed25519 key pair on behalf of the Organisation. Provider verifies the org's identity (SRA number, Companies House, etc.) and adds the DID to its `managedOrganisations` registry. No self-hosting required. |
-| Organisation (`did:web`) | Generate Ed25519 key pair. Create DID document with regulatory metadata. Host at firm's domain. Register in TIR. |
+| Organisation (`did:web`) | Generate Ed25519 key pair. Create DID document with regulatory metadata. Host at firm's domain. Apply to the Trust Anchor for a `regulated-conveyancer` Trust Mark. |
 | Transaction (`did:web`) | Platform generates transaction ID. Creates DID document with service endpoints. Hosts at platform domain. |
-| Trusted Adapter (`did:web`) | Adapter operator generates key pair. Creates DID document with issuance endpoint. Registers in TIR with credential type authorisations. |
+| Trusted Adapter (`did:web`) | Adapter operator generates key pair. Creates DID document with issuance endpoint. Publishes Entity Configuration referencing the Trust Anchor via `authority_hints`; receives a `pdtf-verified-issuer` Trust Mark with `delegation.authorised_paths`. |
 | Property (`urn:pdtf:uprn:*`) | Derived from UPRN. No creation step — the identifier exists as long as the UPRN exists. |
 | Title (`urn:pdtf:titleNumber:*`) | Derived from HMLR title number. No creation step. |
 | Unregistered Title (`urn:pdtf:unregisteredTitle:*`) | Platform generates UUID v4 when a transaction involves unregistered land. |
@@ -4939,7 +4928,7 @@ When a transaction completes (or is withdrawn), the platform should:
 If a firm ceases to operate (SRA de-registration, company dissolution):
 
 1. Remove DID document from domain (or mark as deactivated)
-2. TIR entry is updated to `"status": "revoked"`
+2. The corresponding Trust Mark is marked revoked via the Trust Anchor's `federation_trust_mark_status_endpoint`
 3. All Representation credentials issued to this Organisation should be revoked via Bitstring Status List
 
 #### 8.3.3 Person DID Deactivation
@@ -4960,11 +4949,11 @@ If a firm ceases to operate (SRA de-registration, company dissolution):
 
 | Threat | Impact | Likelihood | Mitigation |
 |--------|--------|-----------|------------|
-| **DNS hijacking** | Attacker serves fraudulent DID document | Low (DNSSEC mitigates) | TIR cross-check: verifier confirms DID is registered in TIR with matching regulatory IDs |
-| **Domain compromise** | Attacker replaces DID document with their own keys | Low–Medium | TIR cross-check + certificate transparency monitoring + key pinning in TIR |
+| **DNS hijacking** | Attacker serves fraudulent DID document | Low (DNSSEC mitigates) | Federation cross-check: verifier confirms the Subordinate Entity Statement from the Trust Anchor pins the expected JWKS and matches regulatory IDs in the Trust Mark |
+| **Domain compromise** | Attacker replaces DID document with their own keys | Low–Medium | Federation cross-check + certificate transparency monitoring + JWKS pinned by Trust Anchor in Subordinate Entity Statement |
 | **TLS interception** | MITM serves modified DID document | Low (certificate pinning mitigates) | Strict TLS validation, reject HTTP, certificate transparency |
-| **Domain expiry** | Firm lets domain lapse; new owner can serve fraudulent DID doc | Medium (human process risk) | TIR monitors domain ownership changes; revoke TIR entry on ownership change |
-| **Insider threat** | Firm's IT admin rotates keys and issues fraudulent credentials | Low | Credential verification includes TIR check of issuance authorisation |
+| **Domain expiry** | Firm lets domain lapse; new owner can serve fraudulent DID doc | Medium (human process risk) | Trust Anchor monitors domain ownership changes; revoke Trust Mark on ownership change |
+| **Insider threat** | Firm's IT admin rotates keys and issues fraudulent credentials | Low | Credential verification includes Trust Mark `delegation` check of issuance authorisation |
 
 ### 9.2 did:key Threat Model
 
@@ -4974,7 +4963,7 @@ If a firm ceases to operate (SRA de-registration, company dissolution):
 | **Key loss** | Person loses access to their DID permanently | Medium | Out-of-band identity re-verification. Platform re-issuance of credentials. |
 | **Quantum computing** | Ed25519 vulnerable to quantum attacks | Future risk (10+ years) | Migration path to post-quantum algorithms. DID method is agnostic to key type — can switch to dilithium/kyber when multicodec prefixes are assigned. |
 
-### 9.3 TIR Cross-Check as Defence in Depth
+### 9.3 Federation Cross-Check as Defence in Depth
 
 The Trusted Issuer Registry provides a critical second layer of trust for `did:web`:
 
@@ -4982,15 +4971,15 @@ The Trusted Issuer Registry provides a critical second layer of trust for `did:w
 Verification chain:
 1. Resolve did:web → get DID document
 2. Verify credential signature against key in DID document
-3. Look up issuer DID in TIR:
+3. Resolve issuer trust chain to the Trust Anchor:
    a. Is this DID registered?
    b. Is it authorised for this credential type + entity path?
-   c. Does the TIR entry match the DID document's regulatory metadata?
-   d. Is the TIR entry still active (not revoked)?
+   c. Does the Trust Mark's delegation / subject metadata match the DID document's regulatory metadata?
+   d. Is the Trust Mark still active (status endpoint reports not revoked)?
 4. Only if ALL checks pass: credential is trusted
 ```
 
-This means that even if an attacker compromises a domain and serves a fraudulent DID document, they cannot issue trusted credentials unless they also compromise the TIR (which is a separate, independently governed system).
+This means that even if an attacker compromises a domain and serves a fraudulent DID document, they cannot issue trusted credentials unless they also compromise the Trust Anchor's signing key (which is held in an HSM with separate, independently governed access).
 
 ### 9.4 Key Storage Recommendations
 
@@ -5035,7 +5024,7 @@ Unregistered land (land not registered at HMLR) has no title number. PDTF needs 
 
 1. **Self-hosted `did:web` guidance:** For firms that choose `did:web`, should PDTF provide a standard tool/template for generating and hosting DID documents? (Likely yes — see Implementation Notes.)
 
-2. **Domain verification cadence:** For `did:web` Organisations, how often should the TIR re-verify that a firm's DID document is still hosted and unchanged? (Proposal: daily automated check.)
+2. **Domain verification cadence:** For `did:web` Organisations, how often should the Trust Anchor re-verify that a firm's DID document is still hosted and unchanged before renewing the Subordinate Entity Statement / Trust Mark? (Proposal: daily automated check.)
 
 3. **Provider migration:** If an Organisation switches account providers, how is the `did:key` transitioned? The new provider would issue a new `did:key` and update its `managedOrganisations` registry. A DID succession credential from the old provider may be needed.
 
@@ -5045,7 +5034,7 @@ Should Organisations be allowed to have multiple active keys for different purpo
 
 ### 10.4 DID Method Migration
 
-If `did:web` is superseded by a more secure method (e.g., `did:webvh` with verifiable history, or `did:tdw`), what is the migration path? The TIR can support multiple DID methods simultaneously, but credential re-issuance may be needed.
+If `did:web` is superseded by a more secure method (e.g., `did:webvh` with verifiable history, or `did:tdw`), what is the migration path? OpenID Federation is DID-method-agnostic and can support multiple methods simultaneously, but credential re-issuance may be needed.
 
 ---
 
@@ -5188,7 +5177,7 @@ This generates the key pair, constructs the DID document with regulatory metadat
 |----------|-----------|
 | [01 — Entity Graph & Schema](./01-entity-graph.md) | Entity types that these identifiers address |
 | [02 — VC Data Model](./02-vc-data-model.md) | How DIDs appear in `issuer` and `credentialSubject.id` fields |
-| [04 — Trusted Issuer Registry](./04-trusted-issuer-registry.md) | TIR registration of `did:web` entities |
+| [04 — OpenID Federation](./04-openid-federation.md) | Federation accreditation of `did:web` entities via Entity Statements and Trust Marks |
 | [12 — Adapter Access Control](./12-adapter-access-control.md) | DID Auth and credential presentation protocols |
 | [07 — State Assembly](./07-state-assembly.md) | How identifiers are used in graph composition |
 
@@ -5198,10 +5187,10 @@ This generates the key pair, constructs the DID document with regulatory metadat
 
 ---
 
-# 04 Trusted Issuer Registry
+# 04 OpenID Federation Trust Architecture
 
 **Version:** 0.1 (Draft)
-**Date:** 9 April 2026
+**Date:** 16 April 2026
 **Author:** Ed Molyneux / Moverly
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](./00-architecture-overview.md)
@@ -5212,14 +5201,14 @@ This generates the key pair, constructs the DID document with regulatory metadat
 
 1. [Purpose](#1-purpose)
 2. [Design Principles](#2-design-principles)
-3. [Registry Location](#3-registry-location)
-4. [Registry Schema](#4-registry-schema)
-5. [Entity:Path Authorisation](#5-entitypath-authorisation)
-6. [Trust Levels](#6-trust-levels)
-7. [Verification Flow](#7-verification-flow)
-8. [Registry Governance](#8-registry-governance)
-9. [Caching Strategy](#9-caching-strategy)
-10. [Initial Registry Entries](#10-initial-registry-entries)
+3. [Trust Anchor](#3-trust-anchor)
+4. [Entity Statements](#4-entity-statements)
+5. [Trust Marks](#5-trust-marks)
+6. [Entity:Path Authorisation (delegation claim)](#6-entitypath-authorisation-delegation-claim)
+7. [Trust Resolution](#7-trust-resolution)
+8. [Trust Levels](#8-trust-levels)
+9. [Federation Metadata Cache](#9-federation-metadata-cache)
+10. [Governance](#10-governance)
 11. [Migration Path](#11-migration-path)
 12. [Security Considerations](#12-security-considerations)
 13. [Open Questions](#13-open-questions)
@@ -5231,209 +5220,258 @@ This generates the key pair, constructs the DID document with regulatory metadat
 
 PDTF 2.0 replaces the single-platform trust model of v1 with a federated architecture where multiple issuers produce W3C Verifiable Credentials about property data. This creates a fundamental question: **how does a verifier know whether a given issuer is authorised to make the claims it's making?**
 
-A Verifiable Credential's cryptographic signature proves that the credential hasn't been tampered with and was issued by the entity controlling the signing key. But it does *not* prove that the issuer had the **authority** to make those claims. Anyone can mint a VC claiming a property has an EPC rating of A — the question is whether the issuer is recognised as a legitimate source for EPC data.
+A Verifiable Credential's cryptographic signature proves that the credential has not been tampered with and was issued by the entity controlling the signing key. But it does *not* prove that the issuer had the **authority** to make those claims. Anyone can mint a VC claiming a property has an EPC rating of A — the question is whether the issuer is recognised as a legitimate source for EPC data.
 
-The **Trusted Issuer Registry (TIR)** answers this question. It is a publicly accessible, version-controlled registry that maps issuer DIDs to the specific data paths they are authorised to issue credentials about. Verifiers consult the TIR as part of credential validation to determine:
+PDTF 2.0 answers this question using **[OpenID Federation 1.0](https://openid.net/specs/openid-federation-1_0.html)**. A federation Trust Anchor publishes signed Entity Statements about subordinate entities, and issues signed **Trust Marks** that carry a PDTF-specific `delegation` claim describing the exact entity:path combinations an issuer is authorised to populate.
 
-- Whether the issuer is recognised at all
-- What specific entity:path combinations they are authorised for
-- What trust level applies (primary source vs intermediary vs account provider)
-- Whether the issuer's authorisation is currently active
+Verifiers establish trust by:
 
-Without a TIR, every verifier would need to maintain its own list of trusted issuers, leading to fragmentation, inconsistency, and an inability to evolve trust relationships as primary sources adopt PDTF 2.0.
+- Resolving the issuer's Entity Configuration (at `.well-known/openid-federation`)
+- Walking the `authority_hints` chain to a recognised Trust Anchor
+- Verifying the Trust Anchor's signed Entity Statement about the issuer
+- Verifying the Trust Mark JWT(s) the issuer presents
+- Checking the `delegation.authorised_paths` claim against the claims inside the VC
 
-### 1.1 What the TIR Is Not
+### 1.1 Why OpenID Federation
 
-The TIR is **not** a certificate authority. It does not issue or manage cryptographic keys. Issuers manage their own key material (see [Sub-spec 06: Key Management](./06-key-management.md)).
+Earlier drafts of this specification described a bespoke GitHub-hosted Trusted Issuer Registry. External review flagged this as reinventing OpenID Federation with weaker guarantees (unsigned JSON vs signed JWTs) and a flat topology that would not scale beyond a handful of issuers. OpenID Federation provides:
 
-The TIR is **not** a DID registry. DID resolution happens separately via the appropriate DID method (`did:web` resolution, `did:key` derivation). The TIR references issuer DIDs but does not host DID documents.
+- **Signed trust chains** — every level is cryptographically verifiable, not just the leaf credential
+- **Decentralised governance** — each Trust Anchor sets its own policy; there is no single registry to control
+- **Ecosystem alignment** — UK Smart Data, GOV.UK Wallet, and EUDI are all converging on OpenID Federation
+- **Credential-format agnostic** — works with both Data Integrity VCs and JWT VCs
+- **Existing infrastructure** — plugs into the OAuth/OIDC infrastructure platforms already operate
 
-The TIR is **not** an access control list. It governs *issuance authority*, not *read access*. Who can access a credential is governed by `termsOfUse` within the credential itself and by participation credentials presented at the API layer.
+### 1.2 What the Federation Is Not
+
+The federation is **not** a certificate authority. Issuers manage their own key material (see [Sub-spec 06: Key Management](./06-key-management.md)). The Trust Anchor signs Entity Statements and Trust Marks, not issuer keys.
+
+The federation is **not** a DID registry. DID resolution happens separately via the appropriate DID method (`did:web`, `did:key`). Entity Statements and DID documents are complementary: Entity Statements describe what an entity is authorised to *do* in the federation; DID documents describe how to cryptographically verify the entity's signatures.
+
+The federation is **not** an access control list. It governs *issuance authority*, not *read access*. Who can access a credential is governed by `termsOfUse` within the credential itself and by participation credentials presented at the API layer.
 
 ---
 
 ## 2. Design Principles
 
-### 2.1 GitHub-Based (Version Controlled, Auditable)
+### 2.1 Standards-First
 
-The TIR is a JSON file in a public GitHub repository. Every change is a git commit with a full audit trail: who changed what, when, and why. No custom database, no admin UI, no opaque backend.
+Everything is an OpenID Federation standard construct where one exists: Entity Configuration, Subordinate Entity Statements, Trust Marks, Trust Chain resolution. PDTF's only extension is a single claim (`delegation`) inside the Trust Mark.
 
-**Rationale:** Trust registries are governance infrastructure. Changes must be visible, reversible, and attributable. Git provides all of this natively. A PR-based workflow means changes are reviewed before they take effect.
+### 2.2 Signed All The Way Down
 
-### 2.2 AI Agent-Manageable
-
-The registry format is designed to be read and written by AI agents and automated tooling, not just humans. The JSON structure is flat and predictable. Field names are self-documenting. There are no nested hierarchies that require special parsing logic.
-
-**Rationale:** In practice, TIR lookups will be performed by VC validators running as part of automated verification pipelines, MCP servers, and AI-powered property intelligence systems. The format must be trivially parseable by code.
+Every level of the trust chain is a signed JWT. A verifier never has to "trust GitHub" or any HTTP endpoint as a source of authority — it only has to trust the Trust Anchor's public key (pinned out-of-band).
 
 ### 2.3 Entity:Path Granularity
 
-Trust is not binary ("this issuer is trusted / not trusted"). The TIR specifies exactly which entity types and JSON paths an issuer is authorised for. An issuer trusted for EPC data is not automatically trusted for title register data.
+Trust is not binary. The Trust Mark's `delegation.authorised_paths` claim specifies exactly which entity types and JSON paths an issuer is authorised for. An issuer trusted for EPC data is not automatically trusted for title register data.
 
-**Rationale:** Different data paths have different authoritative sources. HMLR is the authority for title data. MHCLG (via the EPC register) is the authority for energy performance data. A trusted proxy adapter that correctly fetches EPC data has no authority over title register data, even if it's operated by the same organisation.
+> **Decision D20:** Authorisation is expressed as entity:path combinations (e.g. `Property:/energyEfficiency/certificate`), not issuer-level trust.
 
-> **Decision D20:** TIR describes entity:path combinations (e.g. `Property:/energyEfficiency/certificate`), not just issuer-level trust.
+### 2.4 Federation Topology Can Grow
 
-### 2.4 Extensible Without Breaking Changes
+Phase 1 is a flat topology (Trust Anchor → leaf issuers). Phase 2+ can introduce intermediate entities (a sector authority below the Trust Anchor, or a conveyancing regulator issuing its own Trust Marks). No schema changes are required — OpenID Federation supports arbitrary chain depth natively.
 
-New issuers, new entity types, and new paths can be added without changing the schema. The TIR is additive by design — existing entries are never invalidated by new additions. Removal follows a deprecation lifecycle (active → deprecated → revoked).
-
-### 2.5 No Central Authority Required
-
-The TIR is currently maintained by Moverly as the PDTF 2.0 steward, but its design supports evolution toward multi-stakeholder governance. Any organisation could fork, mirror, or propose changes via pull request. The governance model is designed to decentralise over time.
-
-> **Decision D8:** GitHub-based TIR at `property-data-standards-co`.
+> **Decision D24:** 3-phase evolution — Moverly proxies → independently hosted adapters → primary-source root issuers.
 
 ---
 
-## 3. Registry Location
+## 3. Trust Anchor
 
-The canonical TIR lives at:
+The PDTF Trust Anchor is operated at:
 
-```
-https://github.com/property-data-standards-co/trusted-issuer-registry
-```
+| Property | Value |
+|----------|-------|
+| Entity identifier | `https://trust.pdtf.org` |
+| DID | `did:web:trust.pdtf.org` |
+| Entity Configuration | `https://trust.pdtf.org/.well-known/openid-federation` |
+| Fetch endpoint | `https://trust.pdtf.org/federation/fetch` |
+| List endpoint | `https://trust.pdtf.org/federation/list` |
+| Trust Mark issuance | `https://trust.pdtf.org/federation/trust_mark` |
+| Trust Mark status | `https://trust.pdtf.org/federation/trust_mark_status` |
 
-### 3.1 Repository Structure
+### 3.1 Entity Configuration
 
-```
-trusted-issuer-registry/
-├── README.md                  # Human-readable overview and governance rules
-├── registry.json              # The canonical TIR file
-├── schema/
-│   └── tir-schema.json        # JSON Schema for registry.json validation
-├── CHANGELOG.md               # Human-readable change log
-├── .github/
-│   └── workflows/
-│       └── validate.yml       # CI: validates registry.json against schema on every PR
-└── scripts/
-    └── validate.js            # Schema validation script
-```
-
-### 3.2 Access URLs
-
-| Purpose | URL |
-|---------|-----|
-| **Repository** | `https://github.com/property-data-standards-co/trusted-issuer-registry` |
-| **Raw registry (main branch)** | `https://raw.githubusercontent.com/property-data-standards-co/trusted-issuer-registry/main/registry.json` |
-| **GitHub API (with ETag support)** | `https://api.github.com/repos/property-data-standards-co/trusted-issuer-registry/contents/registry.json` |
-| **JSON Schema** | `https://raw.githubusercontent.com/property-data-standards-co/trusted-issuer-registry/main/schema/tir-schema.json` |
-
-Verifiers SHOULD use the GitHub API endpoint to benefit from `ETag` / `If-None-Match` caching headers (see [Section 9](#9-caching-strategy)).
-
----
-
-## 4. Registry Schema
-
-### 4.1 Top-Level Structure
-
-The `registry.json` file has the following top-level structure:
+The Trust Anchor's self-signed Entity Configuration is a JWT published at `.well-known/openid-federation`:
 
 ```json
 {
-  "$schema": "./schema/tir-schema.json",
-  "version": "1.0",
-  "updated": "2026-03-24T12:00:00Z",
-  "issuers": { ... },
-  "userAccountProviders": { ... }
+  "iss": "https://trust.pdtf.org",
+  "sub": "https://trust.pdtf.org",
+  "iat": 1776038400,
+  "exp": 1776124800,
+  "jwks": {
+    "keys": [
+      {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "kid": "ta-2026-01",
+        "x": "..."
+      }
+    ]
+  },
+  "metadata": {
+    "federation_entity": {
+      "organization_name": "PDTF Trust Anchor",
+      "federation_fetch_endpoint": "https://trust.pdtf.org/federation/fetch",
+      "federation_list_endpoint": "https://trust.pdtf.org/federation/list",
+      "federation_trust_mark_endpoint": "https://trust.pdtf.org/federation/trust_mark",
+      "federation_trust_mark_status_endpoint": "https://trust.pdtf.org/federation/trust_mark_status"
+    }
+  },
+  "trust_mark_issuers": {
+    "https://propdata.org.uk/trust-marks/pdtf-verified-issuer": [
+      "https://trust.pdtf.org"
+    ],
+    "https://propdata.org.uk/trust-marks/account-provider": [
+      "https://trust.pdtf.org"
+    ],
+    "https://propdata.org.uk/trust-marks/regulated-conveyancer": [
+      "https://trust.pdtf.org",
+      "https://sra.org.uk",
+      "https://clc-uk.org"
+    ]
+  }
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `$schema` | string | RECOMMENDED | Relative path to the JSON Schema file for validation tooling |
-| `version` | string | REQUIRED | Semantic version of the registry format |
-| `updated` | string (ISO 8601) | REQUIRED | Timestamp of the last modification to any entry |
-| `issuers` | object | REQUIRED | Map of issuer entries, keyed by issuer slug |
-| `userAccountProviders` | object | REQUIRED | Map of account provider entries, keyed by provider slug |
+The Trust Anchor's public key is the single out-of-band root of trust. It is pinned in verifier configuration and in reference implementation bundles.
 
-### 4.2 Issuer Entry
+---
 
-Each key in the `issuers` map is a **slug** — a lowercase, hyphenated, human-readable identifier for the issuer (e.g. `moverly-hmlr`, `hmlr`, `mhclg-epc`). The slug is stable and MUST NOT change once an entry is published.
+## 4. Entity Statements
+
+A **Subordinate Entity Statement** is a signed JWT issued by the Trust Anchor (or an intermediate entity) about an entity immediately below it in the federation.
+
+A subordinate entity (e.g. an adapter) publishes its own self-signed **Entity Configuration** at its `.well-known/openid-federation` URL, and declares the Trust Anchor(s) that accredit it via `authority_hints`.
+
+### 4.1 Adapter Entity Configuration
 
 ```json
 {
-  "moverly-hmlr": {
-    "name": "Moverly (HMLR Proxy)",
-    "did": "did:web:adapters.propdata.org.uk:hmlr",
-    "authorisedPaths": [
+  "iss": "https://adapters.propdata.org.uk/hmlr",
+  "sub": "https://adapters.propdata.org.uk/hmlr",
+  "iat": 1776038400,
+  "exp": 1776124800,
+  "jwks": { "keys": [ { "kty": "OKP", "crv": "Ed25519", "kid": "hmlr-2026-01", "x": "..." } ] },
+  "authority_hints": ["https://trust.pdtf.org"],
+  "metadata": {
+    "federation_entity": {
+      "organization_name": "Moverly HMLR Adapter",
+      "contacts": ["trust@moverly.com"]
+    },
+    "openid_credential_issuer": {
+      "credential_issuer": "https://adapters.propdata.org.uk/hmlr",
+      "credential_endpoint": "https://adapters.propdata.org.uk/hmlr/credential",
+      "credentials_supported": [
+        {
+          "format": "ldp_vc",
+          "types": ["VerifiableCredential", "TitleCredential"],
+          "cryptographic_binding_methods_supported": ["did:web"]
+        }
+      ]
+    }
+  },
+  "trust_marks": [
+    {
+      "id": "https://propdata.org.uk/trust-marks/pdtf-verified-issuer",
+      "trust_mark": "eyJhbGciOiJFZERTQSIs..."
+    }
+  ]
+}
+```
+
+### 4.2 Subordinate Entity Statement (issued by Trust Anchor)
+
+When a verifier fetches `https://trust.pdtf.org/federation/fetch?sub=https://adapters.propdata.org.uk/hmlr`, the Trust Anchor returns a signed JWT:
+
+```json
+{
+  "iss": "https://trust.pdtf.org",
+  "sub": "https://adapters.propdata.org.uk/hmlr",
+  "iat": 1776038400,
+  "exp": 1776124800,
+  "jwks": { "keys": [ { "kty": "OKP", "crv": "Ed25519", "kid": "hmlr-2026-01", "x": "..." } ] },
+  "metadata_policy": {
+    "openid_credential_issuer": {
+      "credentials_supported": {
+        "subset_of": [
+          { "types": ["VerifiableCredential", "TitleCredential"] }
+        ]
+      }
+    }
+  }
+}
+```
+
+The `jwks` in the subordinate statement pins the keys the Trust Anchor has witnessed. A verifier therefore does not have to trust the subordinate's DNS-delivered JWKS on its own — the Trust Anchor's attestation is authoritative.
+
+---
+
+## 5. Trust Marks
+
+A **Trust Mark** is a signed JWT asserting that a subject entity meets a named policy. PDTF defines the following trust marks:
+
+| Trust Mark ID | Meaning | Typical Subject |
+|---------------|---------|-----------------|
+| `https://propdata.org.uk/trust-marks/pdtf-verified-issuer` | Authorised to issue PDTF VCs for specific entity:path combinations | Adapters, root issuers |
+| `https://propdata.org.uk/trust-marks/account-provider` | Authorised to issue user/organisation DIDs on behalf of people | Moverly, LMS, wallet providers |
+| `https://propdata.org.uk/trust-marks/regulated-conveyancer` | SRA/CLC regulated conveyancing firm | Conveyancer organisations |
+
+### 5.1 `pdtf-verified-issuer` Structure
+
+```json
+{
+  "iss": "https://trust.pdtf.org",
+  "sub": "https://adapters.propdata.org.uk/hmlr",
+  "id": "https://propdata.org.uk/trust-marks/pdtf-verified-issuer",
+  "iat": 1776038400,
+  "exp": 1807574400,
+  "ref": "https://propdata.org.uk/trust-marks/pdtf-verified-issuer/policy",
+  "delegation": {
+    "trust_level": "trusted_proxy",
+    "proxy_for": "https://hmlr.gov.uk",
+    "authorised_paths": [
       "Title:/titleNumber",
       "Title:/titleExtents",
       "Title:/registerExtract/*",
       "Title:/ownership/*"
-    ],
-    "trustLevel": "trustedProxy",
-    "proxyFor": "hmlr",
-    "status": "active",
-    "validFrom": "2026-03-01T00:00:00Z",
-    "validUntil": null,
-    "contact": "trust@moverly.com",
-    "website": "https://moverly.com"
+    ]
   }
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | REQUIRED | Human-readable display name |
-| `did` | string (DID) | REQUIRED | The issuer's Decentralised Identifier. For `planned` issuers, this MAY be a placeholder that is updated when the issuer goes active. |
-| `authorisedPaths` | array of strings | REQUIRED | Entity:path combinations this issuer may issue credentials for (see [Section 5](#5-entitypath-authorisation)) |
-| `trustLevel` | enum | REQUIRED | One of: `rootIssuer`, `trustedProxy`, `accountProvider` (see [Section 6](#6-trust-levels)) |
-| `proxyFor` | string | CONDITIONAL | Required when `trustLevel` is `trustedProxy`. The slug of the root issuer this proxy fetches data from. |
-| `status` | enum | REQUIRED | One of: `active`, `planned`, `deprecated`, `revoked` |
-| `validFrom` | string (ISO 8601) or null | OPTIONAL | Date from which this entry is valid. If null or absent, valid from the entry's creation. |
-| `validUntil` | string (ISO 8601) or null | OPTIONAL | Date after which this entry expires. If null or absent, no expiry. |
-| `contact` | string | OPTIONAL | Contact email for the issuer organisation |
-| `website` | string (URL) | OPTIONAL | Website for the issuer organisation |
+The `delegation` claim is the PDTF-specific extension. Everything else is vanilla OpenID Federation.
 
-### 4.3 User Account Provider Entry
-
-The `userAccountProviders` section lists platforms that issue user DIDs (`did:key` identities for sellers, buyers, conveyancers, etc.). These entries are structurally similar to issuer entries but serve a distinct purpose: they allow a verifier to confirm that a person's DID was created by a recognised identity provider.
-
-> **Decision D21:** User DID issuers (account providers) must also be listed in the TIR.
+### 5.2 `account-provider` Structure
 
 ```json
 {
-  "moverly": {
-    "name": "Moverly",
-    "did": "did:web:moverly.com",
-    "description": "Issues user DIDs (did:key) as account provider. Validates user identity at onboarding.",
-    "trustLevel": "accountProvider",
-    "identityVerification": {
-      "methods": ["email", "sms", "govuk-verify"],
-      "description": "Email + SMS verification at registration. GOV.UK Verify integration planned."
+  "iss": "https://trust.pdtf.org",
+  "sub": "https://moverly.com",
+  "id": "https://propdata.org.uk/trust-marks/account-provider",
+  "iat": 1776038400,
+  "exp": 1807574400,
+  "delegation": {
+    "trust_level": "account_provider",
+    "identity_verification": {
+      "methods": ["email", "sms", "document-check"],
+      "description": "Email + SMS at registration; document-based identity checks for seller/buyer roles."
     },
-    "managedOrganisations": "https://moverly.com/.well-known/pdtf-managed-orgs.json",
-    "status": "active",
-    "validFrom": "2026-03-01T00:00:00Z",
-    "validUntil": null,
-    "contact": "trust@moverly.com",
-    "website": "https://moverly.com"
+    "managed_organisations": "https://moverly.com/.well-known/pdtf-managed-orgs.json"
   }
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | REQUIRED | Human-readable name |
-| `did` | string (DID) | REQUIRED | Platform's DID |
-| `description` | string | OPTIONAL | What this provider does |
-| `trustLevel` | string | REQUIRED | Always `accountProvider` |
-| `identityVerification` | object | OPTIONAL | Describes the identity verification methods used at onboarding |
-| `identityVerification.methods` | array of strings | OPTIONAL | List of verification methods (e.g. `email`, `sms`, `govuk-verify`, `document-check`) |
-| `identityVerification.description` | string | OPTIONAL | Human-readable description of verification process |
-| `managedOrganisations` | string (URL) | OPTIONAL | URL pointing to a signed JSON document listing the `did:key` identifiers of organisations whose identity has been verified by this account provider. Verifiers use this to trace an Organisation's `did:key` back to a trusted provider. See [Section 4.3.1](#431-managed-organisations-document). |
-| `status` | enum | REQUIRED | One of: `active`, `planned`, `deprecated`, `revoked` |
-| `validFrom` | string (ISO 8601) or null | OPTIONAL | Validity start date |
-| `validUntil` | string (ISO 8601) or null | OPTIONAL | Validity end date |
-| `contact` | string | OPTIONAL | Contact email |
-| `website` | string (URL) | OPTIONAL | Website |
+The `managed_organisations` URL points to a signed JSON document listing the `did:key` identifiers of organisations whose identity has been verified by this account provider (see §5.4).
 
-#### 4.3.1 Managed Organisations Document
+### 5.3 Trust Mark Revocation
 
-The `managedOrganisations` URL points to a signed JSON document listing the `did:key` identifiers of organisations whose identity has been verified by this account provider. The document is hosted by the provider and MUST be served over HTTPS.
+Each trust mark carries `iat`/`exp` and can be checked for live status against the `federation_trust_mark_status_endpoint`. The Trust Anchor SHOULD set short lifetimes (days, not years) for high-impact trust marks and rely on status endpoint polling for faster revocation than the cache TTL would allow.
 
-**Example document** at `https://moverly.com/.well-known/pdtf-managed-orgs.json`:
+### 5.4 Managed Organisations Document
+
+The `delegation.managed_organisations` URL points to a JSON document signed by the account provider's DID key:
 
 ```json
 {
@@ -5446,12 +5484,6 @@ The `managedOrganisations` URL points to a signed JSON document listing the `did
       "sraNumber": "612345",
       "companyNumber": "OC123456",
       "verifiedAt": "2026-03-15T10:30:00Z"
-    },
-    {
-      "did": "did:key:z6MkrHKY8pMWMjEQj3FBaYGPnXtvAqRwPsGy2nVN6HRhk4tQ",
-      "name": "Acme Estate Agents Ltd",
-      "companyNumber": "12345678",
-      "verifiedAt": "2026-03-18T14:00:00Z"
     }
   ],
   "proof": {
@@ -5465,918 +5497,229 @@ The `managedOrganisations` URL points to a signed JSON document listing the `did
 }
 ```
 
-**Key points:**
-
-- The document is signed by the account provider's DID key, providing integrity and non-repudiation.
-- Each organisation entry includes the `did:key` identifier and the regulatory identifiers that were verified.
-- The `verifiedAt` timestamp indicates when the organisation's identity was last verified.
-- Verifiers SHOULD cache this document (recommended TTL: 1 hour) and use conditional requests (ETag/If-None-Match) where supported.
-- The provider MUST update this document when organisations are added or removed.
-
-### 4.4 JSON Schema Definition
-
-The following JSON Schema (`schema/tir-schema.json`) validates the `registry.json` file:
-
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/property-data-standards-co/trusted-issuer-registry/main/schema/tir-schema.json",
-  "title": "PDTF Trusted Issuer Registry",
-  "description": "Schema for the PDTF 2.0 Trusted Issuer Registry (TIR). Defines authorised issuers and account providers for the Property Data Trust Framework.",
-  "type": "object",
-  "required": ["version", "updated", "issuers", "userAccountProviders"],
-  "additionalProperties": false,
-  "properties": {
-    "$schema": {
-      "type": "string",
-      "description": "Reference to the JSON Schema file"
-    },
-    "version": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+$",
-      "description": "Semantic version of the registry format"
-    },
-    "updated": {
-      "type": "string",
-      "format": "date-time",
-      "description": "ISO 8601 timestamp of the last modification"
-    },
-    "issuers": {
-      "type": "object",
-      "description": "Map of credential issuers, keyed by slug",
-      "patternProperties": {
-        "^[a-z][a-z0-9-]*$": {
-          "$ref": "#/$defs/issuerEntry"
-        }
-      },
-      "additionalProperties": false
-    },
-    "userAccountProviders": {
-      "type": "object",
-      "description": "Map of user DID account providers, keyed by slug",
-      "patternProperties": {
-        "^[a-z][a-z0-9-]*$": {
-          "$ref": "#/$defs/accountProviderEntry"
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  "$defs": {
-    "issuerEntry": {
-      "type": "object",
-      "required": ["name", "did", "authorisedPaths", "trustLevel", "status"],
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Human-readable display name"
-        },
-        "did": {
-          "type": "string",
-          "pattern": "^did:[a-z]+:.+$",
-          "description": "Issuer's Decentralised Identifier"
-        },
-        "authorisedPaths": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[A-Z][a-zA-Z]*:/[a-zA-Z0-9/*_-][a-zA-Z0-9/*._-]*$",
-            "description": "Entity:path authorisation string"
-          },
-          "minItems": 1,
-          "uniqueItems": true,
-          "description": "Entity:path combinations this issuer is authorised for"
-        },
-        "trustLevel": {
-          "type": "string",
-          "enum": ["rootIssuer", "trustedProxy", "accountProvider"],
-          "description": "Trust classification for this issuer"
-        },
-        "proxyFor": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9-]*$",
-          "description": "Slug of the root issuer this proxy fetches data from. Required when trustLevel is trustedProxy."
-        },
-        "status": {
-          "type": "string",
-          "enum": ["active", "planned", "deprecated", "revoked"],
-          "description": "Current status of this registry entry"
-        },
-        "validFrom": {
-          "type": ["string", "null"],
-          "format": "date-time",
-          "description": "ISO 8601 datetime from which this entry is valid"
-        },
-        "validUntil": {
-          "type": ["string", "null"],
-          "format": "date-time",
-          "description": "ISO 8601 datetime after which this entry expires"
-        },
-        "contact": {
-          "type": "string",
-          "format": "email",
-          "description": "Contact email for the issuer"
-        },
-        "website": {
-          "type": "string",
-          "format": "uri",
-          "description": "Website URL for the issuer"
-        }
-      },
-      "if": {
-        "properties": {
-          "trustLevel": { "const": "trustedProxy" }
-        }
-      },
-      "then": {
-        "required": ["proxyFor"]
-      }
-    },
-    "accountProviderEntry": {
-      "type": "object",
-      "required": ["name", "did", "trustLevel", "status"],
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Human-readable name"
-        },
-        "did": {
-          "type": "string",
-          "pattern": "^did:[a-z]+:.+$",
-          "description": "Provider's Decentralised Identifier"
-        },
-        "description": {
-          "type": "string",
-          "description": "What this account provider does"
-        },
-        "trustLevel": {
-          "type": "string",
-          "const": "accountProvider",
-          "description": "Always accountProvider for this section"
-        },
-        "identityVerification": {
-          "type": "object",
-          "properties": {
-            "methods": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Identity verification methods used"
-            },
-            "description": {
-              "type": "string",
-              "description": "Human-readable description of verification process"
-            }
-          },
-          "additionalProperties": false
-        },
-        "managedOrganisations": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL of a signed JSON document listing organisation did:key identifiers managed by this provider"
-        },
-        "status": {
-          "type": "string",
-          "enum": ["active", "planned", "deprecated", "revoked"],
-          "description": "Current status"
-        },
-        "validFrom": {
-          "type": ["string", "null"],
-          "format": "date-time"
-        },
-        "validUntil": {
-          "type": ["string", "null"],
-          "format": "date-time"
-        },
-        "contact": {
-          "type": "string",
-          "format": "email"
-        },
-        "website": {
-          "type": "string",
-          "format": "uri"
-        }
-      }
-    }
-  }
-}
-```
-
-### 4.5 Slug Conventions
-
-Issuer slugs follow these rules:
-
-- Lowercase alphanumeric characters and hyphens only: `^[a-z][a-z0-9-]*$`
-- Start with a letter, not a number or hyphen
-- Stable once published — slugs MUST NOT be renamed (create a new entry instead)
-- Use organisation name as prefix for proxy adapters: `moverly-hmlr`, `moverly-epc`
-- Root issuers use their natural abbreviation: `hmlr`, `voa`, `mhclg-epc`
+Verifiers consult this document to trace an Organisation's `did:key` back to a trusted account provider. Recommended cache TTL: 1 hour, with ETag-based conditional fetches.
 
 ---
 
-## 5. Entity:Path Authorisation
+## 6. Entity:Path Authorisation (delegation claim)
 
-### 5.1 Format
+The `delegation.authorised_paths` array inside a `pdtf-verified-issuer` Trust Mark carries the entity:path authorisation that was, in earlier drafts, expressed as the `authorisedPaths` field of a TIR entry.
 
-Each authorised path string follows the format:
+### 6.1 Format
 
 ```
 Entity:/json/pointer/path
 ```
 
-Where:
-- **Entity** is the PDTF entity type name, capitalised as per the entity graph (e.g. `Property`, `Title`, `Person`, `Organisation`, `SellerCapacity`, `Representation`, `Transaction`)
-- The colon `:` separates entity from path
-- **Path** is a JSON Pointer (RFC 6901) referencing a location in the entity's schema, prefixed with `/`
+Where **Entity** is the PDTF entity type name, capitalised as per the entity graph (`Property`, `Title`, `Person`, `Organisation`, `SellerCapacity`, `Representation`, `Transaction`). The colon `:` separates entity from path. **Path** is a JSON Pointer (RFC 6901) prefixed with `/`.
 
-### 5.2 Wildcards
+### 6.2 Wildcards
 
-A path segment of `*` matches any subtree beneath the preceding path:
+A final path segment of `*` matches any subtree beneath the preceding path:
 
 | Pattern | Matches |
 |---------|---------|
-| `Title:/registerExtract/*` | Any path under `/registerExtract` — e.g. `/registerExtract/proprietorship`, `/registerExtract/charges`, `/registerExtract/restrictions` |
-| `Property:/energyEfficiency/*` | Any path under `/energyEfficiency` — e.g. `/energyEfficiency/certificate`, `/energyEfficiency/recommendation` |
-| `Property:/*` | Any path on the Property entity — full entity authority |
-| `Title:/*` | Any path on the Title entity — full entity authority |
+| `Title:/registerExtract/*` | Any path under `/registerExtract` |
+| `Property:/energyEfficiency/*` | Any path under `/energyEfficiency` |
+| `Property:/*` | Any path on the Property entity |
 
 The wildcard `*` MUST appear only as the **final** path segment. Mid-path wildcards (e.g. `Property:/*/certificate`) are not supported.
 
-### 5.3 Examples
-
-#### Specific Path — EPC Certificate Data
-
-```json
-"authorisedPaths": [
-  "Property:/energyEfficiency/certificate"
-]
-```
-
-The issuer is authorised only for the EPC certificate data on the Property entity. A VC from this issuer claiming data at `Property:/buildingConstruction` would **fail** TIR verification.
-
-#### Wildcard Subtree — Title Register Extract
-
-```json
-"authorisedPaths": [
-  "Title:/registerExtract/*"
-]
-```
-
-The issuer is authorised for any data beneath the register extract section of the Title entity, including proprietorship data, charges, restrictions, and other register sections.
-
-#### Multiple Paths — HMLR Proxy
-
-```json
-"authorisedPaths": [
-  "Title:/titleNumber",
-  "Title:/titleExtents",
-  "Title:/registerExtract/*",
-  "Title:/ownership/*"
-]
-```
-
-The issuer is authorised for title identification, title extents (boundary geometry), all register extract data, and ownership assertions on the Title entity. It is **not** authorised for Property data, Representation data, or anything outside these specific paths.
-
-#### Full Entity Authority — Future Root Issuer
-
-```json
-"authorisedPaths": [
-  "Property:/*"
-]
-```
-
-Full authority over all paths on the Property entity. This would typically only be granted to a root issuer with comprehensive authority (unlikely in practice — more typically, different authorities cover different property data domains).
-
-### 5.4 Path Matching Algorithm
-
-When a VC is received, the verifier extracts the entity type and data paths from the credential's `credentialSubject` and checks each against the issuer's `authorisedPaths`:
+### 6.3 Path Matching Algorithm
 
 ```
 function isPathAuthorised(entityType, dataPath, authorisedPaths):
     for each authorisedPath in authorisedPaths:
         [authEntity, authPath] = split(authorisedPath, ":")
-
-        // Entity type must match exactly
-        if authEntity != entityType:
-            continue
-
-        // Exact match
-        if authPath == dataPath:
-            return true
-
-        // Wildcard match: "/foo/*" covers "/foo/bar", "/foo/bar/baz", etc.
+        if authEntity != entityType: continue
+        if authPath == dataPath: return true
         if authPath ends with "/*":
             prefix = authPath without trailing "/*"
-            if dataPath starts with prefix + "/":
-                return true
-            // Also match the prefix itself: "/foo/*" covers "/foo"
-            if dataPath == prefix:
-                return true
-
+            if dataPath starts with prefix + "/": return true
+            if dataPath == prefix: return true
     return false
 ```
 
-### 5.5 Credential-to-Path Mapping
+### 6.4 Multiple Issuers Per Path
 
-A single Verifiable Credential maps to one or more entity:path combinations based on its `credentialSubject`:
-
-```json
-{
-  "@context": ["https://www.w3.org/ns/credentials/v2"],
-  "type": ["VerifiableCredential", "PropertyEnergyCredential"],
-  "credentialSubject": {
-    "id": "urn:pdtf:uprn:100023456789",
-    "entityType": "Property",
-    "path": "/energyEfficiency/certificate",
-    "data": {
-      "currentRating": "C",
-      "potentialRating": "B",
-      "expiryDate": "2034-05-12",
-      "certificateNumber": "0123-4567-8901-2345-6789"
-    }
-  }
-}
-```
-
-The verifier derives the entity:path as `Property:/energyEfficiency/certificate` and checks it against the issuer's `authorisedPaths` in the TIR.
-
-### 5.6 Multiple Issuers Per Path
-
-**Multiple issuers per path are permitted** (Q5.2 resolved, see architecture overview §14.1). Multiple commercial providers — search services, valuations, environmental data — will legitimately issue credentials against the same entity:path combinations. The TIR does not enforce exclusivity, and state assembly merges credentials from multiple issuers for the same path using timestamp-ordered semantics.
+Multiple issuers are permitted for the same entity:path — for example, competing search providers or valuers. The federation does not enforce exclusivity; state assembly (see [Sub-spec 07](./07-state-assembly.md)) merges credentials from multiple issuers for the same path using timestamp-ordered semantics.
 
 ---
 
-## 6. Trust Levels
+## 7. Trust Resolution
 
-### 6.1 rootIssuer
-
-| | |
-|---|---|
-| **Definition** | The primary authoritative source for the data. Issues VCs directly from its own canonical dataset. |
-| **Examples** | HM Land Registry (title data), MHCLG EPC Register (energy performance), Valuation Office Agency (council tax bands) |
-| **Trust semantics** | Highest trust. The VC is a signed assertion from the data's origin. No intermediary involved. |
-| **Requirements** | Must control the DID listed in the TIR. Must operate its own VC issuance infrastructure. DID document must be resolvable and contain the signing key. |
-| **proxyFor** | Not applicable — root issuers do not proxy for anyone. |
-
-Root issuers represent the end state of PDTF 2.0's trust model. Initially, most root issuer entries will have `status: "planned"` because government agencies have not yet adopted PDTF 2.0 VC issuance. As adoption grows, these entries transition to `active`.
-
-### 6.2 trustedProxy
-
-| | |
-|---|---|
-| **Definition** | An authorised intermediary that fetches data from a primary source's API and repackages it as signed Verifiable Credentials. |
-| **Examples** | Moverly's HMLR adapter (fetches via OC1 API), Moverly's EPC adapter (fetches via domestic energy API), any licensed data reseller with API access |
-| **Trust semantics** | Intermediate trust. The verifier trusts that the proxy faithfully reproduced the source data without modification. The VC's `evidence` section should reference the source API call for auditability. |
-| **Requirements** | Must declare `proxyFor` referencing the root issuer slug. Must have legitimate API access to the primary source. Must faithfully reproduce source data without modification or interpretation. |
-| **proxyFor** | REQUIRED. References the slug of the root issuer whose data this proxy repackages. |
-
-Trusted proxies are the **Phase 1** mechanism for PDTF 2.0 adoption. They bridge the gap between existing government APIs (which return JSON/XML, not VCs) and the PDTF 2.0 credential model.
-
-### 6.3 accountProvider
-
-| | |
-|---|---|
-| **Definition** | A platform that issues user or organisation DIDs and is responsible for identity verification at onboarding. |
-| **Examples** | Moverly (issues `did:key` identifiers for sellers, buyers, conveyancers), future digital identity wallet providers, LMS user portals |
-| **Trust semantics** | Trusted to have performed adequate identity verification before issuing a DID. The level of verification is described in the `identityVerification` field. |
-| **Requirements** | Must describe its identity verification methods. Must maintain the binding between real-world identity and DID. Listed in `userAccountProviders`, not `issuers`. |
-| **proxyFor** | Not applicable. |
-
-Account providers answer a different question from data issuers: "Was this person's DID created by a platform I trust to have verified their identity?" This matters for SellerCapacity and Representation credentials, where the credential's validity depends partly on the legitimacy of the subject's DID.
-
-### 6.4 Trust Level Comparison
-
-| Aspect | rootIssuer | trustedProxy | accountProvider |
-|--------|-----------|--------------|-----------------|
-| **Data source** | Own canonical dataset | Primary source API | User onboarding |
-| **VC content** | Authoritative assertion | Faithful reproduction | Identity binding |
-| **proxyFor required** | No | Yes | No |
-| **Registry section** | `issuers` | `issuers` | `userAccountProviders` |
-| **Phase** | Phase 3 (future) | Phase 1 (now) | Phase 1 (now) |
-| **Example DID** | `did:web:hmlr.gov.uk` | `did:web:adapters.propdata.org.uk:hmlr` | `did:web:moverly.com` |
-
----
-
-## 7. Verification Flow
-
-### 7.1 Overview
-
-When a verifier receives a Verifiable Credential, TIR verification is one step in the overall validation pipeline. The full pipeline is:
-
-1. **Parse** the VC envelope and extract claims
-2. **Resolve** the issuer's DID and retrieve the public key
-3. **Verify** the cryptographic signature
-4. **Check revocation** status (Bitstring Status List)
-5. **Check TIR** — is this issuer authorised for these claims?
-6. **Return** the composite verification result
-
-Steps 1–4 are covered in other sub-specs. This section details step 5.
-
-### 7.2 TIR Verification Steps
+When a verifier receives a VC, trust resolution proceeds as follows:
 
 ```
-┌─────────────────────────────────────┐
-│  1. Receive Verifiable Credential   │
-│     Extract: issuer DID, entity     │
-│     type, data paths                │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│  2. Look up issuer DID in TIR      │
-│     Search both `issuers` and       │
-│     `userAccountProviders`          │
-│     by matching `did` field         │
-└──────────────┬──────────────────────┘
-               │
-          ┌────┴────┐
-          │ Found?  │
-          └────┬────┘
-         No    │    Yes
-         │     │     │
-         ▼     │     ▼
-┌──────────┐   │  ┌─────────────────────────────────┐
-│ UNTRUSTED│   │  │  3. Check status                 │
-│ Return:  │   │  │     active → continue            │
-│ unknown  │   │  │     planned → UNTRUSTED (not yet)│
-│ issuer   │   │  │     deprecated → WARN + continue │
-└──────────┘   │  │     revoked → UNTRUSTED          │
-               │  └──────────────┬──────────────────┘
-               │                 │
-               │                 ▼
-               │  ┌─────────────────────────────────┐
-               │  │  4. Check validity period         │
-               │  │     now < validFrom → UNTRUSTED  │
-               │  │     now > validUntil → UNTRUSTED │
-               │  │     else → continue              │
-               │  └──────────────┬──────────────────┘
-               │                 │
-               │                 ▼
-               │  ┌─────────────────────────────────┐
-               │  │  5. Check authorisedPaths        │
-               │  │     For each entity:path in VC:  │
-               │  │     Run path matching algorithm  │
-               │  │     All covered → continue       │
-               │  │     Any uncovered → PARTIAL      │
-               │  └──────────────┬──────────────────┘
-               │                 │
-               │                 ▼
-               │  ┌─────────────────────────────────┐
-               │  │  6. Return result                 │
-               │  │     {                             │
-               │  │       trusted: true,              │
-               │  │       issuerSlug: "moverly-epc",  │
-               │  │       trustLevel: "trustedProxy", │
-               │  │       status: "active",           │
-               │  │       pathsCovered: true,          │
-               │  │       warnings: []                │
-               │  │     }                             │
-               │  └───────────────────────────────────┘
+┌────────────────────────────────────────────┐
+│ 1. Parse VC; extract issuer identifier    │
+│    (DID or HTTPS URL) and entity:paths    │
+└───────────────┬────────────────────────────┘
+                │
+                ▼
+┌────────────────────────────────────────────┐
+│ 2. Fetch issuer Entity Configuration       │
+│    from .well-known/openid-federation      │
+└───────────────┬────────────────────────────┘
+                │
+                ▼
+┌────────────────────────────────────────────┐
+│ 3. Walk authority_hints to Trust Anchor    │
+│    At each step, fetch the superior's      │
+│    Subordinate Entity Statement about the  │
+│    issuer; verify signatures; collect JWKS │
+└───────────────┬────────────────────────────┘
+                │
+                ▼
+┌────────────────────────────────────────────┐
+│ 4. Verify Trust Anchor identity            │
+│    Trust Anchor key MUST match pinned      │
+│    value. Fail if not.                     │
+└───────────────┬────────────────────────────┘
+                │
+                ▼
+┌────────────────────────────────────────────┐
+│ 5. Verify Trust Mark(s)                   │
+│    Verify signature by a permitted issuer  │
+│    listed in trust_mark_issuers at the TA. │
+│    Optionally poll trust_mark_status.      │
+└───────────────┬────────────────────────────┘
+                │
+                ▼
+┌────────────────────────────────────────────┐
+│ 6. Check delegation.authorised_paths       │
+│    For each entity:path in the VC, run     │
+│    the path matching algorithm against the │
+│    Trust Mark's delegation claim.          │
+└───────────────┬────────────────────────────┘
+                │
+                ▼
+┌────────────────────────────────────────────┐
+│ 7. Return TrustResolutionResult            │
+└────────────────────────────────────────────┘
 ```
 
-### 7.3 Verification Result Object
+### 7.1 Result Object
 
 ```typescript
-interface TIRVerificationResult {
+interface TrustResolutionResult {
   /** Whether the issuer is trusted for the claimed paths */
   trusted: boolean;
 
-  /** The issuer's slug in the TIR, or null if not found */
-  issuerSlug: string | null;
+  /** The issuer's federation entity identifier */
+  issuer: string;
 
-  /** The trust level, or null if not found */
-  trustLevel: "rootIssuer" | "trustedProxy" | "accountProvider" | null;
+  /** Trust chain: [leaf, ..., trust anchor] */
+  trustChain: string[];
 
-  /** The issuer's status in the TIR */
-  status: "active" | "planned" | "deprecated" | "revoked" | "unknown";
+  /** Trust level derived from the delegation claim */
+  trustLevel: "root_issuer" | "trusted_proxy" | "account_provider" | null;
 
-  /** Whether all entity:paths in the VC are covered by authorisedPaths */
+  /** Whether all entity:paths in the VC are covered by delegation.authorised_paths */
   pathsCovered: boolean;
 
-  /** Paths in the VC not covered by the issuer's authorisedPaths */
+  /** Paths not covered by the delegation claim */
   uncoveredPaths: string[];
 
-  /** Non-fatal warnings (e.g. deprecated issuer) */
+  /** Non-fatal warnings */
   warnings: string[];
 }
 ```
 
-### 7.4 Example: Successful Verification
+---
 
-A VC is received with:
-- Issuer DID: `did:web:adapters.propdata.org.uk:epc`
-- Entity type: `Property`
-- Data path: `/energyEfficiency/certificate`
+## 8. Trust Levels
 
-TIR lookup:
-1. Find entry with `did` matching `did:web:adapters.propdata.org.uk:epc` → slug: `moverly-epc`
-2. Status: `active` ✓
-3. Validity: `validFrom` in the past, no `validUntil` ✓
-4. Path check: `Property:/energyEfficiency/certificate` against `authorisedPaths: ["Property:/energyEfficiency/*"]` → wildcard match ✓
+The `delegation.trust_level` claim classifies the subject. The same three levels that appeared in the earlier TIR design are preserved.
 
-Result:
-```json
-{
-  "trusted": true,
-  "issuerSlug": "moverly-epc",
-  "trustLevel": "trustedProxy",
-  "status": "active",
-  "pathsCovered": true,
-  "uncoveredPaths": [],
-  "warnings": []
-}
-```
+### 8.1 `root_issuer`
 
-### 7.5 Example: Path Not Authorised
+The primary authoritative source for the data. Issues VCs directly from its own canonical dataset. Examples: HM Land Registry (title data), MHCLG EPC Register, Valuation Office Agency. `delegation.proxy_for` is omitted.
 
-A VC is received with:
-- Issuer DID: `did:web:adapters.propdata.org.uk:epc`
-- Entity type: `Property`
-- Data path: `/buildingConstruction/wallType`
+### 8.2 `trusted_proxy`
 
-TIR lookup:
-1. Find entry → slug: `moverly-epc`
-2. Status: `active` ✓
-3. Path check: `Property:/buildingConstruction/wallType` against `authorisedPaths: ["Property:/energyEfficiency/*"]` → no match ✗
+An authorised intermediary that fetches data from a primary source's API and repackages it as signed VCs. `delegation.proxy_for` is REQUIRED and references the root issuer's entity identifier. The VC's `evidence` section should reference the source API call for auditability.
 
-Result:
-```json
-{
-  "trusted": false,
-  "issuerSlug": "moverly-epc",
-  "trustLevel": "trustedProxy",
-  "status": "active",
-  "pathsCovered": false,
-  "uncoveredPaths": ["Property:/buildingConstruction/wallType"],
-  "warnings": ["Issuer moverly-epc is not authorised for path Property:/buildingConstruction/wallType"]
-}
-```
+### 8.3 `account_provider`
 
-### 7.6 Example: Deprecated Issuer
+A platform that issues user or organisation DIDs and is responsible for identity verification at onboarding. Uses the separate `account-provider` trust mark (not `pdtf-verified-issuer`). Carries `delegation.identity_verification` and optionally `delegation.managed_organisations`.
 
-When a root issuer goes active and the corresponding trusted proxy is deprecated:
+### 8.4 Comparison
 
-```json
-{
-  "trusted": true,
-  "issuerSlug": "moverly-hmlr",
-  "trustLevel": "trustedProxy",
-  "status": "deprecated",
-  "pathsCovered": true,
-  "uncoveredPaths": [],
-  "warnings": [
-    "Issuer moverly-hmlr is deprecated. Root issuer hmlr is now active. Credentials from this issuer will be rejected after 2027-06-01T00:00:00Z."
-  ]
-}
-```
+| Aspect | root_issuer | trusted_proxy | account_provider |
+|--------|-------------|---------------|------------------|
+| Data source | Own canonical dataset | Primary source API | User onboarding |
+| VC content | Authoritative assertion | Faithful reproduction | Identity binding |
+| `proxy_for` required | No | Yes | No |
+| Trust mark ID | `pdtf-verified-issuer` | `pdtf-verified-issuer` | `account-provider` |
+| Phase | Phase 3 (future) | Phase 1 (now) | Phase 1 (now) |
 
 ---
 
-## 8. Registry Governance
+## 9. Federation Metadata Cache
 
-### 8.1 Current Governance (Phase 1)
+Verifiers MUST NOT resolve trust chains from scratch on every credential verification. OpenID Federation provides several caching hooks.
 
-During Phase 1, the TIR is maintained by Moverly as the PDTF 2.0 steward:
+### 9.1 Cache Keys
 
-| Role | Responsibility | Current Holder |
-|------|---------------|----------------|
-| **Registry maintainer** | Merges PRs, manages releases | Moverly (Ed Molyneux) |
-| **Entry proposer** | Creates PRs to add/modify entries | Any organisation |
-| **Schema guardian** | Approves changes to the TIR JSON Schema | Moverly |
+| Object | Cache key | Recommended TTL |
+|--------|-----------|-----------------|
+| Entity Configuration | `iss` URL | `exp - iat` (typically 1 day) |
+| Subordinate Entity Statement | `(iss, sub)` | `exp - iat` (typically 1 day) |
+| Trust Mark JWT | `(iss, sub, id)` | `exp - iat` |
+| Trust Mark status | `(iss, sub, id)` | 1 hour |
+| Managed Organisations document | URL | 1 hour (use ETag) |
 
-### 8.2 Change Process
-
-All changes to `registry.json` follow this workflow:
-
-1. **Fork** the repository (or create a branch if you have write access)
-2. **Modify** `registry.json` — add, update, or deprecate entries
-3. **Update** the `updated` timestamp to the current ISO 8601 datetime
-4. **Validate** locally: `node scripts/validate.js` (runs the JSON Schema check)
-5. **Create a Pull Request** with:
-   - Clear description of the change
-   - Justification for new entries or status changes
-   - Evidence of authority (e.g. organisation authorisation for a new adapter)
-6. **CI validation** runs automatically — PR cannot merge if schema validation fails
-7. **Review** by at least one registry maintainer
-8. **Signed commit** — the merge commit MUST be GPG-signed by a maintainer
-9. **Merge** to `main` — the TIR is immediately live
-
-### 8.3 Change Categories
-
-| Change Type | Review Required | Additional Evidence |
-|-------------|----------------|-------------------|
-| **New trusted proxy** | 1 maintainer | Proof of API access to source, organisation details |
-| **New root issuer** | 2 maintainers | Confirmation from the issuing organisation |
-| **New account provider** | 2 maintainers | Description of identity verification process |
-| **Status change (active → deprecated)** | 1 maintainer | Reason for deprecation, migration timeline |
-| **Status change (any → revoked)** | 1 maintainer | Immediate — can bypass PR in emergencies |
-| **Path additions** | 1 maintainer | Justification for expanded scope |
-| **Path removals** | 1 maintainer | Impact assessment (existing VCs at those paths) |
-| **Schema changes** | 2 maintainers + RFC | Backward compatibility analysis |
-
-### 8.4 Emergency Revocation
-
-If an issuer is compromised or found to be issuing fraudulent credentials:
-
-1. A maintainer MAY push a direct commit to `main` (bypassing the PR process)
-2. The entry's `status` is set to `revoked`
-3. A post-hoc PR is created documenting the revocation and rationale
-4. All verifiers will pick up the revocation on their next cache refresh (see [Section 9](#9-caching-strategy))
-
-### 8.5 Future Governance (Phase 2+)
-
-As PDTF 2.0 adoption grows, governance should evolve:
-
-- **Multi-stakeholder review board** — representatives from multiple organisations with merge rights
-- **Formal RFC process** for schema changes
-- **Automated validation** — beyond schema checks, verify that DID documents resolve and contain signing keys
-- **Signed registry** — the `registry.json` itself could be signed (JWS detached payload) for additional integrity
-- **Potential move to a smart contract or distributed ledger** — only if GitHub-based governance proves insufficient (not anticipated near-term)
-
----
-
-## 9. Caching Strategy
-
-### 9.1 Fetching the TIR
-
-Verifiers MUST NOT fetch the TIR from GitHub on every credential verification. The TIR changes infrequently (new entries are added at most weekly), and GitHub rate limits apply to API requests.
-
-**Recommended approach:** Use the GitHub Contents API with conditional requests:
-
-```http
-GET /repos/property-data-standards-co/trusted-issuer-registry/contents/registry.json
-Accept: application/vnd.github.raw+json
-If-None-Match: "abc123def456"
-```
-
-Response if unchanged:
-```http
-HTTP/1.1 304 Not Modified
-```
-
-Response if changed:
-```http
-HTTP/1.1 200 OK
-ETag: "xyz789ghi012"
-Content-Type: application/json
-
-{ ... registry content ... }
-```
-
-### 9.2 Cache Parameters
-
-| Parameter | Value | Rationale |
-|-----------|-------|-----------|
-| **TTL (normal)** | 1 hour | Balances freshness with GitHub API rate limits |
-| **TTL (after error)** | 5 minutes | Retry sooner after transient failures |
-| **Max stale** | 24 hours | If GitHub is completely unreachable, use the last known good TIR for up to 24 hours |
-| **ETag storage** | Persistent | Store the ETag alongside the cached registry to enable conditional requests |
-
-### 9.3 Cache Implementation
-
-```typescript
-interface TIRCache {
-  /** The cached registry data */
-  registry: TrustedIssuerRegistry;
-
-  /** ETag from the last successful fetch */
-  etag: string | null;
-
-  /** Timestamp of the last successful fetch */
-  lastFetched: Date;
-
-  /** Timestamp of the last successful update (registry actually changed) */
-  lastUpdated: Date;
-
-  /** Number of consecutive fetch failures */
-  failureCount: number;
-}
-
-async function fetchTIR(cache: TIRCache): Promise<TIRCache> {
-  const now = new Date();
-  const ttl = cache.failureCount > 0 ? 5 * 60 * 1000 : 60 * 60 * 1000;
-
-  // Within TTL — return cached
-  if (now.getTime() - cache.lastFetched.getTime() < ttl) {
-    return cache;
-  }
-
-  try {
-    const response = await fetch(GITHUB_API_URL, {
-      headers: {
-        'Accept': 'application/vnd.github.raw+json',
-        ...(cache.etag ? { 'If-None-Match': cache.etag } : {})
-      }
-    });
-
-    if (response.status === 304) {
-      // Not modified — update lastFetched, keep data
-      return { ...cache, lastFetched: now, failureCount: 0 };
-    }
-
-    if (response.ok) {
-      const registry = await response.json();
-      const etag = response.headers.get('etag');
-      return {
-        registry,
-        etag,
-        lastFetched: now,
-        lastUpdated: now,
-        failureCount: 0
-      };
-    }
-
-    throw new Error(`GitHub API returned ${response.status}`);
-  } catch (error) {
-    const staleDuration = now.getTime() - cache.lastFetched.getTime();
-    const maxStale = 24 * 60 * 60 * 1000;
-
-    if (staleDuration < maxStale && cache.registry) {
-      // Use stale cache
-      console.warn(`TIR fetch failed, using stale cache (age: ${staleDuration}ms)`);
-      return { ...cache, failureCount: cache.failureCount + 1 };
-    }
-
-    throw new Error('TIR unavailable and cache expired');
-  }
-}
-```
-
-### 9.4 Fallback Behaviour
-
-If the TIR cannot be fetched and the cache has expired beyond `maxStale`:
+### 9.2 Stale Behaviour
 
 | Scenario | Behaviour |
 |----------|-----------|
-| **Stale cache within 24h** | Use cached TIR, log warning, continue verification |
-| **Stale cache beyond 24h** | Fail open or fail closed depending on verifier configuration |
-| **No cache at all** | MUST fail verification — cannot verify issuer trust without a TIR |
+| Cache fresh | Use cache |
+| Cache expired, fetch succeeds | Replace cache |
+| Cache expired, fetch fails, within stale window (24h) | Use stale, log warning |
+| No cache, fetch fails | Fail verification |
 
-**Fail-open vs fail-closed** is a deployment decision:
+**Fail-open vs fail-closed** is a deployment decision. Reference implementations default to fail-closed for high-assurance verifier contexts and fail-open with `trustUnverified` flagging for UI display.
 
-- **Fail-closed** (recommended for high-assurance contexts): If the TIR is unavailable, treat all issuers as untrusted. Verification fails.
-- **Fail-open** (acceptable for low-assurance contexts like UI display): If the TIR is unavailable, skip TIR verification and flag the result as `trustUnverified`.
+### 9.3 Bootstrap Bundle
 
-### 9.5 Bundled Bootstrap TIR
-
-Reference implementations SHOULD ship with a bundled copy of the TIR at build time. This bootstrap copy is used:
-
-- On first run before any network fetch
-- As a last resort if both live fetch and cache fail
-
-The bundled TIR MUST be updated with each release of the reference implementation.
+Reference implementations SHOULD ship with a bundled snapshot of the Trust Anchor's Entity Configuration and the set of currently active Subordinate Entity Statements. This is used on first run before any network fetch and as a last-resort fallback.
 
 ---
 
-## 10. Initial Registry Entries
+## 10. Governance
 
-The following entries constitute the initial TIR, aligned with the architecture overview:
+### 10.1 Phase 1
 
-### 10.1 Full Initial `registry.json`
+The Trust Anchor is operated by Moverly as PDTF 2.0 steward:
 
-```json
-{
-  "$schema": "./schema/tir-schema.json",
-  "version": "1.0",
-  "updated": "2026-03-24T12:00:00Z",
-  "issuers": {
-    "hmlr": {
-      "name": "HM Land Registry",
-      "did": "did:web:hmlr.gov.uk",
-      "authorisedPaths": [
-        "Title:/titleNumber",
-        "Title:/titleExtents",
-        "Title:/registerExtract/*",
-        "Title:/ownership/*"
-      ],
-      "trustLevel": "rootIssuer",
-      "status": "planned",
-      "validFrom": null,
-      "validUntil": null,
-      "contact": null,
-      "website": "https://www.gov.uk/government/organisations/land-registry"
-    },
-    "mhclg-epc": {
-      "name": "Ministry of Housing — EPC Register",
-      "did": "did:web:epc.communities.gov.uk",
-      "authorisedPaths": [
-        "Property:/energyEfficiency/certificate"
-      ],
-      "trustLevel": "rootIssuer",
-      "status": "planned",
-      "validFrom": null,
-      "validUntil": null,
-      "contact": null,
-      "website": "https://www.gov.uk/find-energy-certificate"
-    },
-    "voa": {
-      "name": "Valuation Office Agency",
-      "did": "did:web:voa.gov.uk",
-      "authorisedPaths": [
-        "Property:/councilTax/*"
-      ],
-      "trustLevel": "rootIssuer",
-      "status": "planned",
-      "validFrom": null,
-      "validUntil": null,
-      "contact": null,
-      "website": "https://www.gov.uk/government/organisations/valuation-office-agency"
-    },
-    "moverly-hmlr": {
-      "name": "Moverly (HMLR Proxy)",
-      "did": "did:web:adapters.propdata.org.uk:hmlr",
-      "authorisedPaths": [
-        "Title:/titleNumber",
-        "Title:/titleExtents",
-        "Title:/registerExtract/*",
-        "Title:/ownership/*"
-      ],
-      "trustLevel": "trustedProxy",
-      "proxyFor": "hmlr",
-      "status": "active",
-      "validFrom": "2026-03-01T00:00:00Z",
-      "validUntil": null,
-      "contact": "trust@moverly.com",
-      "website": "https://moverly.com"
-    },
-    "moverly-epc": {
-      "name": "Moverly (EPC Proxy)",
-      "did": "did:web:adapters.propdata.org.uk:epc",
-      "authorisedPaths": [
-        "Property:/energyEfficiency/*"
-      ],
-      "trustLevel": "trustedProxy",
-      "proxyFor": "mhclg-epc",
-      "status": "active",
-      "validFrom": "2026-03-01T00:00:00Z",
-      "validUntil": null,
-      "contact": "trust@moverly.com",
-      "website": "https://moverly.com"
-    },
-    "moverly-ea": {
-      "name": "Moverly (Environment Agency Proxy)",
-      "did": "did:web:adapters.propdata.org.uk:ea-flood",
-      "authorisedPaths": [
-        "Property:/environmentalIssues/flooding/*"
-      ],
-      "trustLevel": "trustedProxy",
-      "proxyFor": "environment-agency",
-      "status": "active",
-      "validFrom": "2026-03-01T00:00:00Z",
-      "validUntil": null,
-      "contact": "trust@moverly.com",
-      "website": "https://moverly.com"
-    },
-    "environment-agency": {
-      "name": "Environment Agency",
-      "did": "did:web:environment.data.gov.uk",
-      "authorisedPaths": [
-        "Property:/environmentalIssues/flooding/*"
-      ],
-      "trustLevel": "rootIssuer",
-      "status": "planned",
-      "validFrom": null,
-      "validUntil": null,
-      "contact": null,
-      "website": "https://www.gov.uk/government/organisations/environment-agency"
-    }
-  },
-  "userAccountProviders": {
-    "moverly": {
-      "name": "Moverly",
-      "did": "did:web:moverly.com",
-      "description": "Issues user DIDs (did:key) as account provider. Validates user and organisation identity at onboarding via email, SMS, and document verification.",
-      "trustLevel": "accountProvider",
-      "identityVerification": {
-        "methods": ["email", "sms", "document-check"],
-        "description": "Email verification at registration, SMS verification for account recovery, document-based identity checks for seller/buyer roles. Organisation identity verified via SRA number and Companies House registration."
-      },
-      "managedOrganisations": "https://moverly.com/.well-known/pdtf-managed-orgs.json",
-      "status": "active",
-      "validFrom": "2026-03-01T00:00:00Z",
-      "validUntil": null,
-      "contact": "trust@moverly.com",
-      "website": "https://moverly.com"
-    }
-  }
-}
-```
+| Role | Responsibility | Phase 1 Holder |
+|------|---------------|----------------|
+| Trust Anchor operator | Signs Entity Statements and Trust Marks; operates federation endpoints | Moverly |
+| Trust Mark issuer (`pdtf-verified-issuer`) | Decides which adapters/issuers are accredited | Moverly |
+| Trust Mark issuer (`account-provider`) | Accredits account providers | Moverly |
+| Trust Mark issuer (`regulated-conveyancer`) | Issues conveyancer trust marks | Moverly (interim), SRA/CLC (target) |
 
-### 10.2 Entry Summary
+### 10.2 Accreditation Process
 
-| Slug | Name | Trust Level | Status | Authorised Paths |
-|------|------|-------------|--------|-----------------|
-| `hmlr` | HM Land Registry | rootIssuer | planned | Title: titleNumber, titleExtents, registerExtract/*, ownership/* |
-| `mhclg-epc` | MHCLG — EPC Register | rootIssuer | planned | Property: energyEfficiency/certificate |
-| `voa` | Valuation Office Agency | rootIssuer | planned | Property: councilTax/* |
-| `environment-agency` | Environment Agency | rootIssuer | planned | Property: environmentalIssues/flooding/* |
-| `moverly-hmlr` | Moverly (HMLR Proxy) | trustedProxy | active | Title: titleNumber, titleExtents, registerExtract/*, ownership/* |
-| `moverly-epc` | Moverly (EPC Proxy) | trustedProxy | active | Property: energyEfficiency/* |
-| `moverly-ea` | Moverly (EA Proxy) | trustedProxy | active | Property: environmentalIssues/flooding/* |
-| `moverly` | Moverly (Account Provider) | accountProvider | active | — (user DIDs) |
+1. Entity applies to the Trust Anchor operator
+2. Trust Anchor verifies the entity's identity and authorisation (e.g. SRA registration for conveyancers, contractual relationship for data adapters)
+3. Trust Anchor issues a Subordinate Entity Statement and the appropriate Trust Marks
+4. Entity publishes its Entity Configuration referencing the Trust Anchor via `authority_hints`
+
+### 10.3 Emergency Revocation
+
+If an issuer is compromised, the Trust Anchor:
+
+1. Marks the Trust Mark as revoked via the `federation_trust_mark_status_endpoint`
+2. Stops serving the Subordinate Entity Statement (or serves one with `exp` in the past)
+3. Publishes an incident note
+
+Verifiers polling the status endpoint (recommended every hour for high-impact trust marks) pick up the revocation within that interval.
+
+### 10.4 Phase 2+
+
+As PDTF 2.0 adoption grows, a multi-stakeholder property-sector governance body should operate the Trust Anchor (or become a higher-level Trust Anchor above Moverly). Multiple Trust Mark issuers will emerge (e.g. SRA issues `regulated-conveyancer` directly). No schema changes are required — this is native OpenID Federation topology.
 
 ---
 
@@ -6386,134 +5729,71 @@ The following entries constitute the initial TIR, aligned with the architecture 
 
 ### 11.1 Phase 1 → Phase 2: Adapter Independence
 
-When adapters move from Moverly-hosted to independently hosted infrastructure:
-
-1. **New entries** are added for the independently hosted adapters (e.g. `propdata-hmlr`)
-2. **DID changes** — the new adapter gets its own `did:web` under the independent domain
-3. **Old entries** (`moverly-hmlr`, etc.) transition to `deprecated` with a `validUntil` date
-4. **Overlap period** — both old and new entries are `active` during migration
-5. **Old entries** eventually transition to `revoked` after the overlap period
-
-Example diff:
-```json
-{
-  "moverly-hmlr": {
-    "status": "deprecated",
-    "validUntil": "2027-06-01T00:00:00Z"
-  },
-  "propdata-hmlr": {
-    "name": "PropData Standards (HMLR Adapter)",
-    "did": "did:web:adapters.propdata.org.uk:hmlr-v2",
-    "authorisedPaths": [
-      "Title:/titleNumber",
-      "Title:/titleExtents",
-      "Title:/registerExtract/*",
-      "Title:/ownership/*"
-    ],
-    "trustLevel": "trustedProxy",
-    "proxyFor": "hmlr",
-    "status": "active",
-    "validFrom": "2027-01-01T00:00:00Z"
-  }
-}
-```
+1. New adapter publishes Entity Configuration at its own domain
+2. Trust Anchor issues new Subordinate Entity Statement + Trust Mark
+3. Old adapter's Trust Mark lifetime is not renewed; status endpoint eventually returns `revoked`
+4. During overlap both adapters are live
 
 ### 11.2 Phase 2 → Phase 3: Root Issuer Activation
 
 When a primary source (e.g. HMLR) begins issuing PDTF-compliant VCs directly:
 
-1. The root issuer entry transitions from `planned` to `active`
-2. The `did` field is updated to the issuer's actual production DID (if it differs from the placeholder)
-3. The corresponding trusted proxy entry transitions to `deprecated`
-4. A `validUntil` date is set on the proxy entry (e.g. 6 months from root issuer activation)
-5. After the overlap period, the proxy entry is `revoked`
-
-```
-Timeline:
-─────────────────────────────────────────────────────────────
-Phase 1        Phase 2              Phase 3
-(now)          (medium-term)        (future)
-
-moverly-hmlr:  ████ active ████     ▓▓ deprecated ▓▓  revoked
-propdata-hmlr:                      ████ active ████   ▓▓ deprecated ▓▓
-hmlr:          planned              planned            ████ active ████
-─────────────────────────────────────────────────────────────
-```
+1. HMLR publishes its own Entity Configuration, optionally as a subordinate of the PDTF Trust Anchor, or as its own Trust Anchor that PDTF verifiers pin alongside `trust.pdtf.org`
+2. The Trust Anchor issues a `pdtf-verified-issuer` Trust Mark to HMLR with `trust_level: root_issuer`
+3. The corresponding proxy's Trust Mark is allowed to expire / marked revoked
+4. Verifiers begin preferring the root issuer's credentials
 
 ### 11.3 Backward Compatibility
 
-Existing VCs issued by deprecated or revoked issuers remain cryptographically valid — their signatures don't change. The TIR status affects **new verification decisions**, not historical ones.
-
-Verifiers SHOULD implement a policy for handling credentials from deprecated issuers:
-
-- **Accept with warning** during the overlap period
-- **Reject** after `validUntil` for revoked issuers
-- **Log** for audit purposes when a deprecated issuer's credential is encountered (signals that the data consumer needs to refresh)
+Existing VCs issued by deprecated proxies remain cryptographically valid — signatures don't change. Trust Mark status affects **new verification decisions**, not historical ones.
 
 ---
 
 ## 12. Security Considerations
 
-### 12.1 GitHub Repository Compromise
+### 12.1 Trust Anchor Key Compromise
 
-**Threat:** An attacker gains write access to the `trusted-issuer-registry` repository and adds a malicious issuer entry.
-
-**Mitigations:**
-- **Branch protection** on `main` — no direct pushes except emergency revocations
-- **Required reviews** — at least 1 (or 2 for high-impact changes) maintainer approvals
-- **Signed commits** — all merge commits must be GPG-signed by a known maintainer key
-- **CI validation** — schema validation and entry cross-checks run on every PR
-- **Audit log** — GitHub provides a full audit log of all repository events
-- **Monitoring** — automated alerts on unexpected registry changes (e.g. new entries appearing without a corresponding PR)
-
-**Residual risk:** If a maintainer's GitHub account and GPG key are both compromised, a malicious entry could be merged. Multi-stakeholder governance (Phase 2+) reduces this by requiring multiple independent approvals.
-
-### 12.2 DID:web DNS Attacks
-
-**Threat:** An attacker compromises DNS for a `did:web` domain (e.g. `adapters.propdata.org.uk`) and serves a malicious DID document with their own signing key. If the attacker's DID matches a TIR entry, verifiers would trust credentials signed by the attacker.
+**Threat:** An attacker obtains the Trust Anchor's signing key and mints fraudulent Entity Statements or Trust Marks.
 
 **Mitigations:**
-- **DNSSEC** — all `did:web` domains used in the TIR SHOULD use DNSSEC
-- **DID document pinning** — verifiers MAY cache DID documents and alert on unexpected key changes
-- **Certificate Transparency** — monitor CT logs for certificates issued for TIR-listed domains
-- **TIR cross-check** — the TIR `did` field provides a second source of truth. If DID resolution returns a different DID than what's in the TIR, verification fails.
+- HSM-held root keys with break-glass procedures
+- Annual key rotation with overlap period
+- Monitoring for unexpected signing events
+- Reference implementations pin key IDs as well as raw keys
+
+### 12.2 `did:web` DNS Attacks
+
+**Threat:** An attacker compromises DNS for a subordinate domain and serves a malicious DID document / Entity Configuration.
+
+**Mitigations:**
+- DNSSEC on all `did:web` domains used in the federation
+- The Subordinate Entity Statement pins the JWKS — verifiers MUST use the Trust Anchor's pinned keys, not the DNS-delivered ones, as authoritative
+- Certificate Transparency monitoring for federation domains
 
 ### 12.3 Stale Cache Exploitation
 
-**Threat:** An attacker targets the window between an issuer being revoked in the TIR and verifiers refreshing their cache.
+**Threat:** Attacker targets the window between a Trust Mark being revoked and verifier caches refreshing.
 
 **Mitigations:**
-- **1-hour TTL** limits the exposure window
-- **Revocation is defence-in-depth** — VC revocation via Bitstring Status List is a separate, faster mechanism. A compromised issuer's credentials should be revoked at the credential level (immediate) as well as at the TIR level (within cache TTL).
-- **Push notifications** (future) — webhook or event-driven cache invalidation for critical changes
+- Short-lived Trust Marks (days, not years)
+- Active `trust_mark_status_endpoint` polling for high-impact marks
+- VC-level revocation (Bitstring Status List) operates on minutes, independent of federation caches
 
-### 12.4 Issuer Key Rotation Without TIR Update
+### 12.4 Enumeration and Privacy
 
-**Threat:** An issuer rotates their signing key but the TIR still references the old DID. If the DID method handles key rotation correctly (e.g. DID document updated with new key), this is not a TIR issue. But if the issuer changes their DID entirely, the TIR entry must be updated.
-
-**Mitigation:** TIR entries reference DIDs, not keys. DID methods handle key rotation internally. If an issuer changes their DID (e.g. domain change), a new TIR entry is required.
-
-### 12.5 Enumeration and Privacy
-
-**Consideration:** The TIR is public. It reveals which organisations are participating in PDTF 2.0, their DIDs, and what data paths they are authorised for. This is intentional — transparency is a feature of the trust model, not a bug. However:
-
-- The TIR does NOT contain personal data
-- The TIR does NOT reveal which specific properties have been queried
-- User DIDs are `did:key` (not `did:web`), so the TIR reveals the account *provider* but not individual users
+The federation endpoints are public. They reveal which organisations participate in PDTF 2.0 and what they are authorised for. This is intentional — transparency is a feature of the trust model. No personal data is exposed. User DIDs are `did:key`, so the federation reveals the account *provider* but not individual users.
 
 ---
 
 ## 13. Open Questions
 
-| # | Question | Context | Status |
-|---|----------|---------|--------|
-| Q1 | Should the TIR support multiple DIDs per issuer (for key rotation)? | If an issuer transitions from one DID to another, should the TIR entry list both during the overlap? Or should two entries exist? | Open |
-| Q2 | Should the TIR be signed (JWS detached payload)? | This would provide integrity verification beyond GitHub's audit trail. Useful if the TIR is fetched from a mirror. | Open |
-| Q3 | How should "multi-path" credentials be handled? | A single VC covering data from multiple entity:path combinations — should ALL paths be authorised, or is partial coverage acceptable? | Leaning: ALL paths must be covered |
-| Q4 | Should there be a TIR for test/staging environments? | Separate registry for non-production issuers, or a `test` status in the main registry? | Open |
-| Q5 | Should trust levels have numeric weights for programmatic comparison? | e.g. rootIssuer=3, trustedProxy=2, accountProvider=1 — or is the enum sufficient? | Leaning: enum is sufficient |
-| Q7 | Should the TIR include a `revokedAt` timestamp when an entry is revoked? | Useful for audit: "this issuer was revoked at X, any credentials issued after X are suspect" | Open |
-| Q8 | Should the `environment-agency` root issuer entry exist at launch? | It was not in the original architecture overview `issuers` map — added here for completeness. The `moverly-ea` proxy needs a `proxyFor` target. | Needs confirmation |
+| # | Question | Status |
+|---|----------|--------|
+| Q1 | Should `pdtf-verified-issuer` Trust Marks support multiple `authorised_paths` arrays (to distinguish paths by trust level)? | Open |
+| Q2 | Should the Trust Anchor also publish a signed aggregate list for verifiers that want to pre-load the whole federation? | Open |
+| Q3 | How should "multi-path" credentials be handled when some paths are covered and some are not? | Leaning: ALL paths must be covered |
+| Q4 | Separate Trust Anchor for test/staging, or a `test` marker on trust marks? | Open |
+| Q5 | Should the federation publish a separate `proxy_for` trust mark for proxies of non-root data? | Open |
 
 ---
 
@@ -6521,112 +5801,61 @@ Verifiers SHOULD implement a policy for handling credentials from deprecated iss
 
 ### 14.1 Reference Implementation
 
-The TIR verification logic will be implemented in the `pdtf-vc-validator` package:
+Federation trust resolution lives in the `@pdtf/core` package:
 
 ```
-property-data-standards-co/pdtf-vc-validator
+property-data-standards-co/core
 ├── src/
-│   ├── tir/
-│   │   ├── fetch.ts          # TIR fetching with caching
-│   │   ├── cache.ts          # Cache management
-│   │   ├── verify.ts         # TIR verification logic
-│   │   ├── pathMatch.ts      # Entity:path matching algorithm
-│   │   └── types.ts          # TypeScript types for TIR
+│   ├── federation/
+│   │   ├── fetch.ts              # Entity Configuration + Statement fetching
+│   │   ├── cache.ts              # Federation metadata cache
+│   │   ├── resolve.ts            # Trust chain resolution
+│   │   ├── trustMark.ts          # Trust Mark JWT verification
+│   │   ├── pathMatch.ts          # Entity:path matching
+│   │   └── types.ts
 │   └── ...
 ```
 
-### 14.2 Key Dependencies
-
-- **TIR fetch:** `fetch` API (Node 18+) or `undici` for HTTP requests with ETag support
-- **JSON Schema validation:** `ajv` for validating `registry.json` against the schema
-- **DID resolution:** Separate concern — `pdtf-did-resolver` package handles DID document fetching
-
-### 14.3 Integration with VC Validator
-
-The TIR check is called from the main VC validation pipeline:
+### 14.2 Integration with VC Validator
 
 ```typescript
 import { verifyCredential } from '@pdtf/vc-validator';
 
 const result = await verifyCredential(credential, {
-  tirUrl: 'https://api.github.com/repos/property-data-standards-co/trusted-issuer-registry/contents/registry.json',
-  tirCache: cache,           // Persistent cache instance
-  tirFailMode: 'closed',    // 'closed' | 'open'
+  trustAnchor: 'https://trust.pdtf.org',
+  trustAnchorKeys: pinnedJwks,
+  federationCache: cache,
+  trustFailMode: 'closed',
 });
 
-// result.tir contains TIRVerificationResult
+// result.federation contains TrustResolutionResult
 // result.signature contains cryptographic verification result
 // result.revocation contains revocation check result
 // result.valid is the composite boolean
 ```
 
-### 14.4 CI Validation Workflow
+### 14.3 Architecture Decision References
 
-The `trusted-issuer-registry` repo includes a GitHub Actions workflow that validates the registry on every PR:
-
-```yaml
-# .github/workflows/validate.yml
-name: Validate Registry
-
-on:
-  pull_request:
-    paths: ['registry.json']
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Validate registry against schema
-        run: node scripts/validate.js
-
-      - name: Check slug uniqueness
-        run: node scripts/check-slugs.js
-
-      - name: Verify DID format
-        run: node scripts/check-dids.js
-
-      - name: Check proxyFor references
-        run: node scripts/check-proxy-refs.js
-```
-
-### 14.5 Architecture Decision References
-
-| Decision | Summary | Date | Status |
-|----------|---------|------|--------|
-| **D8** | GitHub-based TIR at `property-data-standards-co` | 2026-03-23 | ✅ Confirmed |
-| **D20** | TIR describes entity:path combos (e.g. `Property:/energyEfficiency/certificate`) | 2026-03-23 | ✅ Confirmed |
-| **D21** | User DID issuers (account providers) must also be in TIR | 2026-03-23 | ✅ Confirmed |
-| **D24** | 3-phase evolution: Moverly proxies → separately hosted adapters → root issuers | 2026-03-23 | ✅ Confirmed |
+| Decision | Summary | Status |
+|----------|---------|--------|
+| **D8** | Trust infrastructure is OpenID Federation with PDTF Trust Anchor at `trust.pdtf.org` | ✅ Confirmed (supersedes earlier GitHub-TIR decision) |
+| **D20** | Authorisation expressed as entity:path combinations inside the Trust Mark `delegation` claim | ✅ Confirmed |
+| **D21** | Account providers carry an `account-provider` Trust Mark; user DIDs traced via `managed_organisations` | ✅ Confirmed |
+| **D24** | 3-phase evolution: Moverly proxies → independently hosted adapters → primary-source root issuers | ✅ Confirmed |
 
 ---
 
 ## Appendix A: Entity:Path Quick Reference
 
-Common entity:path combinations referenced across PDTF 2.0 sub-specs:
-
 | Entity:Path | Description | Typical Issuer |
-|------------|-------------|----------------|
+|-------------|-------------|----------------|
 | `Title:/titleNumber` | Title number | HMLR (via proxy) |
 | `Title:/titleExtents` | Boundary geometry (GeoJSON) | HMLR (via proxy) |
 | `Title:/registerExtract/*` | Full register extract | HMLR (via proxy) |
-| `Title:/registerExtract/proprietorship` | Proprietorship register | HMLR (via proxy) |
-| `Title:/registerExtract/charges` | Charges register | HMLR (via proxy) |
-| `Title:/registerExtract/restrictions` | Restrictions | HMLR (via proxy) |
-| `Title:/ownership/*` | SellerCapacity assertions | HMLR (via proxy) |
+| `Title:/ownership/*` | Ownership assertions | HMLR (via proxy) |
 | `Property:/energyEfficiency/certificate` | EPC certificate | MHCLG (via proxy) |
-| `Property:/energyEfficiency/recommendation` | EPC recommendations | MHCLG (via proxy) |
 | `Property:/environmentalIssues/flooding/*` | Flood risk data | EA (via proxy) |
 | `Property:/councilTax/*` | Council tax band + valuation | VOA (via proxy) |
-| `Property:/address` | Property address | Multiple sources |
 | `SellerCapacity:/status` | SellerCapacity claim status | Account provider |
 | `Representation:/role` | Representation role | Account provider |
 
@@ -6636,18 +5865,18 @@ Common entity:path combinations referenced across PDTF 2.0 sub-specs:
 
 | Term | Definition |
 |------|-----------|
-| **TIR** | Trusted Issuer Registry — the canonical list of authorised VC issuers |
-| **Issuer slug** | Stable, lowercase-hyphenated identifier for a registry entry |
-| **Entity:path** | Format `Entity:/json/pointer/path` describing a specific data location |
+| **Trust Anchor** | The root entity of the federation; signs Entity Statements and Trust Marks |
+| **Entity Configuration** | A self-signed JWT an entity publishes at `.well-known/openid-federation` describing itself |
+| **Subordinate Entity Statement** | A JWT signed by a superior entity describing a subordinate |
+| **Trust Mark** | A signed JWT asserting a subject meets a named policy |
+| **`delegation` claim** | PDTF extension to the Trust Mark carrying `trust_level`, `authorised_paths`, `proxy_for` |
+| **Trust Chain** | The sequence of Entity Statements from leaf issuer back to the Trust Anchor |
+| **Entity:path** | `Entity:/json/pointer/path` — a location in the PDTF entity graph |
 | **Root issuer** | Primary authoritative data source (e.g. HMLR) |
 | **Trusted proxy** | Authorised intermediary that repackages source data as VCs |
 | **Account provider** | Platform that issues user/org DIDs with identity verification |
-| **DID** | Decentralised Identifier (W3C standard) |
-| **VC** | Verifiable Credential (W3C standard) |
 
 ---
-
-
 
 ---
 
@@ -6688,7 +5917,7 @@ This spec covers key management for **credential signing and verification only**
 | [01 — Entity Graph](./01-entity-graph.md) | Entities that hold DIDs backed by keys defined here |
 | 03 — DID Methods | DID documents reference `verificationMethod` entries whose keys are managed here |
 | 04 — VC Data Model | Credentials signed using the operations defined here |
-| 05 — Trust Architecture | TIR entries reference issuer DIDs whose keys are managed here |
+| 04 — OpenID Federation | Trust Marks reference issuer DIDs whose keys are managed here |
 | 07 — Revocation | Status List credentials signed with keys managed here |
 
 ### 1.3 Key Decisions
@@ -6783,7 +6012,7 @@ Adapter keys are the workhorses of the system. Each trusted proxy adapter — HM
 **Why one key per adapter:**
 - **Blast radius containment.** If a key is compromised, only one adapter's credentials are affected.
 - **Independent rotation.** Each adapter can rotate keys on its own schedule.
-- **TIR granularity.** The Trusted Issuer Registry maps issuer DIDs to entity:path permissions. One DID per adapter means fine-grained trust delegation.
+- **Federation granularity.** Trust Mark `delegation.authorised_paths` maps issuer DIDs to entity:path permissions. One DID per adapter means fine-grained trust delegation.
 
 ### 3.2 User Keys
 
@@ -6813,11 +6042,11 @@ When digital identity wallets mature (see §10), users will hold their own keys.
 | **Cardinality** | One key |
 | **Storage** | Google Cloud KMS (HSM-backed) |
 | **Rotation** | Key version rotation; DID document updated |
-| **Signs** | TIR credential, platform metadata, user DID issuance attestations |
+| **Signs** | Trust Anchor Entity Statements, Trust Marks, platform metadata, user DID issuance attestations |
 
 The platform key represents Moverly as an organisation. It is used sparingly — primarily for signing the Trusted Issuer Registry credential and attesting that user DIDs were issued through a verified onboarding process.
 
-The platform key is the **root of trust** for the PDTF ecosystem in its current form. Compromise of this key would undermine confidence in the entire TIR. It has the highest security requirements.
+The platform key is the **root of trust** for the PDTF ecosystem in its current form. Compromise of this key would undermine confidence in the entire federation (all Entity Statements and Trust Marks signed by this key). It has the highest security requirements.
 
 ### 3.4 Status List Signing
 
@@ -6831,7 +6060,7 @@ The platform key is the **root of trust** for the PDTF ecosystem in its current 
 
 Status List credentials are themselves VCs — they must be signed. Status list VCs are signed with the same key used for credential issuance. No separate status list signing key is required. This aligns with W3C Bitstring Status List convention where the status list VC issuer matches the credential issuer. The issuer who can create a credential should also be able to revoke it — and uses the same key for both operations.
 
-**Exception:** If a separate revocation authority is introduced in the future (e.g., a regulatory body that can revoke credentials it didn't issue), it would need its own signing key and TIR entry. This would be a new issuer with its own key, not a separate "status list key."
+**Exception:** If a separate revocation authority is introduced in the future (e.g., a regulatory body that can revoke credentials it didn't issue), it would need its own signing key and Subordinate Entity Statement in the federation. This would be a new issuer with its own key, not a separate "status list key."
 
 ### 3.5 Category Summary
 
@@ -6843,7 +6072,7 @@ Status List credentials are themselves VCs — they must be signed. Status list 
 ├──────────────────┼──────────────┼───────────┼──────────────────────┤
 │ Adapter Keys     │ did:web      │ KMS (HSM) │ Source-derived VCs   │
 │ User Keys        │ did:key      │ KMS (SW)  │ User assertions      │
-│ Platform Key     │ did:web      │ KMS (HSM) │ TIR, attestations    │
+│ Platform Key     │ did:web      │ KMS (HSM) │ Federation, attestations │
 │ Status List      │ (same key as │ (same as  │ Bitstring Status     │
 │ (not separate)   │  issuer)     │  issuer)  │ List VCs             │
 └──────────────────┴──────────────┴───────────┴──────────────────────┘
@@ -6949,7 +6178,7 @@ Key version names are auto-generated by KMS (e.g., `1`, `2`, `3`). The primary v
 | `credential-service@pdtf-users-prod.iam` | pdtf-users-prod | `cloudkms.cryptoKeyVersions.useToSign` | All keys in `user-keys` ring |
 | `credential-service@pdtf-users-prod.iam` | pdtf-users-prod | `cloudkms.cryptoKeyVersions.viewPublicKey` | All keys in `user-keys` ring |
 | `platform-service@pdtf-platform-prod.iam` | pdtf-platform-prod | `cloudkms.cryptoKeyVersions.useToSign` | `moverly-platform-signing-key` |
-| `tir-service@pdtf-platform-prod.iam` | pdtf-platform-prod | `cloudkms.cryptoKeyVersions.useToSign` | `moverly-platform-signing-key` (signs TIR + platform status lists) |
+| `federation-service@pdtf-platform-prod.iam` | pdtf-platform-prod | `cloudkms.cryptoKeyVersions.useToSign` | `moverly-platform-signing-key` (signs federation Entity Statements + Trust Marks + platform status lists) |
 | `did-resolver@pdtf-adapters-prod.iam` | pdtf-adapters-prod | `cloudkms.cryptoKeyVersions.viewPublicKey` | All adapter keys (read-only) |
 
 **Principle of least privilege:** Each service account can only sign with the keys it needs. The DID resolver can read public keys but cannot sign. Adapter service accounts are isolated to their own key ring.
@@ -6995,27 +6224,27 @@ Google Cloud KMS
 │   ├── hmlr-proxy-key
 │   │   ├── DID: did:web:adapters.propdata.org.uk:hmlr
 │   │   ├── Signs: Title VCs, register extract VCs
-│   │   └── TIR entry: Title.*, Title.registerExtract.*
+│   │   └── Trust Mark delegation: Title.*, Title.registerExtract.*
 │   │
 │   ├── epc-proxy-key
 │   │   ├── DID: did:web:adapters.propdata.org.uk:epc
 │   │   ├── Signs: Property.energyPerformance VCs
-│   │   └── TIR entry: Property.energyPerformance.*
+│   │   └── Trust Mark delegation: Property.energyPerformance.*
 │   │
 │   ├── ea-flood-proxy-key
 │   │   ├── DID: did:web:adapters.propdata.org.uk:ea-flood
 │   │   ├── Signs: Property.environmental.flooding VCs
-│   │   └── TIR entry: Property.environmental.flooding.*
+│   │   └── Trust Mark delegation: Property.environmental.flooding.*
 │   │
 │   ├── local-auth-proxy-key
 │   │   ├── DID: did:web:adapters.propdata.org.uk:llc
 │   │   ├── Signs: Local authority search VCs
-│   │   └── TIR entry: Property.localAuthority.*
+│   │   └── Trust Mark delegation: Property.localAuthority.*
 │   │
 │   └── os-proxy-key
 │       ├── DID: did:web:adapters.propdata.org.uk:os
 │       ├── Signs: Property.address VCs (OS Places)
-│       └── TIR entry: Property.address.*
+│       └── Trust Mark delegation: Property.address.*
 │
 ├── User Keys (did:key, per-user)
 │   │
@@ -7033,8 +6262,8 @@ Google Cloud KMS
     │
     └── moverly-platform-key
         ├── DID: did:web:moverly.com
-        ├── Signs: TIR credential, platform attestations
-        └── TIR entry: (root — signs the TIR itself)
+        ├── Signs: Trust Anchor Entity Statements, Trust Marks, platform attestations
+        └── Role: federation Trust Anchor (root — signs all subordinate statements)
 ```
 
 ### 5.2 Trust Chain
@@ -7044,19 +6273,19 @@ The key hierarchy establishes a trust chain:
 ```
 Platform Key (did:web:moverly.com)
     │
-    ├── Signs TIR ──→ TIR lists adapter DIDs as trusted issuers
+    ├── Signs Trust Marks ──→ Adapter DIDs receive pdtf-verified-issuer Trust Marks
     │                  for specific entity:path combinations
     │
     ├── Adapter Keys (did:web:adapters.propdata.org.uk:{adapter})
     │   └── Sign source-derived VCs ──→ Verifiable by resolving
-    │       adapter DID + checking TIR entry
+    │       adapter DID + verifying its Trust Mark via federation resolution
     │
     └── User Keys (did:key:z6Mk...)
         └── Sign user-asserted VCs ──→ Verifiable by resolving
-            did:key + checking TIR userAccountProviders entry
+            did:key + verifying account-provider Trust Mark via federation resolution
 ```
 
-**Note:** This is not a certificate chain in the X.509 sense. There's no chain-of-signatures from platform key down to adapter keys. Instead, trust is established by the TIR: the platform key signs the TIR, and the TIR declares which adapter DIDs are trusted for which credential types. Verification checks the TIR, not a certificate chain.
+**Note:** This is not a certificate chain in the X.509 sense. There's no chain-of-signatures from platform key down to adapter keys. Instead, trust is established by the OpenID Federation: the platform (as Trust Anchor) signs Subordinate Entity Statements and Trust Marks that declare which adapter DIDs are trusted for which credential types. Verification resolves the federation trust chain.
 
 ---
 
@@ -7096,9 +6325,9 @@ Adapter keys are generated when a new trusted proxy adapter is provisioned.
    → Construct did:web:adapters.propdata.org.uk:{adapter} DID document
    → Publish DID document at https://adapters.propdata.org.uk/{adapter}/did.json
 
-5. Register adapter DID in TIR
-   → Add issuer entry with entity:path permissions
-   → Sign updated TIR with platform key
+5. Issue a `pdtf-verified-issuer` Trust Mark and Subordinate Entity Statement for the adapter DID
+   → Populate `delegation.authorised_paths` with the adapter's entity:path permissions
+   → Sign with platform (Trust Anchor) key
 ```
 
 ### 6.2 User Key Generation
@@ -7324,7 +6553,7 @@ no longer controls (if the old key is disabled).
 
 Platform key rotation follows the same pattern as adapter key rotation (§7.1): new key version in KMS, updated DID document at `https://moverly.com/.well-known/did.json`, old key retained in `verificationMethod`.
 
-**Additional consideration:** The TIR credential is signed by the platform key. After rotation, a new TIR credential must be signed with the new key version and published. Verifiers should accept TIR credentials signed by any key version listed in the platform DID document.
+**Additional consideration:** Federation Entity Statements and Trust Marks are signed by the platform key. After rotation, they must be re-signed with the new key version and republished. Verifiers should accept federation JWTs signed by any key version listed in the platform (Trust Anchor) DID document / JWKS.
 
 ### 7.4 Rotation Schedule
 
@@ -7332,7 +6561,7 @@ Platform key rotation follows the same pattern as adapter key rotation (§7.1): 
 |-------------|-----------------|--------------------|--------------------|
 | Adapter Keys | Annually | Immediate | No |
 | User Keys | Not recommended | Immediate | Yes (all credentials) |
-| Platform Key | Annually | Immediate | TIR credential only |
+| Platform Key | Annually | Immediate | Federation Entity Statements + Trust Marks only |
 | Status Lists | Follows issuer key | Follows issuer key | Current status list VC (signed by issuer's key) |
 
 ---
@@ -7574,7 +6803,7 @@ Verification is the counterpart to signing — and it's the more important opera
            │
            ▼
 ┌─────────────────────┐
-│  Check TIR entry     │  Is issuer trusted for this entity:path?
+│  Federation lookup    │  Is issuer trusted for this entity:path?
 └──────────┬──────────┘
            │
            ▼
@@ -7605,7 +6834,7 @@ interface VerificationResult {
 async function verifyCredential(
   signedVC: SignedVC,
   didResolver: DIDResolver,
-  tirRegistry: TIRRegistry
+  federationResolver: FederationResolver
 ): Promise<VerificationResult> {
 
   // Step 1: Extract and separate proof
@@ -7677,7 +6906,7 @@ async function verifyCredential(
     };
   }
 
-  // Step 10: Check TIR — is this issuer trusted for this credential type?
+  // Step 10: Resolve federation trust chain — is this issuer trusted for this credential type?
   const issuerTrusted = await tirRegistry.isIssuerTrusted(
     signedVC.issuer,
     signedVC.type,
@@ -7752,7 +6981,7 @@ They need:
 1. The signed VC (JSON document)
 2. Internet access to resolve `did:web` DIDs (or nothing at all for `did:key`)
 3. An Ed25519 verification library (available in every major language)
-4. Optionally, access to the TIR (to check issuer trust) and Status List (to check revocation)
+4. Optionally, access to the Trust Anchor federation endpoints (to check issuer trust) and Status List (to check revocation)
 
 This is the fundamental difference from PDTF v1, where verification meant "trust the platform that served you the data."
 
@@ -8039,9 +7268,9 @@ All KMS operations generate Cloud Audit Logs:
 1. IMMEDIATE: Disable the compromised key version
 2. IMMEDIATE: Generate new key version
 3. IMMEDIATE: Update platform DID document
-4. WITHIN 1 HOUR: Re-sign the TIR with the new key
-5. WITHIN 4 HOURS: Notify all relying parties that the TIR
-   has been re-signed (the old TIR signature is no longer trusted)
+4. WITHIN 1 HOUR: Re-sign all active federation Entity Statements and Trust Marks with the new key
+5. WITHIN 4 HOURS: Notify all relying parties that federation metadata
+   has been re-signed (old signatures are no longer trusted)
 6. POST-INCIDENT: Full security audit of all platform operations
    during the compromise window
 ```
@@ -8052,7 +7281,7 @@ All KMS operations generate Cloud Audit Logs:
 |--------|--------|-----------|
 | Adapter key compromise | Forged credentials for one data source | Per-adapter key isolation, KMS HSM, IAM, revocation |
 | User key compromise | Forged assertions for one user | Custodial control, KMS access logging, revocation |
-| Platform key compromise | Forged TIR, undermined trust model | HSM, break-glass access, minimal usage, audit logging |
+| Platform key compromise | Forged Entity Statements / Trust Marks, undermined trust model | HSM, break-glass access, minimal usage, audit logging |
 | KMS region outage | Signing unavailable | Cross-region DR, verification unaffected |
 | Insider threat (Moverly employee) | Access to signing operations | IAM least-privilege, audit logs, break-glass for admin |
 | Supply chain (library compromise) | Malformed signatures or key extraction | Dependency pinning, no key material in application memory |
@@ -8109,7 +7338,7 @@ All KMS operations generate Cloud Audit Logs:
 □ Set up alerting per §12.2
 □ Export public keys and generate DID documents
 □ Publish DID documents at .well-known/did.json endpoints
-□ Register adapter DIDs in TIR
+□ Issue Trust Marks for adapter DIDs via the Trust Anchor
 ```
 
 ### 14.4 Testing Strategy
@@ -8178,7 +7407,7 @@ At scale (10,000 users): ~$600/month for user keys + operations. Still modest co
 | **KMS** | Key Management Service (see Cloud KMS) |
 | **Multibase** | Self-describing base encoding (prefix identifies the encoding) |
 | **Multicodec** | Self-describing codec identifier (prefix identifies the key type) |
-| **TIR** | Trusted Issuer Registry — maps issuer DIDs to entity:path trust permissions |
+| **Trust Anchor** | Root entity of the OpenID Federation — signs Entity Statements and Trust Marks that map issuer DIDs to entity:path trust permissions |
 
 ## Appendix B: Related Specifications
 
@@ -8374,7 +7603,7 @@ The composer's input is a set of Verifiable Credentials associated with a transa
 |----------|-----------------|
 | `credentialSubject.id` | Groups credential to entity — the entity identifier (DID or URN) |
 | `credentialSubject.*` | The sparse data to merge into entity state |
-| `issuer` | Determines trust level via TIR lookup (§7) |
+| `issuer` | Determines trust level via OpenID Federation trust resolution (§7) |
 | `validFrom` | Temporal ordering — latest wins for conflicting paths |
 | `type` | Entity type classification (PropertyCredential, TitleCredential, etc.) |
 | `credentialStatus` | Revocation check — revoked credentials are excluded from assembly |
@@ -8387,7 +7616,7 @@ Before composition begins, credentials are filtered:
 1. **Signature verification** — invalid proofs are rejected
 2. **Revocation check** — revoked credentials (Bitstring Status List) are excluded
 3. **Expiry check** — credentials past `validUntil` are excluded
-4. **TIR lookup** — issuer must be listed in the Trusted Issuer Registry for the entity:path combinations they claim
+4. **OpenID Federation trust resolution** — issuer must hold a Trust Mark whose `delegation.authorised_paths` covers the entity:path combinations they claim
 
 Only credentials passing all four checks enter the composition pipeline.
 
@@ -8429,7 +7658,7 @@ Output: ComposedStateV4
 1. Group credentials by credentialSubject.id
 2. For each entity group:
    a. Sort credentials by validFrom (ascending — latest applied last, so latest wins)
-   b. Resolve trust levels from TIR
+   b. Resolve trust levels from Trust Mark delegation claims
    c. For conflicting paths: apply conflict resolution (§7)
    d. Deep-merge credentialSubject sparse objects (in sorted order)
    e. Apply dependency pruning against entity schema (§6)
@@ -8518,9 +7747,9 @@ All three target `urn:pdtf:uprn:100023456789` → one entity group.
 VC 1 (2026-03-18) → VC 2 (2026-03-20) → VC 3 (2026-03-22)
 
 **Step 2b — Resolve trust levels:**
-- VC 1: `adapters.propdata.org.uk:epc` → TIR lookup → `trustedProxy` for `Property:/energyEfficiency/*`
-- VC 2: `did:key:z6Mkh...seller` → TIR lookup → `accountProvider` (user attestation)
-- VC 3: `adapters.propdata.org.uk:epc` → TIR lookup → `trustedProxy` for `Property:/energyEfficiency/*`
+- VC 1: `adapters.propdata.org.uk:epc` → OpenID Federation trust resolution → `trusted_proxy` for `Property:/energyEfficiency/*`
+- VC 2: `did:key:z6Mkh...seller` → OpenID Federation trust resolution → `account_provider` (user attestation)
+- VC 3: `adapters.propdata.org.uk:epc` → OpenID Federation trust resolution → `trusted_proxy` for `Property:/energyEfficiency/*`
 
 **Step 2c — Conflict resolution:**
 VC 1 and VC 3 both claim `energyEfficiency.certificate.*`. Same trust level (trustedProxy), so latest validFrom wins. VC 3 supersedes VC 1 for all `energyEfficiency` paths.
@@ -9320,7 +8549,7 @@ rootIssuer > trustedProxy > accountProvider
 When two VCs have the same trust level, the later `validFrom` wins:
 
 ```typescript
-function resolveConflict(vc1: VC, vc2: VC, tir: TIR): VC {
+function resolveConflict(vc1: VC, vc2: VC, federation: FederationResolver): VC {
   const trust1 = tir.getTrustLevel(vc1.issuer);
   const trust2 = tir.getTrustLevel(vc2.issuer);
 
@@ -9360,7 +8589,7 @@ VC from seller (accountProvider):
   address.postcode = "EH45 8AB"                             ← wins (authorised for address paths)
 ```
 
-The TIR's `authorisedPaths` determine whether an issuer is even *permitted* to claim a given path. Claims outside an issuer's authorised paths are ignored during assembly (they can still be stored for audit, but don't contribute to composed state).
+The Trust Mark's `delegation.authorised_paths` determines whether an issuer is even *permitted* to claim a given path. Claims outside an issuer's authorised paths are ignored during assembly (they can still be stored for audit, but don't contribute to composed state).
 
 ### 7.5 Provenance Tracking
 
@@ -9396,7 +8625,7 @@ Some conflicts should be flagged rather than silently resolved:
 
 - **Trust level conflicts** — a seller claims a different EPC rating than the EPC adapter. The adapter wins, but the discrepancy should be logged.
 - **Stale data** — a VC with `validFrom` more than N days old is superseded by a much newer VC. May indicate the old data was never updated.
-- **Multi-issuer conflicts** — two different trusted proxies claim the same path with different values. This shouldn't happen (TIR authorisedPaths should prevent it) but must be detected.
+- **Multi-issuer conflicts** — two different trusted proxies claim the same path with different values. This shouldn't happen (Trust Mark `delegation.authorised_paths` should prevent overlap) but must be detected.
 
 These alerts feed into the diligence engine's quality assessment layer.
 
@@ -9788,7 +9017,7 @@ For a typical transaction with ~50 VCs and ~4,000 paths total: estimated <50ms f
 
 Composed state should be cached because:
 - Most reads are of the same state (VCs don't change between reads)
-- Composition involves signature verification, TIR lookups, and deep merging
+- Composition involves signature verification, OpenID Federation trust resolution, and deep merging
 - Multiple consumers may request state for the same transaction concurrently
 
 **Cache design:**
@@ -9816,7 +9045,7 @@ The cache is invalidated when:
 
 1. **New VC arrives** — any new credential for any entity in the transaction
 2. **VC revoked** — a credential in `contributingVcIds` is revoked
-3. **TIR updated** — trust levels may change, affecting conflict resolution
+3. **Trust Mark updated** — trust levels may change, affecting conflict resolution
 4. **TTL expiry** — background refresh after configurable TTL (e.g. 5 minutes)
 
 **Invalidation strategy:** Event-driven. When a new VC is stored, emit an event that invalidates the cache for the affected transaction. Don't recompose eagerly — wait for the next read.
@@ -9878,7 +9107,7 @@ For performance optimisation (future), the composer could support incremental up
 
 1. **`dependencyPruning.js`** — Start here. It's the most novel component and needs the most validation. Build the schema walker, extract discriminators from real PDTF schemas, write extensive tests.
 
-2. **`conflictResolution.js`** — Trust level lookup and temporal ordering. Depends on TIR format being stable (Sub-spec 04).
+2. **`conflictResolution.js`** — Trust level lookup and temporal ordering. Depends on the Trust Mark `delegation` claim format being stable (Sub-spec 04).
 
 3. **`composeV4StateFromGraph.js`** — Core composer. Once pruning and conflict resolution are solid, this is straightforward deep merging with orchestration.
 
@@ -9913,7 +9142,7 @@ For performance optimisation (future), the composer could support incremental up
 | VC with unknown entity type | Log warning, skip VC, continue composition |
 | VC with invalid `credentialSubject.id` | Log error, skip VC |
 | Schema not found for entity type | Log error, skip entity (cannot prune without schema) |
-| TIR lookup failure | Fall back to `accountProvider` trust level |
+| Federation trust resolution failure | Fall back to `account_provider` trust level |
 | Merge produces invalid state (fails schema validation) | Log error, return last valid state, alert |
 | Collection conversion loses data | Fatal error — this should never happen in production |
 
@@ -9937,7 +9166,7 @@ State assembly is a critical path. Every composition should log:
 | D5 — Sparse objects + pruning | §6 (pruning algorithm), §8 (migration) | 🟡 Needs LMS consensus |
 | D10 — Dual state assembly | §2 (three composers), §8 (migration phases) | ✅ Confirmed |
 | D15 — ID-keyed collections | §10 (conversion rules), §4.4 (v4 output shape) | ✅ Confirmed |
-| D20 — TIR entity:path combos | §7 (conflict resolution), §3.3 (pre-assembly filtering) | ✅ Confirmed |
+| D20 — Trust Mark entity:path combos | §7 (conflict resolution), §3.3 (pre-assembly filtering) | ✅ Confirmed |
 | D27 — Logbook test | §5.4 (field reassignment) | ✅ Confirmed |
 
 ---
@@ -10414,7 +9643,7 @@ The validator executes a sequential pipeline. Each stage can short-circuit on fa
 
 ```
 1. Structure Validation  →  2. Resolve Issuer DID  →  3. Verify Signature
-        →  4. TIR Lookup  →  5. Expiry Check  →  6. Revocation Check  →  Result
+        →  4. Federation Lookup  →  5. Expiry Check  →  6. Revocation Check  →  Result
 ```
 
 **Stage 1 — Structure Validation.** Validates the VC JSON against W3C VC Data Model 2.0 structure and PDTF-specific requirements: `@context` includes the PDTF context URL, `type` includes a recognised PDTF credential type, `credentialSubject` conforms to the entity schema, and `proof` is present with a supported cryptosuite.
@@ -10423,7 +9652,7 @@ The validator executes a sequential pipeline. Each stage can short-circuit on fa
 
 **Stage 3 — Signature Verification.** Canonicalises the credential using JCS (RFC 8785), then verifies the `eddsa-jcs-2022` proof against the resolved public key.
 
-**Stage 4 — TIR Lookup.** Queries the Trusted Issuer Registry to confirm the issuer DID is authorised for the specific `entity:path` combination claimed by the credential. When verifying a credential issued by or about an Organisation with a `did:key` identifier, the validator MUST check the TIR `accountProvider` entries' `managedOrganisations` registries to confirm the `did:key` is managed by a trusted provider.
+**Stage 4 — Federation Lookup.** Resolves the issuer's trust chain via OpenID Federation to the PDTF Trust Anchor, verifies the `pdtf-verified-issuer` Trust Mark, and confirms its `delegation.authorised_paths` covers the specific `entity:path` combination claimed by the credential. When verifying a credential issued by or about an Organisation with a `did:key` identifier, the validator MUST consult the relevant `account-provider` Trust Mark's `delegation.managed_organisations` document to confirm the `did:key` is managed by a trusted provider.
 
 **Stage 5 — Expiry Check.** Validates `validFrom` ≤ now ≤ `validUntil` (if present). Configurable clock skew tolerance (default: 60 seconds).
 
@@ -10435,7 +9664,7 @@ The validator executes a sequential pipeline. Each stage can short-circuit on fa
 interface ValidationResult {
   /** Overall validity — true only if all checks pass. */
   valid: boolean;
-  /** Trust level derived from TIR lookup. */
+  /** Trust level derived from Trust Mark delegation claim. */
   trustLevel: TrustLevel;
   /** Resolved issuer information. */
   issuer: ResolvedIssuer | null;
@@ -10452,7 +9681,7 @@ type TrustLevel =
   | 'delegated'     // Issuer with explicit delegation from root
   | 'proxy'         // Trusted proxy (e.g., Moverly aggregating data)
   | 'self-asserted' // Seller/owner self-declaration
-  | 'unknown';      // Issuer not found in TIR
+  | 'unknown';      // Issuer not found in federation
 
 interface ResolvedIssuer {
   did: string;
@@ -10500,10 +9729,10 @@ type ValidationErrorCode =
   // Signature errors
   | 'INVALID_SIGNATURE'
   | 'CANONICALIZATION_ERROR'
-  // TIR errors
-  | 'ISSUER_NOT_IN_TIR'
+  // Federation errors
+  | 'ISSUER_NOT_IN_FEDERATION'
   | 'UNTRUSTED_PATH'
-  | 'TIR_NETWORK_ERROR'
+  | 'FEDERATION_NETWORK_ERROR'
   | 'ORG_DID_KEY_NOT_IN_MANAGED_ORGS'
   // Temporal errors
   | 'CREDENTIAL_NOT_YET_VALID'
@@ -10519,11 +9748,11 @@ type ValidationErrorCode =
 ```typescript
 interface ValidatorConfig {
   /** URL of the Trusted Issuer Registry API. */
-  tirUrl: string;
+  trustAnchor: string;
   /** DID resolver instance. If not provided, a default resolver is created. */
   didResolver?: DIDResolver;
-  /** Cache TTL for TIR lookups in milliseconds. Default: 300_000 (5 min). */
-  tirCacheTtlMs?: number;
+  /** Cache TTL for federation metadata in milliseconds. Default: 300_000 (5 min). */
+  federationCacheTtlMs?: number;
   /** Cache TTL for status list fetches in milliseconds. Default: 60_000 (1 min). */
   statusListCacheTtlMs?: number;
   /** Clock skew tolerance in seconds for expiry checks. Default: 60. */
@@ -10542,7 +9771,7 @@ import { createValidator } from '@pdtf/vc-validator';
 import { createResolver } from '@pdtf/did-resolver';
 
 const validator = createValidator({
-  tirUrl: 'https://tir.pdtf.org/api/v1',
+  trustAnchor: 'https://trust.pdtf.org',
   didResolver: createResolver({ cacheTtlMs: 600_000 }),
 });
 
@@ -10977,7 +10206,7 @@ describe('round-trip', () => {
     });
 
     const validator = createValidator({
-      tirUrl: 'mock://tir',
+      trustAnchor: 'mock://trust-anchor',
       skipStages: ['tir-lookup', 'revocation'],
     });
     const result = await validator.validate(vc);
@@ -11085,7 +10314,7 @@ Explicitly excluded: `jsonld` (too heavy), `node-forge` (native crypto preferred
 ### 9.3 Network Security
 
 - **TLS-only for `did:web`.** No HTTP fallback. `allowInsecure` gated behind explicit opt-in with warning.
-- **Timeout enforcement.** All network operations have configurable timeouts (10s DID resolution, 10s status list fetch, 30s TIR queries).
+- **Timeout enforcement.** All network operations have configurable timeouts (10s DID resolution, 10s status list fetch, 30s federation resolution).
 
 ### 9.4 Input Validation
 
@@ -11204,7 +10433,7 @@ Anticipated but out of scope for initial release:
 - [Sub-spec 01 — Entity Graph & Schema](./01-entity-graph.md)
 - [Sub-spec 02 — VC Data Model](./02-vc-data-model.md)
 - [Sub-spec 03 — DID Methods & Identifiers](./03-did-methods.md)
-- [Sub-spec 04 — Trusted Issuer Registry](./04-trusted-issuer-registry.md)
+- [Sub-spec 04 — OpenID Federation](./04-openid-federation.md)
 - [Sub-spec 06 — Key Management](./06-key-management.md)
 - [Sub-spec 07 — State Assembly](./07-state-assembly.md)
 - [Sub-spec 14 — Credential Revocation](./14-credential-revocation.md)
@@ -12260,7 +11489,7 @@ The status list credential MUST be signed by the same DID — using the same sig
 - Forge a status list showing revoked credentials as active
 - Forge a status list showing active credentials as revoked
 
-**Mitigation:** Key rotation procedures, monitoring for unexpected status list changes, and the TIR (Trusted Issuer Registry) providing an additional layer of issuer authentication.
+**Mitigation:** Key rotation procedures, monitoring for unexpected status list changes, and OpenID Federation trust resolution providing an additional layer of issuer authentication.
 
 ### Cache Poisoning
 
@@ -12491,7 +11720,7 @@ PDTF v1/v3 does not have credential revocation (claims are asserted through OIDC
 - [W3C Verifiable Credentials Data Model v2.0](https://www.w3.org/TR/vc-data-model-2.0/)
 - [Sub-spec 02 — VC Data Model](./02-vc-data-model.md) (credential structure)
 - [Sub-spec 03 — DID Methods & Identifiers](./03-did-methods.md) (issuer DIDs)
-- [Sub-spec 04 — Trusted Issuer Registry](./04-trusted-issuer-registry.md) (issuer trust)
+- [Sub-spec 04 — OpenID Federation](./04-openid-federation.md) (issuer trust)
 - [Sub-spec 05 — Hosted Adapter Services](./05-hosted-adapter-services.md) (adapter-hosted status lists)
 - [Sub-spec 07 — State Assembly](./07-state-assembly.md) (dual-state assembly)
 
@@ -12528,7 +11757,7 @@ To claim Level 1, an implementation MUST correctly process all Level 1 test vect
 - DID resolution (`did:key` and `did:web`)
 - Data Integrity signature verification (`eddsa-jcs-2022`)
 - Bitstring Status List resolution and bit checking
-- TIR issuer authorisation checks
+- OpenID Federation trust resolution and Trust Mark `delegation` authorisation checks
 
 ### Level 2: Entity State Assembly
 Required for systems that compose the entity graph and manage transaction state.
@@ -12583,7 +11812,7 @@ Each test category contains a `manifest.json` describing the test cases:
 1. **VC Verification:** Valid VCs, tampered subjects, invalid dates, missing required fields.
 2. **DID Resolution:** Valid `did:key` derivations, valid `did:web` documents, incorrect `assertionMethod` arrays, key format errors.
 3. **Status Lists:** Active credentials, revoked credentials, suspended credentials, out-of-bounds indices.
-4. **TIR Lookups:** Authorised paths, unauthorised paths, wildcard matching (e.g. `Title:*`), trust level inheritance.
+4. **Federation Trust Resolution:** Trust Mark `delegation.authorised_paths` coverage, unauthorised paths, wildcard matching (e.g. `Title:*`), trust level inheritance.
 5. **State Assembly:** Pruning tests (e.g. changing `heatingType` to "None" and ensuring `centralHeatingDetails` is stripped).
 
 ## 3. Interoperability Protocol

@@ -29,7 +29,7 @@ To claim Level 1, an implementation MUST correctly process all Level 1 test vect
 - DID resolution (`did:key` and `did:web`)
 - Data Integrity signature verification (`eddsa-jcs-2022`)
 - Bitstring Status List resolution and bit checking
-- TIR issuer authorisation checks
+- OpenID Federation trust resolution and Trust Mark `delegation` authorisation checks
 
 ### Level 2: Entity State Assembly
 Required for systems that compose the entity graph and manage transaction state.
@@ -84,7 +84,7 @@ Each test category contains a `manifest.json` describing the test cases:
 1. **VC Verification:** Valid VCs, tampered subjects, invalid dates, missing required fields.
 2. **DID Resolution:** Valid `did:key` derivations, valid `did:web` documents, incorrect `assertionMethod` arrays, key format errors.
 3. **Status Lists:** Active credentials, revoked credentials, suspended credentials, out-of-bounds indices.
-4. **TIR Lookups:** Authorised paths, unauthorised paths, wildcard matching (e.g. `Title:*`), trust level inheritance.
+4. **Federation Trust Resolution:** Trust Mark `delegation.authorised_paths` coverage, unauthorised paths, wildcard matching (e.g. `Title:*`), trust level inheritance.
 5. **State Assembly:** Pruning tests (e.g. changing `heatingType` to "None" and ensuring `centralHeatingDetails` is stripped).
 
 ## 3. Interoperability Protocol
