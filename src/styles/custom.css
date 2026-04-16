@@ -432,14 +432,23 @@ html[data-has-hero] body::before {
 }
 
 /* ──────────── Hero (splash) page ──────────── */
-/* Centred layout with Fern-style soft radial tinting in the background */
+/* Centred layout with Fern-style soft radial tinting in the background.
+   Override Starlight's default 7fr/4fr grid so content takes full width
+   and can centre properly (no empty image column on the right). */
 .hero {
 	text-align: center;
-	justify-items: center;
-	align-items: center;
 	position: relative;
 	padding-top: 4rem;
 	padding-bottom: 4rem;
+}
+
+@media (min-width: 50rem) {
+	.hero {
+		grid-template-columns: 1fr !important;
+		gap: 1rem !important;
+		justify-items: center;
+		align-items: center;
+	}
 }
 
 .hero .stack {
@@ -523,24 +532,24 @@ html[data-has-hero] body::before {
 	z-index: -1;
 }
 
-/* LEFT side — soft blue-grey glow (primary)
-   Positioned relative to the viewport so it sits at the page edge —
-   only visible on wider screens. */
+/* LEFT side — soft blue-grey glow.
+   Positioned at the very edge of the viewport via calc(50% - 50vw)
+   minus extra inset, so they sit mostly off-page on standard screens. */
 .hero::before {
-	width: 28rem;
-	height: 28rem;
-	background: radial-gradient(circle, rgba(150, 175, 210, 0.45) 0%, rgba(150, 175, 210, 0) 65%);
-	top: -6rem;
-	left: max(-30rem, calc(50% - 50vw - 6rem));
+	width: 32rem;
+	height: 32rem;
+	background: radial-gradient(circle, rgba(150, 175, 210, 0.28) 0%, rgba(150, 175, 210, 0) 65%);
+	top: -8rem;
+	left: calc(50% - 50vw - 16rem);
 }
 
-/* LEFT side — secondary pale green wash, lower & more inset */
+/* LEFT side — secondary pale green wash */
 .hero::after {
-	width: 22rem;
-	height: 22rem;
-	background: radial-gradient(circle, rgba(195, 251, 183, 0.35) 0%, rgba(195, 251, 183, 0) 65%);
-	top: 6rem;
-	left: max(-22rem, calc(50% - 50vw + 4rem));
+	width: 24rem;
+	height: 24rem;
+	background: radial-gradient(circle, rgba(195, 251, 183, 0.20) 0%, rgba(195, 251, 183, 0) 65%);
+	top: 4rem;
+	left: calc(50% - 50vw - 8rem);
 }
 
 /* Use a wrapping pseudo on the splash content to add the right-side glows.
@@ -559,23 +568,22 @@ html[data-has-hero] body::before {
 	z-index: -1;
 }
 
-/* RIGHT side — soft blue-grey glow (primary)
-   Positioned at the viewport edge — only visible on wider screens. */
+/* RIGHT side — soft blue-grey glow */
 .hero .stack::before {
-	width: 28rem;
-	height: 28rem;
-	background: radial-gradient(circle, rgba(150, 175, 210, 0.45) 0%, rgba(150, 175, 210, 0) 65%);
+	width: 32rem;
+	height: 32rem;
+	background: radial-gradient(circle, rgba(150, 175, 210, 0.28) 0%, rgba(150, 175, 210, 0) 65%);
 	top: -10rem;
-	right: max(-30rem, calc(50% - 50vw - 6rem));
+	right: calc(50% - 50vw - 16rem);
 }
 
-/* RIGHT side — secondary pale green wash, lower */
+/* RIGHT side — secondary pale green wash */
 .hero .stack::after {
-	width: 22rem;
-	height: 22rem;
-	background: radial-gradient(circle, rgba(195, 251, 183, 0.30) 0%, rgba(195, 251, 183, 0) 65%);
-	top: 4rem;
-	right: max(-22rem, calc(50% - 50vw + 4rem));
+	width: 24rem;
+	height: 24rem;
+	background: radial-gradient(circle, rgba(195, 251, 183, 0.18) 0%, rgba(195, 251, 183, 0) 65%);
+	top: 2rem;
+	right: calc(50% - 50vw - 8rem);
 }
 
 /* Dark mode — toned down */
