@@ -196,11 +196,34 @@ header.header {
 	background: rgba(17, 17, 19, 0.72);
 }
 
-/* Wordmark replaces title text — keep it compact */
+/* Compact header brand: small logo + 'PDTF2' wordmark in brand navy */
+.site-title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
 .site-title img {
-	height: 2rem;
-	width: auto;
-	max-width: none;
+	height: 1.75rem;
+	width: 1.75rem;
+	object-fit: contain;
+}
+
+.site-title span,
+.site-title .site-title-text,
+.site-title > :not(img) {
+	font-family: var(--sl-font);
+	font-weight: 700;
+	font-size: 1.25rem;
+	letter-spacing: -0.04em;
+	color: #1b396d;
+	line-height: 1;
+}
+
+:root[data-theme='dark'] .site-title span,
+:root[data-theme='dark'] .site-title .site-title-text,
+:root[data-theme='dark'] .site-title > :not(img) {
+	color: #6b8fc8;
 }
 
 /* ──────────── Sidebar ──────────── */
@@ -376,50 +399,54 @@ header.header {
 	margin: 0 auto;
 }
 
-/* Fern-style soft radial tinting in the page background.
-   Two coloured "glows" — one green (brand), one navy (logo) — heavily
-   blurred behind the hero content. Pointer-events disabled. */
+/* Fern-style soft radial tinting — lives on the splash content panel
+   so it can sit on either side of the centred hero text. */
+.hero {
+	isolation: isolate; /* contain pseudo-element stacking */
+}
+
 .hero::before,
 .hero::after {
 	content: '';
 	position: absolute;
 	border-radius: 50%;
-	filter: blur(7rem);
-	opacity: 0.55;
+	filter: blur(6rem);
 	pointer-events: none;
 	z-index: -1;
 }
 
+/* Green glow — left side, slightly above hero centre */
 .hero::before {
-	width: 26rem;
-	height: 26rem;
-	background: radial-gradient(circle, #c3fbb7 0%, rgba(195, 251, 183, 0) 70%);
-	top: -6rem;
-	left: -4rem;
+	width: 32rem;
+	height: 32rem;
+	background: radial-gradient(circle, rgba(112, 225, 85, 0.55) 0%, rgba(112, 225, 85, 0) 65%);
+	top: -8rem;
+	left: -10rem;
 }
 
+/* Navy glow — right side, picking up the brand colour from the logo */
 .hero::after {
-	width: 22rem;
-	height: 22rem;
-	background: radial-gradient(circle, #d9e3f4 0%, rgba(217, 227, 244, 0) 70%);
-	top: 2rem;
-	right: -4rem;
+	width: 30rem;
+	height: 30rem;
+	background: radial-gradient(circle, rgba(27, 57, 109, 0.35) 0%, rgba(27, 57, 109, 0) 65%);
+	top: -4rem;
+	right: -10rem;
 }
 
 :root[data-theme='dark'] .hero::before {
-	background: radial-gradient(circle, rgba(81, 194, 51, 0.35) 0%, rgba(81, 194, 51, 0) 70%);
-	opacity: 0.6;
+	background: radial-gradient(circle, rgba(81, 194, 51, 0.32) 0%, rgba(81, 194, 51, 0) 65%);
 }
 
 :root[data-theme='dark'] .hero::after {
-	background: radial-gradient(circle, rgba(27, 57, 109, 0.5) 0%, rgba(27, 57, 109, 0) 70%);
-	opacity: 0.5;
+	background: radial-gradient(circle, rgba(107, 143, 200, 0.28) 0%, rgba(107, 143, 200, 0) 65%);
 }
 
 @media (max-width: 768px) {
 	.hero h1 { font-size: 2.75rem; }
 	.hero .tagline { font-size: 1.0625rem; }
-	.hero::before, .hero::after { width: 14rem; height: 14rem; filter: blur(4rem); }
+	.hero::before, .hero::after { width: 18rem; height: 18rem; filter: blur(4rem); }
+	.hero::before { left: -6rem; }
+	.hero::after { right: -6rem; }
 }
 
 /* ──────────── Banner (e.g. candidate spec) ──────────── */

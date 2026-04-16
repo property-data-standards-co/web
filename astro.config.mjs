@@ -8,16 +8,15 @@ export default defineConfig({
 	base: '/web',
 	integrations: [
 		starlight({
-			title: 'PDTF 2.0 — Property Data Trust Framework',
+			title: 'PDTF2',
 			customCss: ['./src/styles/custom.css'],
 			components: {
 				Banner: './src/components/Banner.astro',
 			},
 
 			logo: {
-				src: './public/wordmark.svg',
-				alt: 'PDTF 2.0',
-				replacesTitle: true,
+				src: './public/logo.png',
+				alt: 'PDTF',
 			},
 			favicon: '/favicon.png',
 			social: [
