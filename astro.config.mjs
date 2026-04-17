@@ -68,6 +68,7 @@ export default defineConfig({
 								{ label: 'Revocation', slug: 'docs/concepts/revocation' },
 								{ label: 'OpenID Federation', slug: 'docs/concepts/openid-federation' },
 								{ label: 'Credential Exchange', slug: 'docs/concepts/oid4vc' },
+								{ label: 'AI Agents & MCP', slug: 'docs/concepts/agents' },
 							],
 						},
 						{
