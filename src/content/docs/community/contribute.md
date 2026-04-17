@@ -11,7 +11,7 @@ Work happens in the Property Data Standards Company GitHub organisation:
 
 - `spec`: protocol and implementation specs
 - `core-*`: reference implementations
-- `tir`: Trusted Issuer Registry
+- `federation-registry`: OpenID Federation Trust Anchor
 - `web`: this website
 
 ## How to propose changes

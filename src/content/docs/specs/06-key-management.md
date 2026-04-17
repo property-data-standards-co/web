@@ -166,7 +166,7 @@ When digital identity wallets mature (see §10), users will hold their own keys.
 | **Rotation** | Key version rotation; DID document updated |
 | **Signs** | Trust Anchor Entity Statements, Trust Marks, platform metadata, user DID issuance attestations |
 
-The platform key represents the platform operator as an organisation. It is used sparingly — primarily for signing the Trusted Issuer Registry credential and attesting that user DIDs were issued through a verified onboarding process.
+The platform key represents the platform operator as an organisation. It is used sparingly — primarily for signing OpenID Federation Entity Statements and Trust Marks, and attesting that user DIDs were issued through a verified onboarding process.
 
 The platform key is the **root of trust** for the PDTF ecosystem in its current form. Compromise of this key would undermine confidence in the entire federation (all Entity Statements and Trust Marks signed by this key). It has the highest security requirements.
 

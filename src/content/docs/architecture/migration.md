@@ -24,7 +24,7 @@ The assembly layer merges and prunes, then produces consistent outputs.
 
 ## Trust migration
 
-In early phases, many credentials will be issued by trusted proxy adapters. Over time, more primary sources can issue credentials directly, and the TIR evolves to reflect that.
+In early phases, many credentials will be issued by trusted proxy adapters. Over time, more primary sources can issue credentials directly, and the OpenID Federation trust marks evolve to reflect that.
 
 ## What changes for consumers
 
@@ -39,4 +39,4 @@ Credential-native consumers can instead:
 ## Where to go next
 
 - See the *State Assembly* spec for merge and pruning rules.
-- See the *Trusted Issuer Registry* spec for authorisation and governance.
+- See the *OpenID Federation* spec for authorisation and governance.
