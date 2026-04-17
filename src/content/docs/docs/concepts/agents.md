@@ -46,9 +46,9 @@ The agent issues an MCP tool call to retrieve the property pack:
 
 ```json
 {
-  "tool": "get_transaction_state",
+  "tool": "get_state",
   "arguments": {
-    "transactionDid": "did:web:moverly.com:transactions:abc123"
+    "id": "did:web:moverly.com:transactions:abc123"
   }
 }
 ```

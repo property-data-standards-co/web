@@ -72,16 +72,17 @@ MCP allows AI agents (like a conveyancer's copilot or a diligence engine) to que
 
 The PDTF MCP server exposes tools that map directly to the entity graph:
 
-- `get_transaction_state(transactionDid)`: Recomposes the full v3-style property pack by traversing the graph from the transaction root.
-- `get_entity(urn)`: Retrieves a specific entity (Property, Title, Person).
-- `verify_trust_chain(issuerDid)`: Evaluates an issuer's OpenID Federation Trust Marks to determine their authority.
+- `get_credentials(id)`: Returns the traversed bundle of raw Verifiable Credentials for a given URN/DID based on the caller's authorised scope.
+- `get_state(id)`: Recomposes the full v3-style property pack or v4 entity map by traversing the graph and assembling the retrieved credentials.
+- `issue_credential(payload, type)`: Issues a new VC (e.g., vouching for data, uploading a document) signed by the agent/user's DID.
+- `verify_credential(vc)`: Cryptographically verifies a VC against its signature and OpenID Federation Trust Marks.
 
 ### Agentic Access Control
 
 When an AI agent connects to a PDTF MCP server, it authenticates using the identity of its human operator. The MCP server evaluates access by performing the exact same graph traversal as OID4VP:
 
 1. Agent authenticates as `did:key:conveyancer_123`.
-2. Agent requests `get_transaction_state("did:web:...abc")`.
+2. Agent requests `get_state("did:web:...abc")`.
 3. Server checks: Does `did:key:conveyancer_123` hold a valid `Representation` credential for the seller on this transaction?
 4. If yes, the server traverses the graph, decrypts the VC pool, and returns the aggregated JSON context to the agent.
 
