@@ -12,7 +12,7 @@ The `@pdtf/*` packages are in active development and not yet published to npm. C
 ## Install the packages
 
 ```bash
-npm install @pdtf/vc-validator @pdtf/tir-tools @pdtf/did-resolver
+npm install @pdtf/core
 ```
 
 ## 1. Verify a credential
@@ -20,7 +20,7 @@ npm install @pdtf/vc-validator @pdtf/tir-tools @pdtf/did-resolver
 Given a W3C Verifiable Credential containing PDTF entity data, verify its signature, issuer authorisation, and revocation status in one call:
 
 ```typescript
-import { verifyCredential } from '@pdtf/vc-validator';
+import { VcValidator, DidResolver, FederationRegistryResolver } from '@pdtf/core';
 
 const credential = {
   "@context": [
@@ -32,10 +32,6 @@ const credential = {
   "credentialSubject": {
     "id": "urn:pdtf:uprn:100023336956",
     "type": "Property",
-    "address": {
-      "line1": "10 Downing Street",
-      "postcode": "SW1A 2AA"
-    },
     "energyPerformance": {
       "currentRating": "C",
       "certificateNumber": "0000-0000-0000-0000-0000"
@@ -44,64 +40,65 @@ const credential = {
   "proof": { /* Ed25519 signature */ }
 };
 
-const result = await verifyCredential(credential, {
-  checkTIR: true,       // verify issuer is in the Trusted Issuer Registry
-  checkRevocation: true  // verify credential hasn't been revoked
+const validator = new VcValidator();
+const didResolver = new DidResolver();
+const trustResolver = new FederationRegistryResolver({
+  registryUrl: 'https://trust.pdtf.org/.well-known/openid-federation'
 });
 
-if (result.verified) {
+const result = await validator.validate(credential, {
+  didResolver,
+  trustResolver
+});
+
+if (result.valid) {
   console.log('Credential is valid');
-  console.log('Issuer trust level:', result.issuer.trustLevel);
+  console.log('Issuer trust level:', result.stages.trust.details?.trustLevel);
   // → 'root-issuer' | 'accredited-issuer' | 'trusted-proxy'
 } else {
-  console.error('Verification failed:', result.errors);
+  console.error('Verification failed:', result.warnings);
 }
 ```
 
-### What `verifyCredential` checks
+### What `validate` checks
 
-1. **Signature** — resolves the issuer's DID document, extracts the verification method, and validates the `eddsa-jcs-2022` proof
-2. **Issuer authorisation** — looks up the issuer in the TIR and confirms they're authorised for this entity type and data path
-3. **Revocation status** — fetches the Bitstring Status List and checks the credential's status bit
-4. **Schema conformance** — validates the `credentialSubject` against the PDTF v4 JSON schema
+1. **Structure** — validates the `credentialSubject` against the PDTF v4 JSON schema.
+2. **Signature** — resolves the issuer's DID document, extracts the verification method, and validates the `eddsa-jcs-2022` proof.
+3. **Trust** — evaluates the issuer's OpenID Federation Trust Marks and confirms they are authorised for this entity type and data path.
+4. **Status** — fetches the Bitstring Status List and checks the credential's revocation bit.
 
-## 2. Look up an issuer in the TIR
+## 2. Verify OpenID Federation Trust Marks
 
-The Trusted Issuer Registry tells you who is authorised to issue which types of credentials:
+The OpenID Federation Trust Anchor dictates who is authorised to issue which types of credentials:
 
 ```typescript
-import { lookupIssuer } from '@pdtf/tir-tools';
+import { FederationRegistryResolver } from '@pdtf/core';
 
-// Check if an issuer is authorised for a specific entity:path
-const entry = await lookupIssuer('did:web:adapter.moverly.com', {
-  entityType: 'property',
-  path: 'energyPerformance'
+const trustResolver = new FederationRegistryResolver({
+  registryUrl: 'https://trust.pdtf.org/.well-known/openid-federation'
 });
 
-if (entry) {
-  console.log('Trust level:', entry.trustLevel);
-  console.log('Status:', entry.status);
-  console.log('Authorised paths:', entry.authorisedPaths);
+// Check if an issuer has a Trust Mark authorising them for a specific path
+const isTrusted = await trustResolver.isIssuerTrusted(
+  'did:web:adapter.moverly.com', 
+  ['Property:/energyPerformance']
+);
+
+if (isTrusted) {
+  console.log('Issuer is authorised via OpenID Federation Trust Marks');
 } else {
-  console.log('Issuer not found in TIR for this entity:path');
+  console.log('Issuer lacks Trust Marks for this entity:path');
 }
 ```
 
-### List all issuers for an entity type
+### Fetch an Entity Statement
 
 ```typescript
-import { listIssuers } from '@pdtf/tir-tools';
+// Fetch the raw entity statement for an issuer within the federation
+const statement = await trustResolver.fetchEntityStatement('did:web:adapter.moverly.com');
 
-const issuers = await listIssuers({
-  entityType: 'property',
-  status: 'active'
-});
-
-for (const issuer of issuers) {
-  console.log(`${issuer.name} (${issuer.did})`);
-  console.log(`  Trust: ${issuer.trustLevel}`);
-  console.log(`  Paths: ${issuer.authorisedPaths.join(', ')}`);
-}
+console.log(`Issuer: ${statement.sub}`);
+console.log(`Trust Marks:`, statement.trust_marks);
 ```
 
 ## 3. Check revocation status
@@ -109,9 +106,10 @@ for (const issuer of issuers) {
 Every PDTF credential includes a `credentialStatus` field pointing to a Bitstring Status List. Check it directly:
 
 ```typescript
-import { checkRevocation } from '@pdtf/vc-validator';
+import { StatusListResolver } from '@pdtf/core';
 
-const status = await checkRevocation(credential);
+const statusResolver = new StatusListResolver();
+const status = await statusResolver.checkRevocation(credential);
 
 if (status.revoked) {
   console.log('Credential has been revoked');
@@ -128,10 +126,12 @@ The status list is a compact bitstring where each credential is assigned an inde
 Look up a DID document for any PDTF entity that uses `did:web`:
 
 ```typescript
-import { resolve } from '@pdtf/did-resolver';
+import { DidResolver } from '@pdtf/core';
+
+const resolver = new DidResolver();
 
 // Resolve a transaction's DID document
-const doc = await resolve('did:web:platform.example.com:transactions:abc123');
+const doc = await resolver.resolve('did:web:platform.example.com:transactions:abc123');
 
 console.log('Service endpoints:', doc.service);
 // → [{ type: 'PDTFv4API', serviceEndpoint: 'https://...' }]
@@ -148,8 +148,8 @@ The `@pdtf/cli` package provides command-line equivalents:
 # Verify a credential from a JSON file
 pdtf verify credential.json
 
-# Look up an issuer
-pdtf tir lookup did:web:adapter.moverly.com --entity property --path energyPerformance
+# Look up an issuer's Trust Marks
+pdtf trust resolve did:web:adapter.moverly.com
 
 # Check revocation
 pdtf revocation check credential.json
