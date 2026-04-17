@@ -176,7 +176,7 @@ Representation is another thin credential that delegates authority from a transa
     "representative": "did:web:smithandco.law",
     "representedParty": "did:key:z6MkhSellerDID",
     "role": "seller-conveyancer",
-    "transaction": "did:web:moverly.com:transactions:abc123"
+    "transaction": "did:web:platform.example.com:transactions:abc123"
   }
 }
 ```

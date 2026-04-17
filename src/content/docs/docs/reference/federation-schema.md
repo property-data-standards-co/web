@@ -43,9 +43,9 @@ Every federation participant publishes a self-signed entity statement at `{entit
   ],
   "metadata": {
     "federation_entity": {
-      "organization_name": "Moverly HMLR Adapter",
-      "homepage_uri": "https://moverly.com",
-      "contacts": ["trust@moverly.com"]
+      "organization_name": "PDTF HMLR Adapter",
+      "homepage_uri": "https://platform.example.com",
+      "contacts": ["trust@propdata.org.uk"]
     },
     "openid_credential_issuer": {
       "credential_endpoint": "https://adapters.propdata.org.uk/hmlr/credentials",
@@ -106,11 +106,11 @@ General information about the organisation:
 
 ```json
 {
-  "organization_name": "Moverly HMLR Adapter",
-  "homepage_uri": "https://moverly.com",
-  "contacts": ["trust@moverly.com"],
-  "logo_uri": "https://moverly.com/logo.png",
-  "policy_uri": "https://moverly.com/trust-policy"
+  "organization_name": "PDTF HMLR Adapter",
+  "homepage_uri": "https://platform.example.com",
+  "contacts": ["trust@propdata.org.uk"],
+  "logo_uri": "https://platform.example.com/logo.png",
+  "policy_uri": "https://platform.example.com/trust-policy"
 }
 ```
 

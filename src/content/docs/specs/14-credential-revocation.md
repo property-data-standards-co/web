@@ -6,7 +6,7 @@ description: "PDTF 2.0 specification document."
 
 **Version:** 0.1 (Draft)
 **Date:** 1 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
 
@@ -36,7 +36,7 @@ description: "PDTF 2.0 specification document."
 
 Verifiable Credentials in PDTF 2.0 assert facts about properties, ownership, representation, and consent at a specific point in time. Those facts change. Properties are sold. Mandates are withdrawn. EPCs are superseded. Accounts are disabled. Without a mechanism to signal that a previously-issued credential is no longer valid, verifiers would continue to trust stale assertions — with real consequences for conveyancing transactions.
 
-Credential revocation is the mechanism by which an issuer declares that a credential it previously issued MUST no longer be accepted by verifiers. It is a foundational infrastructure concern: every credential in the PDTF 2.0 ecosystem — whether issued by a Moverly adapter, a primary-source authority, or the platform itself — MUST support revocation from the moment of issuance.
+Credential revocation is the mechanism by which an issuer declares that a credential it previously issued MUST no longer be accepted by verifiers. It is a foundational infrastructure concern: every credential in the PDTF 2.0 ecosystem — whether issued by a PDTF adapter, a primary-source authority, or the platform itself — MUST support revocation from the moment of issuance.
 
 ### Why Revocation Is Critical in Property Transactions
 
@@ -333,7 +333,7 @@ The gzip compression is highly effective for sparse bitstrings (few revocations)
 
 Each credential issuer is responsible for hosting the status lists for the credentials it issues. In the PDTF 2.0 trust evolution model, this means:
 
-- **Phase 1 (Moverly proxies):** Moverly hosts status lists for all adapter-issued credentials at `adapters.propdata.org.uk`
+- **Phase 1 (platform proxies):** The platform hosts status lists for all adapter-issued credentials at `adapters.propdata.org.uk`
 - **Phase 2 (Separate adapters):** Each adapter host manages its own status lists at its own domain
 - **Phase 3 (Primary sources):** Authoritative issuers host their own status lists
 
@@ -356,15 +356,15 @@ https://adapters.propdata.org.uk/status/water-drainage/00003
 #### Platform-Issued Credentials (User VCs, Consent VCs)
 
 ```
-https://moverly.com/status/{category}/{listId}
+https://platform.example.com/status/{category}/{listId}
 ```
 
 Examples:
 ```
-https://moverly.com/status/ownership/00001
-https://moverly.com/status/representation/00001
-https://moverly.com/status/consent/00001
-https://moverly.com/status/user/00001
+https://platform.example.com/status/ownership/00001
+https://platform.example.com/status/representation/00001
+https://platform.example.com/status/consent/00001
+https://platform.example.com/status/user/00001
 ```
 
 #### Primary-Source Issued Credentials (Phase 3)

@@ -65,7 +65,7 @@ type KeyCategory = 'adapter' | 'user' | 'platform' | 'organisation';
 | `adapter` | Signs credentials from a data source adapter | EPC adapter, HMLR adapter |
 | `user` | Signs user-initiated attestations | Seller property information |
 | `platform` | Signs platform-level credentials | Transaction lifecycle events |
-| `organisation` | Organisation identity key | `did:web:moverly.com` anchor |
+| `organisation` | Organisation identity key | `did:web:platform.example.com` anchor |
 
 ---
 
@@ -199,7 +199,7 @@ Use consistent key IDs across environments:
 adapter/epc          → EPC data source adapter
 adapter/hmlr         → HMLR title data adapter
 platform/transaction → Transaction lifecycle signing
-org/moverly          → Organisation identity key
+org/platform          → Organisation identity key
 service/validate     → Validation service receipt signing
 ```
 

@@ -178,14 +178,14 @@ https://adapters.propdata.org.uk/status/ea-flood/list-001
 ### Platform-issued credentials
 
 ```
-https://moverly.com/status/{category}/{listId}
+https://platform.example.com/status/{category}/{listId}
 ```
 
 Examples:
 ```
-https://moverly.com/status/ownership/list-001
-https://moverly.com/status/representation/list-001
-https://moverly.com/status/consent/list-001
+https://platform.example.com/status/ownership/list-001
+https://platform.example.com/status/representation/list-001
+https://platform.example.com/status/consent/list-001
 ```
 
 ## HTTP requirements for status endpoints

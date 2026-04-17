@@ -96,7 +96,7 @@ All PDTF Ed25519 `did:key` identifiers begin with `did:key:z6Mk`.
 | DID | Resolves to |
 |---|---|
 | `did:web:smithandjones.co.uk` | `https://smithandjones.co.uk/.well-known/did.json` |
-| `did:web:moverly.com:transactions:abc123` | `https://moverly.com/transactions/abc123/did.json` |
+| `did:web:platform.example.com:transactions:abc123` | `https://platform.example.com/transactions/abc123/did.json` |
 | `did:web:adapters.propdata.org.uk:hmlr` | `https://adapters.propdata.org.uk/hmlr/did.json` |
 
 **General mapping:**
@@ -124,7 +124,7 @@ did:web:{platform}:transactions:{id}
 Example:
 
 ```text
-did:web:moverly.com:transactions:abc123
+did:web:platform.example.com:transactions:abc123
 ```
 
 ### Adapter pattern
@@ -156,28 +156,28 @@ A transaction DID document MUST advertise service endpoints.
 
 ```json
 {
-  "id": "did:web:moverly.com:transactions:abc123",
-  "controller": "did:web:moverly.com",
+  "id": "did:web:platform.example.com:transactions:abc123",
+  "controller": "did:web:platform.example.com",
   "verificationMethod": [
     {
-      "id": "did:web:moverly.com:transactions:abc123#key-1",
+      "id": "did:web:platform.example.com:transactions:abc123#key-1",
       "type": "Ed25519VerificationKey2020",
-      "controller": "did:web:moverly.com:transactions:abc123",
+      "controller": "did:web:platform.example.com:transactions:abc123",
       "publicKeyMultibase": "z6MknGc3ocHs3zdPiJbnaaqDi58NGb4pk1Sp7eTbCt2DADLY"
     }
   ],
-  "authentication": ["did:web:moverly.com:transactions:abc123#key-1"],
-  "assertionMethod": ["did:web:moverly.com:transactions:abc123#key-1"],
+  "authentication": ["did:web:platform.example.com:transactions:abc123#key-1"],
+  "assertionMethod": ["did:web:platform.example.com:transactions:abc123#key-1"],
   "service": [
     {
-      "id": "did:web:moverly.com:transactions:abc123#pdtf-api",
+      "id": "did:web:platform.example.com:transactions:abc123#pdtf-api",
       "type": "PdtfTransactionEndpoint",
-      "serviceEndpoint": "https://api.moverly.com/v2/transactions/abc123"
+      "serviceEndpoint": "https://api.platform.example.com/v2/transactions/abc123"
     },
     {
-      "id": "did:web:moverly.com:transactions:abc123#mcp",
+      "id": "did:web:platform.example.com:transactions:abc123#mcp",
       "type": "McpEndpoint",
-      "serviceEndpoint": "https://api.moverly.com/mcp/transactions/abc123"
+      "serviceEndpoint": "https://api.platform.example.com/mcp/transactions/abc123"
     }
   ]
 }

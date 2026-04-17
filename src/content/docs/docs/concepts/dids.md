@@ -51,7 +51,7 @@ Examples:
 
 ```text
 did:web:smithandjones.co.uk
-did:web:moverly.com:transactions:abc123
+did:web:platform.example.com:transactions:abc123
 did:web:adapters.propdata.org.uk:hmlr
 ```
 
@@ -91,15 +91,15 @@ Example transaction DID shape:
 
 ```json
 {
-  "id": "did:web:moverly.com:transactions:abc123",
+  "id": "did:web:platform.example.com:transactions:abc123",
   "service": [
     {
       "type": "PdtfTransactionEndpoint",
-      "serviceEndpoint": "https://api.moverly.com/v2/transactions/abc123"
+      "serviceEndpoint": "https://api.platform.example.com/v2/transactions/abc123"
     },
     {
       "type": "McpEndpoint",
-      "serviceEndpoint": "https://api.moverly.com/mcp/transactions/abc123"
+      "serviceEndpoint": "https://api.platform.example.com/mcp/transactions/abc123"
     }
   ]
 }

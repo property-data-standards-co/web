@@ -6,7 +6,7 @@ description: "PDTF 2.0 specification document."
 
 **Version:** 0.1 (Draft)
 **Date:** 16 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
 
@@ -87,7 +87,7 @@ Trust is not binary. The Trust Mark's `delegation.authorised_paths` claim specif
 
 Phase 1 is a flat topology (Trust Anchor → leaf issuers). Phase 2+ can introduce intermediate entities (a sector authority below the Trust Anchor, or a conveyancing regulator issuing its own Trust Marks). No schema changes are required — OpenID Federation supports arbitrary chain depth natively.
 
-> **Decision D24:** 3-phase evolution — Moverly proxies → independently hosted adapters → primary-source root issuers.
+> **Decision D24:** 3-phase evolution — platform proxies → independently hosted adapters → primary-source root issuers.
 
 ---
 
@@ -172,8 +172,8 @@ A subordinate entity (e.g. an adapter) publishes its own self-signed **Entity Co
   "authority_hints": ["https://trust.pdtf.org"],
   "metadata": {
     "federation_entity": {
-      "organization_name": "Moverly HMLR Adapter",
-      "contacts": ["trust@moverly.com"]
+      "organization_name": "PDTF HMLR Adapter",
+      "contacts": ["trust@propdata.org.uk"]
     },
     "openid_credential_issuer": {
       "credential_issuer": "https://adapters.propdata.org.uk/hmlr",
@@ -230,7 +230,7 @@ A **Trust Mark** is a signed JWT asserting that a subject entity meets a named p
 | Trust Mark ID | Meaning | Typical Subject |
 |---------------|---------|-----------------|
 | `https://propdata.org.uk/trust-marks/pdtf-verified-issuer` | Authorised to issue PDTF VCs for specific entity:path combinations | Adapters, root issuers |
-| `https://propdata.org.uk/trust-marks/account-provider` | Authorised to issue user/organisation DIDs on behalf of people | Moverly, LMS, wallet providers |
+| `https://propdata.org.uk/trust-marks/account-provider` | Authorised to issue user/organisation DIDs on behalf of people | The reference platform, LMS, wallet providers |
 | `https://propdata.org.uk/trust-marks/regulated-conveyancer` | SRA/CLC regulated conveyancing firm | Conveyancer organisations |
 
 ### 5.1 `pdtf-verified-issuer` Structure
@@ -263,7 +263,7 @@ The `delegation` claim is the PDTF-specific extension. Everything else is vanill
 ```json
 {
   "iss": "https://trust.pdtf.org",
-  "sub": "https://moverly.com",
+  "sub": "https://platform.example.com",
   "id": "https://propdata.org.uk/trust-marks/account-provider",
   "iat": 1776038400,
   "exp": 1807574400,
@@ -273,7 +273,7 @@ The `delegation` claim is the PDTF-specific extension. Everything else is vanill
       "methods": ["email", "sms", "document-check"],
       "description": "Email + SMS at registration; document-based identity checks for seller/buyer roles."
     },
-    "managed_organisations": "https://moverly.com/.well-known/pdtf-managed-orgs.json"
+    "managed_organisations": "https://platform.example.com/.well-known/pdtf-managed-orgs.json"
   }
 }
 ```
@@ -290,7 +290,7 @@ The `delegation.managed_organisations` URL points to a JSON document signed by t
 
 ```json
 {
-  "provider": "did:web:moverly.com",
+  "provider": "did:web:platform.example.com",
   "updated": "2026-03-24T12:00:00Z",
   "organisations": [
     {
@@ -304,7 +304,7 @@ The `delegation.managed_organisations` URL points to a JSON document signed by t
   "proof": {
     "type": "DataIntegrityProof",
     "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:web:moverly.com#key-1",
+    "verificationMethod": "did:web:platform.example.com#key-1",
     "created": "2026-03-24T12:00:00Z",
     "proofPurpose": "assertionMethod",
     "proofValue": "z4FXQje2VihZqE3WPgtvJh4Kv8..."
@@ -506,14 +506,14 @@ Reference implementations SHOULD ship with a bundled snapshot of the Trust Ancho
 
 ### 10.1 Phase 1
 
-The Trust Anchor is operated by Moverly as PDTF 2.0 steward:
+The Trust Anchor is operated by the PDTF steward:
 
 | Role | Responsibility | Phase 1 Holder |
 |------|---------------|----------------|
-| Trust Anchor operator | Signs Entity Statements and Trust Marks; operates federation endpoints | Moverly |
-| Trust Mark issuer (`pdtf-verified-issuer`) | Decides which adapters/issuers are accredited | Moverly |
-| Trust Mark issuer (`account-provider`) | Accredits account providers | Moverly |
-| Trust Mark issuer (`regulated-conveyancer`) | Issues conveyancer trust marks | Moverly (interim), SRA/CLC (target) |
+| Trust Anchor operator | Signs Entity Statements and Trust Marks; operates federation endpoints | The platform operator |
+| Trust Mark issuer (`pdtf-verified-issuer`) | Decides which adapters/issuers are accredited | The platform operator |
+| Trust Mark issuer (`account-provider`) | Accredits account providers | The platform operator |
+| Trust Mark issuer (`regulated-conveyancer`) | Issues conveyancer trust marks | The platform operator (interim), SRA/CLC (target) |
 
 ### 10.2 Accreditation Process
 
@@ -534,13 +534,13 @@ Verifiers polling the status endpoint (recommended every hour for high-impact tr
 
 ### 10.4 Phase 2+
 
-As PDTF 2.0 adoption grows, a multi-stakeholder property-sector governance body should operate the Trust Anchor (or become a higher-level Trust Anchor above Moverly). Multiple Trust Mark issuers will emerge (e.g. SRA issues `regulated-conveyancer` directly). No schema changes are required — this is native OpenID Federation topology.
+As PDTF 2.0 adoption grows, a multi-stakeholder property-sector governance body should operate the Trust Anchor (or become a higher-level Trust Anchor above the platform operator). Multiple Trust Mark issuers will emerge (e.g. SRA issues `regulated-conveyancer` directly). No schema changes are required — this is native OpenID Federation topology.
 
 ---
 
 ## 11. Migration Path
 
-> **Decision D24:** 3-phase evolution: Moverly proxies → separately hosted adapters → root issuers.
+> **Decision D24:** 3-phase evolution: platform proxies → separately hosted adapters → root issuers.
 
 ### 11.1 Phase 1 → Phase 2: Adapter Independence
 
@@ -656,7 +656,7 @@ const result = await verifyCredential(credential, {
 | **D8** | Trust infrastructure is OpenID Federation with PDTF Trust Anchor at `trust.pdtf.org` | ✅ Confirmed (supersedes earlier GitHub-TIR decision) |
 | **D20** | Authorisation expressed as entity:path combinations inside the Trust Mark `delegation` claim | ✅ Confirmed |
 | **D21** | Account providers carry an `account-provider` Trust Mark; user DIDs traced via `managed_organisations` | ✅ Confirmed |
-| **D24** | 3-phase evolution: Moverly proxies → independently hosted adapters → primary-source root issuers | ✅ Confirmed |
+| **D24** | 3-phase evolution: platform proxies → independently hosted adapters → primary-source root issuers | ✅ Confirmed |
 
 ---
 

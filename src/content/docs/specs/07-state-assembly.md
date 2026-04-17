@@ -6,7 +6,7 @@ description: "PDTF 2.0 specification document."
 
 **Version:** 0.1 (Draft)
 **Date:** 1 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
 
@@ -212,7 +212,7 @@ The composer must determine which entity type each credential targets. This is r
    - `TransactionCredential` → Transaction
    - etc.
 
-3. **Transaction DID** — credentials targeting `did:web:moverly.com:transactions:*` are Transaction credentials
+3. **Transaction DID** — credentials targeting `did:web:platform.example.com:transactions:*` are Transaction credentials
 
 ---
 
@@ -474,7 +474,7 @@ The composed v4 state follows the structure defined in [Sub-spec 01 §6](/web/sp
 
 ```json
 {
-  "transactionId": "did:web:moverly.com:transactions:abc123",
+  "transactionId": "did:web:platform.example.com:transactions:abc123",
   "status": "Active",
   "saleContext": {
     "numberOfSellers": 2,
@@ -1073,7 +1073,7 @@ Dependency pruning changes the semantics of state assembly. It must be agreed wi
 
 **What doesn't need consensus:**
 - The deep merge algorithm (standard practice)
-- The conflict resolution rules (internal to Moverly initially)
+- The conflict resolution rules (internal to the platform initially)
 - The v4 state shape (new, no backward-compat constraint)
 
 ### 6.10 Assembler Pruning Obligation (Pending Q1.1)
@@ -1110,8 +1110,8 @@ rootIssuer > trustedProxy > accountProvider
 | Trust Level | Description | Example Issuers |
 |------------|-------------|-----------------|
 | `rootIssuer` | Primary data source — the authority itself | HMLR, MHCLG (EPC), Environment Agency, VOA |
-| `trustedProxy` | Adapter that fetches from the primary source and signs | Moverly HMLR adapter, Moverly EPC adapter |
-| `accountProvider` | User-attested data via a platform account | Moverly (on behalf of sellers/buyers) |
+| `trustedProxy` | Adapter that fetches from the primary source and signs | PDTF HMLR adapter, PDTF EPC adapter |
+| `accountProvider` | User-attested data via a platform account | The platform (on behalf of sellers/buyers) |
 
 **Rule:** A credential from a higher trust level always wins, regardless of timestamp.
 
@@ -1654,7 +1654,7 @@ For performance optimisation (future), the composer could support incremental up
 
 4. **Conflict visibility** — Should trust-level conflicts be visible to transaction participants? E.g., should a seller see "The EPC adapter says your energy rating is C, but you claimed D"? Or is this internal only?
 
-### 12.2 Internal (Moverly)
+### 12.2 Internal (Platform)
 
 5. **Dependency graph extraction from real schemas** — The pruning algorithm requires walking the actual PDTF JSON Schemas to identify discriminators. How complete are the current schemas' use of `if/then/else` and `oneOf`? Are there discriminator patterns that aren't expressed in the schema today?
 
@@ -1919,14 +1919,14 @@ A complete worked example showing composition of a realistic transaction from VC
 
 ### B.1 Input: Five VCs for a Transaction
 
-**VC 1 — Transaction metadata (Moverly platform):**
+**VC 1 — Transaction metadata (the platform):**
 ```json
 {
   "type": ["VerifiableCredential", "TransactionCredential"],
-  "issuer": "did:web:moverly.com",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-15T10:00:00Z",
   "credentialSubject": {
-    "id": "did:web:moverly.com:transactions:tx-42",
+    "id": "did:web:platform.example.com:transactions:tx-42",
     "status": "Active",
     "saleContext": {
       "numberOfSellers": 1,
@@ -2016,11 +2016,11 @@ A complete worked example showing composition of a realistic transaction from VC
 }
 ```
 
-**VC 5 — Person identity (Moverly platform):**
+**VC 5 — Person identity (the platform):**
 ```json
 {
   "type": ["VerifiableCredential", "PersonCredential"],
-  "issuer": "did:web:moverly.com",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-15T09:00:00Z",
   "credentialSubject": {
     "id": "did:key:z6Mkh...seller",
@@ -2042,7 +2042,7 @@ A complete worked example showing composition of a realistic transaction from VC
 
 | Entity ID | VCs |
 |-----------|-----|
-| `did:web:moverly.com:transactions:tx-42` | VC 1 |
+| `did:web:platform.example.com:transactions:tx-42` | VC 1 |
 | `urn:pdtf:uprn:100023456789` | VC 2, VC 3 |
 | `urn:pdtf:titleNumber:AB12345` | VC 4 |
 | `did:key:z6Mkh...seller` | VC 5 |

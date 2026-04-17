@@ -15,8 +15,8 @@ Every participant in the federation publishes a **federation entity statement** 
 
 ```
 Trust Anchor (propdata.org.uk)
-  └─ Subordinate: Moverly HMLR Adapter
-  └─ Subordinate: Moverly EPC Adapter
+  └─ Subordinate: PDTF HMLR Adapter
+  └─ Subordinate: PDTF EPC Adapter
   └─ Subordinate: LMS Title Adapter
 ```
 
@@ -27,7 +27,7 @@ Each link in the chain is a signed JWT. A verifier walks the chain from bottom t
 In the PDTF ecosystem:
 
 - **Trust Anchor**: `propdata.org.uk` operates the federation Trust Anchor. It publishes its own entity statement at `https://propdata.org.uk/.well-known/openid-federation` and signs subordinate statements for authorised adapters.
-- **Subordinate entities**: Each adapter (e.g. Moverly's HMLR proxy, an EPC adapter) publishes its own entity statement and is referenced by a subordinate statement from the Trust Anchor.
+- **Subordinate entities**: Each adapter (e.g. the PDTF HMLR proxy, an EPC adapter) publishes its own entity statement and is referenced by a subordinate statement from the Trust Anchor.
 - **Trust Marks**: The Trust Anchor issues **Property Trust Marks** — signed tokens that declare what an entity is authorised to do.
 
 ### Entity statements
@@ -47,8 +47,8 @@ An entity statement is a signed JWT published at `{entity_url}/.well-known/openi
   "jwks": { "keys": [{ "kty": "OKP", "crv": "Ed25519", "..." : "..." }] },
   "metadata": {
     "federation_entity": {
-      "organization_name": "Moverly HMLR Adapter",
-      "homepage_uri": "https://moverly.com"
+      "organization_name": "PDTF HMLR Adapter",
+      "homepage_uri": "https://platform.example.com"
     },
     "openid_credential_issuer": {
       "credential_configurations_supported": { "..." : "..." }

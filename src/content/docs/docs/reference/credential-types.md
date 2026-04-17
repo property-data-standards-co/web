@@ -197,7 +197,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
     "organisationId": "did:web:smithandco.law",
     "role": "sellerConveyancer",
     "grantedBy": "did:key:z6MkhSellerAbc123",
-    "transactionId": "did:web:moverly.com:transactions:tx-789",
+    "transactionId": "did:web:platform.example.com:transactions:tx-789",
     "status": "active"
   }
 }
@@ -236,7 +236,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
     "id": "urn:pdtf:consent:dc-g7h8i9",
     "organisationId": "did:web:bigbank.co.uk",
     "grantedBy": "did:key:z6MkhBuyerXyz789",
-    "transactionId": "did:web:moverly.com:transactions:tx-789",
+    "transactionId": "did:web:platform.example.com:transactions:tx-789",
     "scope": [
       "Property:energyEfficiency",
       "Property:environmentalIssues",
@@ -274,7 +274,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
   "type": ["VerifiableCredential", "OfferCredential"],
   "credentialSubject": {
     "id": "urn:pdtf:offer:off-j1k2l3",
-    "transactionId": "did:web:moverly.com:transactions:tx-789",
+    "transactionId": "did:web:platform.example.com:transactions:tx-789",
     "buyerIds": ["did:key:z6MkhBuyerXyz789"],
     "amount": 450000,
     "currency": "GBP",
@@ -307,7 +307,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 {
   "type": ["VerifiableCredential", "TransactionCredential"],
   "credentialSubject": {
-    "id": "did:web:moverly.com:transactions:tx-789",
+    "id": "did:web:platform.example.com:transactions:tx-789",
     "status": "Active",
     "milestones": {
       "listed": "2026-03-01T00:00:00Z",

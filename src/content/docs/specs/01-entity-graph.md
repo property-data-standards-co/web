@@ -6,7 +6,7 @@ description: "PDTF 2.0 specification document."
 
 **Version:** 0.1 (Draft)
 **Date:** 9 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft for review (LMS collaboration)
 **Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
 
@@ -85,7 +85,7 @@ v4/combined.json (ID-keyed maps — single dev artifact)
 ### 3.2 Relationship Model
 
 ```
-Transaction (did:web:moverly.com:transactions:{id})
+Transaction (did:web:platform.example.com:transactions:{id})
     │
     ├── properties: {
     │     "urn:pdtf:uprn:100023456789": { Property }
@@ -395,7 +395,7 @@ Links buyer(s) to the Transaction. Buyers exist only through Offers.
 
 | Entity | Identifier Format | Example | Source |
 |--------|------------------|---------|--------|
-| Transaction | `did:web` | `did:web:moverly.com:transactions:abc123` | Platform-assigned |
+| Transaction | `did:web` | `did:web:platform.example.com:transactions:abc123` | Platform-assigned |
 | Property | `urn:pdtf:uprn:{uprn}` | `urn:pdtf:uprn:100023456789` | Ordnance Survey UPRN |
 | Title | `urn:pdtf:titleNumber:{number}` | `urn:pdtf:titleNumber:AB12345` | HMLR title number |
 | Title (unregistered) | `urn:pdtf:unregisteredTitle:{id}` | `urn:pdtf:unregisteredTitle:ut-7f3a` | Generated, may transition to registered |
@@ -432,7 +432,7 @@ The v4 combined.json uses the same top-level structure but with ID-keyed maps re
 ```json
 {
   "$schema": "https://trust.propdata.org.uk/schemas/v4/combined.json",
-  "transactionId": "did:web:moverly.com:transactions:abc123",
+  "transactionId": "did:web:platform.example.com:transactions:abc123",
   "status": "Active",
   "externalIds": { ... },
   
@@ -653,7 +653,7 @@ The following are *value lists*, not entity collections. They remain as arrays:
    *Question:* When an unregistered title gets registered, or a new build receives a UPRN, how does the URN transition?
    *Working Assumption:* We use the standard W3C `alsoKnownAs` property on the Verifiable Credential. The new VC uses the permanent identifier as its `subject.id`, but lists the old synthetic/unregistered identifier in `alsoKnownAs`. Traversal logic will resolve both to the same entity.
 
-### 9.2 Internal (Moverly)
+### 9.2 Internal (Platform)
 
 6. **v4 combined.json creation** — First step is transforming current v3 combined.json to v4 format. This is the bootstrap for all subsequent extraction and tooling work.
 

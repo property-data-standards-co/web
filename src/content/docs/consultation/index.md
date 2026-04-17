@@ -58,7 +58,7 @@ To issue or present Verifiable Credentials, an entity needs a Decentralised Iden
 **The Options:**
 - **Option A:** Require all participating firms to self-host `did:web` infrastructure.
 - **Option B:** Mandate a central registry that generates and holds keys for everyone.
-- **Option C (Provider-Managed Identity):** Allow firms to use ephemeral or provider-managed `did:key` identifiers, issued by their technology provider (e.g., their CRM or a platform like LMS/Moverly). Only tech-forward firms and major platforms are expected to self-host `did:web`.
+- **Option C (Provider-Managed Identity):** Allow firms to use ephemeral or provider-managed `did:key` identifiers, issued by their technology provider (e.g., their CRM or a platform like LMS). Only tech-forward firms and major platforms are expected to self-host `did:web`.
 
 **Our Recommendation (Option C):** 
 We must support account-provider-managed `did:key` identity for the vast majority of firms. It drastically lowers the barrier to entry while maintaining cryptographic integrity.

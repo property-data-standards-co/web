@@ -6,7 +6,7 @@ description: "PDTF 2.0 specification document."
 
 **Version:** 0.1 (Draft)
 **Date:** 1 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
 
@@ -158,7 +158,7 @@ Percent-encoded characters:
 | DID | Resolves to |
 |-----|-------------|
 | `did:web:smithandjones.co.uk` | `https://smithandjones.co.uk/.well-known/did.json` |
-| `did:web:moverly.com:transactions:abc123` | `https://moverly.com/transactions/abc123/did.json` |
+| `did:web:platform.example.com:transactions:abc123` | `https://platform.example.com/transactions/abc123/did.json` |
 | `did:web:adapters.propdata.org.uk:hmlr` | `https://adapters.propdata.org.uk/hmlr/did.json` |
 | `did:web:adapters.propdata.org.uk:epc` | `https://adapters.propdata.org.uk/epc/did.json` |
 
@@ -168,7 +168,7 @@ Percent-encoded characters:
 |-------------|-------------|---------|-----------|
 | Organisation (provider-managed) | `did:key:z6Mk{base58}` | `did:key:z6MkpJmq...` | Implicit (no hosting — key managed by account provider) |
 | Organisation (self-hosted) | `did:web:{firm-domain}` | `did:web:smithandjones.co.uk` | The firm itself |
-| Transaction | `did:web:{platform}:transactions:{id}` | `did:web:moverly.com:transactions:abc123` | The platform hosting the transaction |
+| Transaction | `did:web:{platform}:transactions:{id}` | `did:web:platform.example.com:transactions:abc123` | The platform hosting the transaction |
 | Trusted Adapter | `did:web:{adapter-host}:{adapter-name}` | `did:web:adapters.propdata.org.uk:hmlr` | The adapter operator |
 
 #### 2.2.3 Domain Verification
@@ -177,7 +177,7 @@ Hosting a DID document at a domain constitutes proof of domain control. This has
 
 - **Organisations (did:web):** A conveyancer firm at `did:web:smithandjones.co.uk` has proven they control the `smithandjones.co.uk` domain. Combined with a `regulated-conveyancer` Trust Mark (which cross-references SRA number and Companies House number), this provides a strong identity binding.
 - **Organisations (did:key):** A provider-managed Organisation's identity is verified by the account provider. Verifiers confirm the `did:key` is listed in the provider's `managedOrganisations` document (referenced from the account provider's `account-provider` Trust Mark).
-- **Transactions:** A transaction DID like `did:web:moverly.com:transactions:abc123` is inherently scoped to the platform hosting it. The platform's Entity Statement in the federation establishes its authority to host transactions.
+- **Transactions:** A transaction DID like `did:web:platform.example.com:transactions:abc123` is inherently scoped to the platform hosting it. The platform's Entity Statement in the federation establishes its authority to host transactions.
 - **Adapters:** An adapter at `did:web:adapters.propdata.org.uk:hmlr` is controlled by whoever operates the `adapters.propdata.org.uk` domain. A `pdtf-verified-issuer` Trust Mark binds this to an authorised adapter operator.
 
 > **Security note:** `did:web` security depends entirely on DNS and TLS. See [Section 9: Security Considerations](#9-security-considerations) for threat analysis and mitigations.
@@ -433,7 +433,7 @@ For firms that want direct control of their identity, hosted at the firm's domai
 
 ### 4.3 Transaction DID Document (did:web)
 
-Hosted by the platform at the transaction's path. For `did:web:moverly.com:transactions:abc123`, served from `https://moverly.com/transactions/abc123/did.json`:
+Hosted by the platform at the transaction's path. For `did:web:platform.example.com:transactions:abc123`, served from `https://platform.example.com/transactions/abc123/did.json`:
 
 ```json
 {
@@ -442,33 +442,33 @@ Hosted by the platform at the transaction's path. For `did:web:moverly.com:trans
     "https://w3id.org/security/suites/ed25519-2020/v1",
     "https://w3id.org/security/multikey/v1"
   ],
-  "id": "did:web:moverly.com:transactions:abc123",
-  "controller": "did:web:moverly.com",
+  "id": "did:web:platform.example.com:transactions:abc123",
+  "controller": "did:web:platform.example.com",
   "verificationMethod": [
     {
-      "id": "did:web:moverly.com:transactions:abc123#key-1",
+      "id": "did:web:platform.example.com:transactions:abc123#key-1",
       "type": "Ed25519VerificationKey2020",
-      "controller": "did:web:moverly.com:transactions:abc123",
+      "controller": "did:web:platform.example.com:transactions:abc123",
       "publicKeyMultibase": "z6MknGc3ocHs3zdPiJbnaaqDi58NGb4pk1Sp7eTbCt2DADLY"
     }
   ],
   "authentication": [
-    "did:web:moverly.com:transactions:abc123#key-1"
+    "did:web:platform.example.com:transactions:abc123#key-1"
   ],
   "assertionMethod": [
-    "did:web:moverly.com:transactions:abc123#key-1"
+    "did:web:platform.example.com:transactions:abc123#key-1"
   ],
   "service": [
     {
-      "id": "did:web:moverly.com:transactions:abc123#pdtf-api",
+      "id": "did:web:platform.example.com:transactions:abc123#pdtf-api",
       "type": "PdtfTransactionEndpoint",
-      "serviceEndpoint": "https://api.moverly.com/v2/transactions/abc123",
+      "serviceEndpoint": "https://api.platform.example.com/v2/transactions/abc123",
       "description": "PDTF v2 transaction API — credential submission, state retrieval, entity queries"
     },
     {
-      "id": "did:web:moverly.com:transactions:abc123#mcp",
+      "id": "did:web:platform.example.com:transactions:abc123#mcp",
       "type": "McpEndpoint",
-      "serviceEndpoint": "https://api.moverly.com/mcp/transactions/abc123",
+      "serviceEndpoint": "https://api.platform.example.com/mcp/transactions/abc123",
       "description": "Model Context Protocol endpoint for AI agent access"
     }
   ],
@@ -480,7 +480,7 @@ Hosted by the platform at the transaction's path. For `did:web:moverly.com:trans
 
 **Key points:**
 
-- The `controller` field indicates `did:web:moverly.com` controls this transaction DID. This establishes the platform's authority over the transaction.
+- The `controller` field indicates `did:web:platform.example.com` controls this transaction DID. This establishes the platform's authority over the transaction.
 - `#pdtf-api` is the primary API endpoint for credential exchange and state retrieval.
 - `#mcp` provides the MCP (Model Context Protocol) endpoint for AI agent interaction.
 - `alsoKnownAs` links to the property UPRN for cross-referencing. Multiple URNs may be listed when a transaction involves multiple properties.
@@ -638,9 +638,9 @@ The primary API for interacting with a PDTF transaction.
 
 ```json
 {
-  "id": "did:web:moverly.com:transactions:abc123#pdtf-api",
+  "id": "did:web:platform.example.com:transactions:abc123#pdtf-api",
   "type": "PdtfTransactionEndpoint",
-  "serviceEndpoint": "https://api.moverly.com/v2/transactions/abc123",
+  "serviceEndpoint": "https://api.platform.example.com/v2/transactions/abc123",
   "description": "PDTF v2 transaction API"
 }
 ```
@@ -664,9 +664,9 @@ The Model Context Protocol endpoint for AI agent interaction.
 
 ```json
 {
-  "id": "did:web:moverly.com:transactions:abc123#mcp",
+  "id": "did:web:platform.example.com:transactions:abc123#mcp",
   "type": "McpEndpoint",
-  "serviceEndpoint": "https://api.moverly.com/mcp/transactions/abc123",
+  "serviceEndpoint": "https://api.platform.example.com/mcp/transactions/abc123",
   "description": "Model Context Protocol endpoint for AI agent access"
 }
 ```
@@ -753,18 +753,18 @@ Output: DID Document (see Section 4.1)
 **Resolution algorithm:**
 
 ```
-Input:  did:web:moverly.com:transactions:abc123
+Input:  did:web:platform.example.com:transactions:abc123
 Output: DID Document (fetched from HTTPS)
 
 1. Parse the DID:
    - Method: "web"
-   - Domain: "moverly.com"
+   - Domain: "platform.example.com"
    - Path segments: ["transactions", "abc123"]
 
 2. Construct the URL:
    - If path segments exist:
      https://{domain}/{path1}/{path2}/.../did.json
-     → https://moverly.com/transactions/abc123/did.json
+     → https://platform.example.com/transactions/abc123/did.json
    - If no path segments:
      https://{domain}/.well-known/did.json
 
@@ -912,18 +912,18 @@ When a transaction completes (or is withdrawn), the platform should:
 ```json
 {
   "@context": ["https://www.w3.org/ns/did/v1"],
-  "id": "did:web:moverly.com:transactions:abc123",
+  "id": "did:web:platform.example.com:transactions:abc123",
   "deactivated": true,
   "verificationMethod": [
     {
-      "id": "did:web:moverly.com:transactions:abc123#key-1",
+      "id": "did:web:platform.example.com:transactions:abc123#key-1",
       "type": "Ed25519VerificationKey2020",
-      "controller": "did:web:moverly.com:transactions:abc123",
+      "controller": "did:web:platform.example.com:transactions:abc123",
       "publicKeyMultibase": "z6MknGc3ocHs3zdPiJbnaaqDi58NGb4pk1Sp7eTbCt2DADLY"
     }
   ],
   "assertionMethod": [
-    "did:web:moverly.com:transactions:abc123#key-1"
+    "did:web:platform.example.com:transactions:abc123#key-1"
   ]
 }
 ```
@@ -1072,7 +1072,7 @@ const { did, publicKey, privateKey } = await generateDidKey();
 // → did = "did:key:z6Mk..."
 
 // Resolve any DID
-const didDocument = await resolveDid('did:web:moverly.com:transactions:abc123');
+const didDocument = await resolveDid('did:web:platform.example.com:transactions:abc123');
 // → { id: "did:web:...", verificationMethod: [...], service: [...] }
 
 // Resolve did:key (synchronous — no network)
@@ -1158,7 +1158,7 @@ This generates the key pair, constructs the DID document with regulatory metadat
 | Person | `did:key` | `did:key:z6Mk{base58}` | `did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK` |
 | Organisation (provider-managed) | `did:key` | `did:key:z6Mk{base58}` | `did:key:z6MkpJmqLFMmaFHCqS9jVjMNRNHriSNkFCyG3MLbiqkVMhvm` |
 | Organisation (self-hosted) | `did:web` | `did:web:{domain}` | `did:web:smithandjones.co.uk` |
-| Transaction | `did:web` | `did:web:{platform}:transactions:{id}` | `did:web:moverly.com:transactions:abc123` |
+| Transaction | `did:web` | `did:web:{platform}:transactions:{id}` | `did:web:platform.example.com:transactions:abc123` |
 | Trusted Adapter | `did:web` | `did:web:{host}:{adapter}` | `did:web:adapters.propdata.org.uk:hmlr` |
 | Property | URN | `urn:pdtf:uprn:{uprn}` | `urn:pdtf:uprn:100023456789` |
 | Title (registered) | URN | `urn:pdtf:titleNumber:{number}` | `urn:pdtf:titleNumber:DN123456` |

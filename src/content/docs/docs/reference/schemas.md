@@ -28,7 +28,7 @@ The v4 combined schema uses ID-keyed collections rather than arrays.
 ```json
 {
   "$schema": "https://trust.propdata.org.uk/schemas/v4/combined.json",
-  "transactionId": "did:web:moverly.com:transactions:abc123",
+  "transactionId": "did:web:platform.example.com:transactions:abc123",
   "status": "Active",
   "saleContext": {},
   "sellerConfirmations": {},
@@ -219,7 +219,7 @@ The v4 combined schema uses ID-keyed collections rather than arrays.
   "organisationId": "did:web:smithandco.law",
   "role": "sellerConveyancer",
   "grantedBy": "did:key:z6Mkh...",
-  "transactionId": "did:web:moverly.com:transactions:tx-789",
+  "transactionId": "did:web:platform.example.com:transactions:tx-789",
   "status": "active"
 }
 ```
@@ -241,7 +241,7 @@ The v4 combined schema uses ID-keyed collections rather than arrays.
   "id": "urn:pdtf:consent:dc-g7h8i9",
   "organisationId": "did:web:bigbank.co.uk",
   "grantedBy": "did:key:z6Mkh...",
-  "transactionId": "did:web:moverly.com:transactions:tx-789",
+  "transactionId": "did:web:platform.example.com:transactions:tx-789",
   "scope": ["Property:energyEfficiency", "Title:registerExtract"],
   "purpose": "Mortgage valuation and underwriting",
   "status": "active",
@@ -256,7 +256,7 @@ The v4 combined schema uses ID-keyed collections rather than arrays.
 ```json
 {
   "id": "urn:pdtf:offer:off-j1k2l3",
-  "transactionId": "did:web:moverly.com:transactions:tx-789",
+  "transactionId": "did:web:platform.example.com:transactions:tx-789",
   "buyerIds": ["did:key:z6Mkh..."],
   "amount": 450000,
   "currency": "GBP",

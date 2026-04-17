@@ -44,7 +44,7 @@
 
 **Version:** 0.1 (Draft)
 **Date:** 15 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 
 ---
 
@@ -138,7 +138,7 @@ The relationship is **Transaction-centric**, not Property → Title → Transact
 - The DID-based relationship model handles this naturally — a Transaction DID document references its associated Property and Title identifiers.
 
 ```
-Transaction (did:web:moverly.com:transactions:*)
+Transaction (did:web:platform.example.com:transactions:*)
     ├── Property[] (urn:pdtf:uprn:*)
     │     └── (may have no title — new build, unregistered)
     ├── Title[] (urn:pdtf:titleNumber:* OR urn:pdtf:unregisteredTitle:*)
@@ -385,7 +385,7 @@ DIDs serve as identifiers for organisations, persons, and transactions within th
 |--------------------|----------------------|---------------------------------------------------|------------------------------------------------------------------------------------------------|
 | Persons            | `did:key`            | `did:key:z6Mkh...abc`                             | Self-resolving from public key, no hosting needed                                              |
 | Organisations      | `did:key` or `did:web` | `did:key:z6Mkf...xyz` or `did:web:smithandjones.co.uk` | `did:key` when managed by account provider (e.g. LMS); `did:web` when self-hosting identity |
-| Transactions       | `did:web`            | `did:web:moverly.com:transactions:abc123`         | Hosted DID document at `https://moverly.com/transactions/abc123/did.json`                      |
+| Transactions       | `did:web`            | `did:web:platform.example.com:transactions:abc123`         | Hosted DID document at `https://platform.example.com/transactions/abc123/did.json`                      |
 | Trusted Adapters   | `did:web`            | `did:web:adapters.propdata.org.uk:hmlr`           | Hosted DID document with service endpoints for VC requests + federation entity configuration   |
 
 ### 5.2 URN Scheme
@@ -411,7 +411,7 @@ Discovery in PDTF 2.0 combines OpenID Federation metadata resolution with DID do
 
 For a transaction, the discovery flow is:
 ```
-Transaction DID (did:web:moverly.com:transactions:abc123)
+Transaction DID (did:web:platform.example.com:transactions:abc123)
   → DID Document (keys, service endpoints including PDTF API and MCP)
   → Federation entity configuration (trust chain, trust marks)
   → Credential issuer metadata (for adapters providing data to this transaction)
@@ -520,7 +520,7 @@ Each trust mark is a signed JWT issued by the trust anchor (or a delegated trust
 | `https://propdata.org.uk/trust-marks/regulated-conveyancer` | SRA/CLC regulated conveyancing firm | Conveyancer organisations |
 | `https://propdata.org.uk/trust-marks/energy-data-provider` | Authorised to issue EPC/energy credentials | MHCLG, EPC adapters |
 | `https://propdata.org.uk/trust-marks/environmental-data-provider` | Authorised to issue environmental risk credentials | EA, flood risk adapters |
-| `https://propdata.org.uk/trust-marks/account-provider` | Authorised to issue user DIDs on behalf of persons | Moverly, LMS, wallet providers |
+| `https://propdata.org.uk/trust-marks/account-provider` | Authorised to issue user DIDs on behalf of persons | The reference platform, LMS, wallet providers |
 
 **Trust mark structure:**
 
@@ -552,7 +552,7 @@ The `delegation` claim is a PDTF extension to the standard trust mark. It carrie
 How an entity obtains trust marks and joins the federation:
 
 **Phase 1 (bootstrap):**
-1. Entity applies to the trust anchor operator (initially Moverly/propdata.org.uk)
+1. Entity applies to the trust anchor operator (initially propdata.org.uk)
 2. Trust anchor verifies the entity's identity and authorisation (e.g. SRA registration for conveyancers, contractual relationship for data adapters)
 3. Trust anchor issues a subordinate entity statement and the appropriate trust marks
 4. Entity publishes its entity configuration referencing the trust anchor
@@ -593,16 +593,16 @@ EBSI's Root-TAO/TAO hierarchy is conceptually elegant — trust chains are VCs a
 
 ### 6.5 Three-Phase Evolution
 
-**Phase 1 (now): Moverly as Federation Trust Anchor**
-- Moverly operates the trust anchor at `propdata.org.uk`
+**Phase 1 (now): The Platform as Federation Trust Anchor**
+- The platform operator runs the trust anchor at `propdata.org.uk`
 - Existing collectors become OID4VCI credential issuers (adapters) as leaf entities
 - Each adapter holds trust marks issued by the trust anchor
 - Federation metadata served from the PDTF Trust Anchor at `trust.pdtf.org`
-- Moverly is the sole account provider for user DIDs
+- The reference platform is the sole account provider for user DIDs
 - "Map-and-wrap": call existing APIs (HMLR OC1, EPC API, EA flood), issue as signed VCs via OID4VCI
 
 **Phase 2 (medium-term): Federated Governance**
-- Property sector governance body operates the trust anchor (or becomes a higher-level trust anchor above Moverly)
+- Property sector governance body operates the trust anchor (or becomes a higher-level trust anchor above the platform operator)
 - Multiple organisations can run adapters (TM Group, LMS) — each with their own entity configuration and trust marks
 - Adapters hosted independently (`adapters.propdata.org.uk`) with their own federation metadata
 - SRA/CLC issue `regulated-conveyancer` trust marks directly
@@ -625,7 +625,7 @@ EBSI's Root-TAO/TAO hierarchy is conceptually elegant — trust chains are VCs a
 - **Ed25519** key algorithm (expressed as JWK in federation metadata and DID documents)
 - One key per user (generates their `did:key` identity)
 - One key per adapter (for signing VCs and federation entity configuration)
-- One key for Moverly platform / trust anchor (for signing trust marks and subordinate entity statements)
+- One key for the platform / trust anchor (for signing trust marks and subordinate entity statements)
 
 Keys are published in two places:
 1. **Federation entity configuration** — JWKS in the entity statement, used for federation trust chain verification
@@ -691,8 +691,8 @@ Google Cloud KMS
 │   ├── user-{uid}-key → did:key:z6Mkh...abc
 │   └── ...
 │
-└── Platform Key (Moverly's own identity)
-    └── moverly-platform-key → did:web:moverly.com
+└── Platform Key (platform operator identity)
+    └── pdtf-platform-key → did:web:platform.example.com
 ```
 
 ### 7.5 Custodial Cloud Wallets vs Bring-Your-Own-Wallet
@@ -912,7 +912,7 @@ Access to transaction data requires proof that the requester is a participant. A
 
 #### Phase 1: Account Provider Delegation (Custodial)
 
-In Phase 1, the account provider (LMS, Moverly) holds the user's private key in KMS. Authentication works via OAuth + OID4VP:
+In Phase 1, the account provider (e.g. LMS) holds the user's private key in KMS. Authentication works via OAuth + OID4VP:
 
 1. **Agent/client authenticates** via FAPI 2.0 flow with the account provider
 2. **Account provider verifies** the user's identity and maps to their `did:key`
@@ -935,7 +935,7 @@ In both phases, the participation credential is the authorization — no separat
 
 ### 12.4 Platform-to-Platform Sync & VC Encryption
 
-> **Phase 1 note:** Envelope encryption is the target architecture for multi-platform sync. In Phase 1, where Moverly is the sole platform, VC encryption is not implemented — data access is controlled through platform-level authentication and `termsOfUse` filtering. The encryption model described here will be specified in detail in Sub-spec 12 when multi-platform sync is introduced.
+> **Phase 1 note:** Envelope encryption is the target architecture for multi-platform sync. In Phase 1, where the reference platform is the sole platform, VC encryption is not implemented — data access is controlled through platform-level authentication and `termsOfUse` filtering. The encryption model described here will be specified in detail in Sub-spec 12 when multi-platform sync is introduced.
 
 Platforms (LMS systems, conveyancer software, orchestrators) need to sync VC collections to ensure all participants have the latest data. The challenge: GDPR exposure. A platform shouldn't hold decryptable personal data for transactions it's not a participant in.
 
@@ -956,7 +956,7 @@ PDTF uses **ECDH-ES+A256KW** (Elliptic Curve Diffie-Hellman Ephemeral Static + A
   "recipients": [
     { "header": { "kid": "did:key:z6Mk...#key-agreement" }, "encrypted_key": "..." },
     { "header": { "kid": "did:web:smithandjones.co.uk#key-agreement" }, "encrypted_key": "..." },
-    { "header": { "kid": "did:web:moverly.com#key-agreement" }, "encrypted_key": "..." }
+    { "header": { "kid": "did:web:platform.example.com#key-agreement" }, "encrypted_key": "..." }
   ],
   "iv": "...",
   "ciphertext": "...",
@@ -1028,8 +1028,8 @@ Staging:       did:web:adapters.staging.propdata.org.uk:{adapter}
 Production:    did:web:transactions.propdata.org.uk:txn:{id}
 Staging:       did:web:transactions.staging.propdata.org.uk:txn:{id}
 
-Production:    did:web:auth.moverly.com
-Staging:       did:web:auth.staging.moverly.com
+Production:    did:web:auth.platform.example.com
+Staging:       did:web:auth.staging.platform.example.com
 
 Federation:
 Production:    https://propdata.org.uk/.well-known/openid-federation
@@ -1149,7 +1149,7 @@ Reordered to reflect the OpenID ecosystem alignment:
 
 **Version:** 0.1 (Draft)
 **Date:** 9 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft for review (LMS collaboration)
 **Parent:** [00 — Architecture Overview](./00-architecture-overview.md)
 
@@ -1228,7 +1228,7 @@ v4/combined.json (ID-keyed maps — single dev artifact)
 ### 3.2 Relationship Model
 
 ```
-Transaction (did:web:moverly.com:transactions:{id})
+Transaction (did:web:platform.example.com:transactions:{id})
     │
     ├── properties: {
     │     "urn:pdtf:uprn:100023456789": { Property }
@@ -1538,7 +1538,7 @@ Links buyer(s) to the Transaction. Buyers exist only through Offers.
 
 | Entity | Identifier Format | Example | Source |
 |--------|------------------|---------|--------|
-| Transaction | `did:web` | `did:web:moverly.com:transactions:abc123` | Platform-assigned |
+| Transaction | `did:web` | `did:web:platform.example.com:transactions:abc123` | Platform-assigned |
 | Property | `urn:pdtf:uprn:{uprn}` | `urn:pdtf:uprn:100023456789` | Ordnance Survey UPRN |
 | Title | `urn:pdtf:titleNumber:{number}` | `urn:pdtf:titleNumber:AB12345` | HMLR title number |
 | Title (unregistered) | `urn:pdtf:unregisteredTitle:{id}` | `urn:pdtf:unregisteredTitle:ut-7f3a` | Generated, may transition to registered |
@@ -1575,7 +1575,7 @@ The v4 combined.json uses the same top-level structure but with ID-keyed maps re
 ```json
 {
   "$schema": "https://trust.propdata.org.uk/schemas/v4/combined.json",
-  "transactionId": "did:web:moverly.com:transactions:abc123",
+  "transactionId": "did:web:platform.example.com:transactions:abc123",
   "status": "Active",
   "externalIds": { ... },
   
@@ -1796,7 +1796,7 @@ The following are *value lists*, not entity collections. They remain as arrays:
    *Question:* When an unregistered title gets registered, or a new build receives a UPRN, how does the URN transition?
    *Working Assumption:* We use the standard W3C `alsoKnownAs` property on the Verifiable Credential. The new VC uses the permanent identifier as its `subject.id`, but lists the old synthetic/unregistered identifier in `alsoKnownAs`. Traversal logic will resolve both to the same entity.
 
-### 9.2 Internal (Moverly)
+### 9.2 Internal (Platform)
 
 6. **v4 combined.json creation** — First step is transforming current v3 combined.json to v4 format. This is the bootstrap for all subsequent extraction and tooling work.
 
@@ -1859,7 +1859,7 @@ The following are *value lists*, not entity collections. They remain as arrays:
 
 **Version:** 0.1 (Draft)
 **Date:** 9 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](./00-architecture-overview.md)
 
@@ -1973,11 +1973,11 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](./01-entity
 |----------------|--------|-------------------|--------|-------------|
 | `PropertyCredential` | Property | `urn:pdtf:uprn:{uprn}` | Trusted proxy / root issuer / user | Property facts: EPC, flood, build info, legal questions, fixtures, searches |
 | `TitleCredential` | Title | `urn:pdtf:titleNumber:{n}` or `urn:pdtf:unregisteredTitle:{id}` | HMLR proxy / root issuer | Register extract, ownership type, leasehold terms, encumbrances |
-| `SellerCapacityCredential` | SellerCapacity | `urn:pdtf:capacity:{id}` | Account provider (Moverly) | Thin assertion: Person/Org DID → Title URN, status, verification level |
+| `SellerCapacityCredential` | SellerCapacity | `urn:pdtf:capacity:{id}` | Account provider | Thin assertion: Person/Org DID → Title URN, status, verification level |
 | `RepresentationCredential` | Representation | `urn:pdtf:representation:{id}` | Person (seller/buyer) | Organisation DID, role, granted by instructing party |
 | `DelegatedConsentCredential` | DelegatedConsent | `urn:pdtf:consent:{id}` | Person (granting party) | Authorised entity, access scope, terms |
 | `OfferCredential` | Offer | `urn:pdtf:offer:{id}` | Buyer (Person) or platform | Buyer DID, amount, status, conditions |
-| `TransactionCredential` | Transaction | `did:web:...` | Platform (Moverly) | Transaction metadata, status, milestones, financial context |
+| `TransactionCredential` | Transaction | `did:web:...` | Platform | Transaction metadata, status, milestones, financial context |
 
 ### 3.2 PropertyCredential
 
@@ -2071,7 +2071,7 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](./01-entity
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
   "type": ["VerifiableCredential", "PropertyCredential"],
-  "issuer": "did:web:moverly.com",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-20T14:30:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:uprn:100023456789",
@@ -2099,16 +2099,16 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](./01-entity
     "roleRestrictions": ["sellerConveyancer", "buyerConveyancer", "estateAgent", "buyer"]
   }],
   "credentialStatus": {
-    "id": "https://api.moverly.com/status/property/list-007#4521",
+    "id": "https://api.platform.example.com/status/property/list-007#4521",
     "type": "BitstringStatusListEntry",
     "statusPurpose": "revocation",
     "statusListIndex": "4521",
-    "statusListCredential": "https://api.moverly.com/status/property/list-007"
+    "statusListCredential": "https://api.platform.example.com/status/property/list-007"
   },
   "proof": {
     "type": "DataIntegrityProof",
     "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:web:moverly.com#platform-key-1",
+    "verificationMethod": "did:web:platform.example.com#platform-key-1",
     "proofPurpose": "assertionMethod",
     "created": "2026-03-20T14:30:00Z",
     "proofValue": "z3hQ8xNr..."
@@ -2116,7 +2116,7 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](./01-entity
 }
 ```
 
-**Note on issuer for user attestations:** When a seller fills in a form, Moverly signs the credential on their behalf (custodial key management — see D14 in Architecture Overview). The `evidence` section records that the attestation came from the seller's DID. When wallet-held keys are available (future), the seller will sign directly.
+**Note on issuer for user attestations:** When a seller fills in a form, the platform signs the credential on their behalf (custodial key management — see D14 in Architecture Overview). The `evidence` section records that the attestation came from the seller's DID. When wallet-held keys are available (future), the seller will sign directly.
 
 ### 3.3 TitleCredential
 
@@ -2229,7 +2229,7 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](./01-entity
 
 **Subject ID:** `urn:pdtf:capacity:{id}` — a generated URN for this ownership assertion.
 
-**Issuer:** The account provider (currently Moverly) that verified the user's identity and cross-referenced against the title register.
+**Issuer:** The account provider (the account provider) that verified the user's identity and cross-referenced against the title register.
 
 ```json
 {
@@ -2238,7 +2238,7 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](./01-entity
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
   "type": ["VerifiableCredential", "SellerCapacityCredential"],
-  "issuer": "did:web:moverly.com",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-18T09:00:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:capacity:own-a1b2c3",
@@ -2261,16 +2261,16 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](./01-entity
     "roleRestrictions": ["sellerConveyancer", "buyerConveyancer", "estateAgent"]
   }],
   "credentialStatus": {
-    "id": "https://api.moverly.com/status/ownership/list-001#892",
+    "id": "https://api.platform.example.com/status/ownership/list-001#892",
     "type": "BitstringStatusListEntry",
     "statusPurpose": "revocation",
     "statusListIndex": "892",
-    "statusListCredential": "https://api.moverly.com/status/ownership/list-001"
+    "statusListCredential": "https://api.platform.example.com/status/ownership/list-001"
   },
   "proof": {
     "type": "DataIntegrityProof",
     "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:web:moverly.com#platform-key-1",
+    "verificationMethod": "did:web:platform.example.com#platform-key-1",
     "proofPurpose": "assertionMethod",
     "created": "2026-03-18T09:00:00Z",
     "proofValue": "z5tPqR7s..."
@@ -2309,7 +2309,7 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
 
 **Subject ID:** `urn:pdtf:representation:{id}` — a generated URN for this representation.
 
-**Issuer:** The Person (seller or buyer) granting the authority. In practice, during Phase 1, Moverly signs on behalf of the person (custodial keys), so the `issuer` is `did:web:moverly.com` and the `evidence` records the person's DID and their explicit instruction.
+**Issuer:** The Person (seller or buyer) granting the authority. In practice, during Phase 1, the platform signs on behalf of the person (custodial keys), so the `issuer` is `did:web:platform.example.com` and the `evidence` records the person's DID and their explicit instruction.
 
 **Key design decision (D3):** Representation credentials are issued to **Organisations** (the firm), not to individual solicitors. The professional duty, PI insurance, and regulatory obligations sit with the firm. If your solicitor goes on holiday, the firm still has access.
 
@@ -2320,14 +2320,14 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
   "type": ["VerifiableCredential", "RepresentationCredential"],
-  "issuer": "did:web:moverly.com",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-15T11:00:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:representation:rep-d4e5f6",
     "organisationId": "did:web:smithandco.law",
     "role": "sellerConveyancer",
     "grantedBy": "did:key:z6MkhSellerAbc123",
-    "transactionId": "did:web:moverly.com:transactions:tx-789",
+    "transactionId": "did:web:platform.example.com:transactions:tx-789",
     "status": "active"
   },
   "evidence": [{
@@ -2343,16 +2343,16 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
     "roleRestrictions": ["sellerConveyancer", "buyerConveyancer"]
   }],
   "credentialStatus": {
-    "id": "https://api.moverly.com/status/representation/list-001#334",
+    "id": "https://api.platform.example.com/status/representation/list-001#334",
     "type": "BitstringStatusListEntry",
     "statusPurpose": "revocation",
     "statusListIndex": "334",
-    "statusListCredential": "https://api.moverly.com/status/representation/list-001"
+    "statusListCredential": "https://api.platform.example.com/status/representation/list-001"
   },
   "proof": {
     "type": "DataIntegrityProof",
     "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:web:moverly.com#platform-key-1",
+    "verificationMethod": "did:web:platform.example.com#platform-key-1",
     "proofPurpose": "assertionMethod",
     "created": "2026-03-15T11:00:00Z",
     "proofValue": "zK8mN4rJ..."
@@ -2387,13 +2387,13 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
   "type": ["VerifiableCredential", "DelegatedConsentCredential"],
-  "issuer": "did:web:moverly.com",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-22T16:00:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:consent:dc-g7h8i9",
     "organisationId": "did:web:bigbank.co.uk",
     "grantedBy": "did:key:z6MkhBuyerXyz789",
-    "transactionId": "did:web:moverly.com:transactions:tx-789",
+    "transactionId": "did:web:platform.example.com:transactions:tx-789",
     "scope": [
       "Property:energyEfficiency",
       "Property:buildInformation",
@@ -2420,16 +2420,16 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
     "roleRestrictions": ["buyerConveyancer"]
   }],
   "credentialStatus": {
-    "id": "https://api.moverly.com/status/consent/list-001#156",
+    "id": "https://api.platform.example.com/status/consent/list-001#156",
     "type": "BitstringStatusListEntry",
     "statusPurpose": "revocation",
     "statusListIndex": "156",
-    "statusListCredential": "https://api.moverly.com/status/consent/list-001"
+    "statusListCredential": "https://api.platform.example.com/status/consent/list-001"
   },
   "proof": {
     "type": "DataIntegrityProof",
     "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:web:moverly.com#platform-key-1",
+    "verificationMethod": "did:web:platform.example.com#platform-key-1",
     "proofPurpose": "assertionMethod",
     "created": "2026-03-22T16:00:00Z",
     "proofValue": "z7bQm3vR..."
@@ -2457,7 +2457,7 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
 
 **Subject ID:** `urn:pdtf:offer:{id}` — a generated URN for this offer.
 
-**Issuer:** The platform (Moverly) on behalf of the buyer. Future: buyer signs directly with wallet-held key.
+**Issuer:** The platform on behalf of the buyer. Future: buyer signs directly with wallet-held key.
 
 ```json
 {
@@ -2466,11 +2466,11 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
   "type": ["VerifiableCredential", "OfferCredential"],
-  "issuer": "did:web:moverly.com",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-20T09:30:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:offer:off-j1k2l3",
-    "transactionId": "did:web:moverly.com:transactions:tx-789",
+    "transactionId": "did:web:platform.example.com:transactions:tx-789",
     "buyerIds": ["did:key:z6MkhBuyerXyz789"],
     "amount": 450000,
     "currency": "GBP",
@@ -2499,16 +2499,16 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
     "roleRestrictions": ["sellerConveyancer", "buyerConveyancer", "estateAgent"]
   }],
   "credentialStatus": {
-    "id": "https://api.moverly.com/status/offers/list-001#2041",
+    "id": "https://api.platform.example.com/status/offers/list-001#2041",
     "type": "BitstringStatusListEntry",
     "statusPurpose": "revocation",
     "statusListIndex": "2041",
-    "statusListCredential": "https://api.moverly.com/status/offers/list-001"
+    "statusListCredential": "https://api.platform.example.com/status/offers/list-001"
   },
   "proof": {
     "type": "DataIntegrityProof",
     "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:web:moverly.com#platform-key-1",
+    "verificationMethod": "did:web:platform.example.com#platform-key-1",
     "proofPurpose": "assertionMethod",
     "created": "2026-03-20T09:30:00Z",
     "proofValue": "zW2nP9sK..."
@@ -2536,7 +2536,7 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
 
 **Subject ID:** `did:web:{host}:transactions:{id}` — the transaction's own DID.
 
-**Issuer:** The platform hosting the transaction (Moverly).
+**Issuer:** The platform hosting the transaction.
 
 *Note: The `saleContext` fields were previously part of the monolithic v1 `ownership` object and have been decomposed per Q7.1.*
 
@@ -2547,10 +2547,10 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
   "type": ["VerifiableCredential", "TransactionCredential"],
-  "issuer": "did:web:moverly.com",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-10T12:00:00Z",
   "credentialSubject": {
-    "id": "did:web:moverly.com:transactions:tx-789",
+    "id": "did:web:platform.example.com:transactions:tx-789",
     "status": "Active",
     "milestones": {
       "listed": "2026-03-01T00:00:00Z",
@@ -2574,16 +2574,16 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
     "roleRestrictions": ["sellerConveyancer", "buyerConveyancer", "estateAgent"]
   }],
   "credentialStatus": {
-    "id": "https://api.moverly.com/status/transactions/list-001#5567",
+    "id": "https://api.platform.example.com/status/transactions/list-001#5567",
     "type": "BitstringStatusListEntry",
     "statusPurpose": "revocation",
     "statusListIndex": "5567",
-    "statusListCredential": "https://api.moverly.com/status/transactions/list-001"
+    "statusListCredential": "https://api.platform.example.com/status/transactions/list-001"
   },
   "proof": {
     "type": "DataIntegrityProof",
     "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:web:moverly.com#platform-key-1",
+    "verificationMethod": "did:web:platform.example.com#platform-key-1",
     "proofPurpose": "assertionMethod",
     "created": "2026-03-10T12:00:00Z",
     "proofValue": "zL5jH9wQ..."
@@ -2607,7 +2607,7 @@ The `credentialSubject.id` field identifies the entity the credential makes asse
 | RepresentationCredential | `urn:pdtf:representation:{id}` | `urn:pdtf:representation:rep-d4e5f6` |
 | DelegatedConsentCredential | `urn:pdtf:consent:{id}` | `urn:pdtf:consent:dc-g7h8i9` |
 | OfferCredential | `urn:pdtf:offer:{id}` | `urn:pdtf:offer:off-j1k2l3` |
-| TransactionCredential | `did:web:{host}:transactions:{id}` | `did:web:moverly.com:transactions:tx-789` |
+| TransactionCredential | `did:web:{host}:transactions:{id}` | `did:web:platform.example.com:transactions:tx-789` |
 
 ### 4.2 Sparse Object Model
 
@@ -3045,15 +3045,15 @@ A `partyOnly` survey report is accessible only to the party who commissioned it 
 The `pdtf://` URL scheme resolves through the Transaction DID document:
 
 1. Parse the `pdtf://` URL to extract the transaction identifier and document path
-2. Resolve the Transaction DID (`did:web:moverly.com:transactions:{txnId}`)
+2. Resolve the Transaction DID (`did:web:platform.example.com:transactions:{txnId}`)
 3. Find the `PdtfDocumentEndpoint` service in the DID document:
 
 ```json
 {
   "service": [{
-    "id": "did:web:moverly.com:transactions:abc123#documents",
+    "id": "did:web:platform.example.com:transactions:abc123#documents",
     "type": "PdtfDocumentEndpoint",
-    "serviceEndpoint": "https://moverly.com/api/transactions/abc123/documents"
+    "serviceEndpoint": "https://platform.example.com/api/transactions/abc123/documents"
   }]
 }
 ```
@@ -3303,7 +3303,7 @@ The `encodedList` is a GZIP-compressed, base64url-encoded bitstring. Each bit po
 Status list credentials are hosted at stable URLs by each issuer:
 
 - Adapters: `https://adapters.propdata.org.uk/status/{adapter}/{list-id}`
-- Platform: `https://api.moverly.com/status/{entity-type}/{list-id}`
+- Platform: `https://api.platform.example.com/status/{entity-type}/{list-id}`
 
 **Caching:** Status lists SHOULD be served with `Cache-Control: max-age=300` (5 minutes). Verifiers SHOULD cache status lists and refresh on cache expiry. For time-sensitive revocations (e.g. conveyancer change), the issuer can invalidate the cache by updating the list and notifying known verifiers.
 
@@ -3522,7 +3522,7 @@ Minor additions (new optional fields) can be added without version bumps, follow
 
 ### 11.1 EPC PropertyCredential (Trusted Proxy Issuer)
 
-A complete EPC credential issued by Moverly's EPC adapter (trusted proxy for MHCLG):
+A complete EPC credential issued by the PDTF EPC adapter (trusted proxy for MHCLG):
 
 ```json
 {
@@ -3610,7 +3610,7 @@ A complete ownership credential — thin assertion only, no duplicated title dat
   ],
   "id": "urn:pdtf:vc:own-3a2b1c7f-4e9d-6a5f-7c8b-1e0d2f3a4b5c",
   "type": ["VerifiableCredential", "SellerCapacityCredential"],
-  "issuer": "did:web:moverly.com",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-18T09:00:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:capacity:own-a1b2c3",
@@ -3641,16 +3641,16 @@ A complete ownership credential — thin assertion only, no duplicated title dat
     "roleRestrictions": ["sellerConveyancer", "buyerConveyancer", "estateAgent"]
   }],
   "credentialStatus": {
-    "id": "https://api.moverly.com/status/ownership/list-001#892",
+    "id": "https://api.platform.example.com/status/ownership/list-001#892",
     "type": "BitstringStatusListEntry",
     "statusPurpose": "revocation",
     "statusListIndex": "892",
-    "statusListCredential": "https://api.moverly.com/status/ownership/list-001"
+    "statusListCredential": "https://api.platform.example.com/status/ownership/list-001"
   },
   "proof": {
     "type": "DataIntegrityProof",
     "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:web:moverly.com#platform-key-1",
+    "verificationMethod": "did:web:platform.example.com#platform-key-1",
     "proofPurpose": "assertionMethod",
     "created": "2026-03-18T09:00:00Z",
     "proofValue": "z5tPqR7sK2mN4vL8xZ1bD4gJ6kM9nP2qS0tU7wY3aC5eG8iK1lN4oQ6rT9uW2yB0dF3hI5jL8mO1pR7sV4xZ6bD2gJ9kM0nP5qS3tU8wY1aC7eG4iK6lN9oQ2rT0uW5yB3dF8hI1jL4mO6pR9sV2xZ7bD0gJ5kM3nP8qS1tU6wY4aC9eG2iK0lN7oQ5rT3uW8yB1dF6hI4jL9mO2pR0sV7xZ5bD3gJ8kM1nP6qS4tU9wY2aC0eG7iK3lN5oQ8rT1uW6yB4dF9hI2jL0mO7pR5sV3xZ8bD1gJ6kM4nP9qS2tU0wY7"
@@ -3670,14 +3670,14 @@ A complete representation credential — seller instructs a conveyancer firm:
   ],
   "id": "urn:pdtf:vc:rep-1c7f3a2b-9d4e-5f6a-8b7c-0d1e2f3a4b5c",
   "type": ["VerifiableCredential", "RepresentationCredential"],
-  "issuer": "did:web:moverly.com",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-15T11:00:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:representation:rep-d4e5f6",
     "organisationId": "did:web:smithandco.law",
     "role": "sellerConveyancer",
     "grantedBy": "did:key:z6MkhRqN4v5sW8xZ1bD4gJ6kM9nP2qS0tSellerAbc",
-    "transactionId": "did:web:moverly.com:transactions:tx-789",
+    "transactionId": "did:web:platform.example.com:transactions:tx-789",
     "status": "active"
   },
   "evidence": [{
@@ -3693,16 +3693,16 @@ A complete representation credential — seller instructs a conveyancer firm:
     "roleRestrictions": ["sellerConveyancer", "buyerConveyancer"]
   }],
   "credentialStatus": {
-    "id": "https://api.moverly.com/status/representation/list-001#334",
+    "id": "https://api.platform.example.com/status/representation/list-001#334",
     "type": "BitstringStatusListEntry",
     "statusPurpose": "revocation",
     "statusListIndex": "334",
-    "statusListCredential": "https://api.moverly.com/status/representation/list-001"
+    "statusListCredential": "https://api.platform.example.com/status/representation/list-001"
   },
   "proof": {
     "type": "DataIntegrityProof",
     "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:web:moverly.com#platform-key-1",
+    "verificationMethod": "did:web:platform.example.com#platform-key-1",
     "proofPurpose": "assertionMethod",
     "created": "2026-03-15T11:00:00Z",
     "proofValue": "zK8mN4rJP2sL7vX0bD3gJ5kM8nQ1tU4wY6aC9eG2iK0lN7oQ5rT3uW8yB1dF6hI4jL9mO2pR0sV7xZ5bD3gJ8kM1nP6qS4tU9wY2aC0eG7iK3lN5oQ8rT1uW6yB4dF9hI2jL0mO7pR5sV3xZ8bD1gJ6kM4nP9qS2tU0wY7aC5eG3iK8lN1oQ6rT4uW9yB2dF0hI7jL5mO3pR8sV1xZ6bD4gJ9kM2nP0qS7tU5wY3aC8eG1iK6lN4oQ9rT2uW0yB7dF5hI3jL8mO1pR6sV4xZ9bD2gJ0kM7nP5qS3tU8wY1aC6eG4iK9lN2oQ0rT7"
@@ -3838,9 +3838,9 @@ This is more natural, more efficient (one signature instead of four), and preser
 
 9. **Context evolution.** How do we handle adding new property data paths to the JSON-LD context without breaking existing credentials? JSON-LD's open-world assumption helps, but tooling may not handle unknown terms gracefully.
 
-### 13.3 Internal (Moverly)
+### 13.3 Internal (Platform)
 
-10. **Custodial signing for user attestations.** In Phase 1, Moverly signs on behalf of users. The evidence records the user's DID. But the proof doesn't come from the user's key. Is this semantically honest? Should we use a different proof mechanism (e.g. counter-signature) that makes the custodial relationship explicit?
+10. **Custodial signing for user attestations.** In Phase 1, the platform signs on behalf of users. The evidence records the user's DID. But the proof doesn't come from the user's key. Is this semantically honest? Should we use a different proof mechanism (e.g. counter-signature) that makes the custodial relationship explicit?
 
 11. **Adapter credential caching.** Should adapters cache issued credentials (return the same VC for repeated requests for the same data) or always issue fresh ones? Caching is efficient but means the adapter stores credentials. Fresh issuance is stateless but means multiple VCs for the same data.
 
@@ -4004,7 +4004,7 @@ TitleCredential
 SellerCapacityCredential
   subject: urn:pdtf:capacity:{id}
   claims: personId/organisationId → titleId, status, verificationLevel
-  issuer: account provider (Moverly)
+  issuer: account provider (platform)
   NOTE: thin — no title details, just the link
 
 RepresentationCredential
@@ -4038,7 +4038,7 @@ TransactionCredential
 
 **Version:** 0.1 (Draft)
 **Date:** 1 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](./00-architecture-overview.md)
 
@@ -4190,7 +4190,7 @@ Percent-encoded characters:
 | DID | Resolves to |
 |-----|-------------|
 | `did:web:smithandjones.co.uk` | `https://smithandjones.co.uk/.well-known/did.json` |
-| `did:web:moverly.com:transactions:abc123` | `https://moverly.com/transactions/abc123/did.json` |
+| `did:web:platform.example.com:transactions:abc123` | `https://platform.example.com/transactions/abc123/did.json` |
 | `did:web:adapters.propdata.org.uk:hmlr` | `https://adapters.propdata.org.uk/hmlr/did.json` |
 | `did:web:adapters.propdata.org.uk:epc` | `https://adapters.propdata.org.uk/epc/did.json` |
 
@@ -4200,7 +4200,7 @@ Percent-encoded characters:
 |-------------|-------------|---------|-----------|
 | Organisation (provider-managed) | `did:key:z6Mk{base58}` | `did:key:z6MkpJmq...` | Implicit (no hosting — key managed by account provider) |
 | Organisation (self-hosted) | `did:web:{firm-domain}` | `did:web:smithandjones.co.uk` | The firm itself |
-| Transaction | `did:web:{platform}:transactions:{id}` | `did:web:moverly.com:transactions:abc123` | The platform hosting the transaction |
+| Transaction | `did:web:{platform}:transactions:{id}` | `did:web:platform.example.com:transactions:abc123` | The platform hosting the transaction |
 | Trusted Adapter | `did:web:{adapter-host}:{adapter-name}` | `did:web:adapters.propdata.org.uk:hmlr` | The adapter operator |
 
 #### 2.2.3 Domain Verification
@@ -4209,7 +4209,7 @@ Hosting a DID document at a domain constitutes proof of domain control. This has
 
 - **Organisations (did:web):** A conveyancer firm at `did:web:smithandjones.co.uk` has proven they control the `smithandjones.co.uk` domain. Combined with a `regulated-conveyancer` Trust Mark (which cross-references SRA number and Companies House number), this provides a strong identity binding.
 - **Organisations (did:key):** A provider-managed Organisation's identity is verified by the account provider. Verifiers confirm the `did:key` is listed in the provider's `managedOrganisations` document (referenced from the account provider's `account-provider` Trust Mark).
-- **Transactions:** A transaction DID like `did:web:moverly.com:transactions:abc123` is inherently scoped to the platform hosting it. The platform's Entity Statement in the federation establishes its authority to host transactions.
+- **Transactions:** A transaction DID like `did:web:platform.example.com:transactions:abc123` is inherently scoped to the platform hosting it. The platform's Entity Statement in the federation establishes its authority to host transactions.
 - **Adapters:** An adapter at `did:web:adapters.propdata.org.uk:hmlr` is controlled by whoever operates the `adapters.propdata.org.uk` domain. A `pdtf-verified-issuer` Trust Mark binds this to an authorised adapter operator.
 
 > **Security note:** `did:web` security depends entirely on DNS and TLS. See [Section 9: Security Considerations](#9-security-considerations) for threat analysis and mitigations.
@@ -4465,7 +4465,7 @@ For firms that want direct control of their identity, hosted at the firm's domai
 
 ### 4.3 Transaction DID Document (did:web)
 
-Hosted by the platform at the transaction's path. For `did:web:moverly.com:transactions:abc123`, served from `https://moverly.com/transactions/abc123/did.json`:
+Hosted by the platform at the transaction's path. For `did:web:platform.example.com:transactions:abc123`, served from `https://platform.example.com/transactions/abc123/did.json`:
 
 ```json
 {
@@ -4474,33 +4474,33 @@ Hosted by the platform at the transaction's path. For `did:web:moverly.com:trans
     "https://w3id.org/security/suites/ed25519-2020/v1",
     "https://w3id.org/security/multikey/v1"
   ],
-  "id": "did:web:moverly.com:transactions:abc123",
-  "controller": "did:web:moverly.com",
+  "id": "did:web:platform.example.com:transactions:abc123",
+  "controller": "did:web:platform.example.com",
   "verificationMethod": [
     {
-      "id": "did:web:moverly.com:transactions:abc123#key-1",
+      "id": "did:web:platform.example.com:transactions:abc123#key-1",
       "type": "Ed25519VerificationKey2020",
-      "controller": "did:web:moverly.com:transactions:abc123",
+      "controller": "did:web:platform.example.com:transactions:abc123",
       "publicKeyMultibase": "z6MknGc3ocHs3zdPiJbnaaqDi58NGb4pk1Sp7eTbCt2DADLY"
     }
   ],
   "authentication": [
-    "did:web:moverly.com:transactions:abc123#key-1"
+    "did:web:platform.example.com:transactions:abc123#key-1"
   ],
   "assertionMethod": [
-    "did:web:moverly.com:transactions:abc123#key-1"
+    "did:web:platform.example.com:transactions:abc123#key-1"
   ],
   "service": [
     {
-      "id": "did:web:moverly.com:transactions:abc123#pdtf-api",
+      "id": "did:web:platform.example.com:transactions:abc123#pdtf-api",
       "type": "PdtfTransactionEndpoint",
-      "serviceEndpoint": "https://api.moverly.com/v2/transactions/abc123",
+      "serviceEndpoint": "https://api.platform.example.com/v2/transactions/abc123",
       "description": "PDTF v2 transaction API — credential submission, state retrieval, entity queries"
     },
     {
-      "id": "did:web:moverly.com:transactions:abc123#mcp",
+      "id": "did:web:platform.example.com:transactions:abc123#mcp",
       "type": "McpEndpoint",
-      "serviceEndpoint": "https://api.moverly.com/mcp/transactions/abc123",
+      "serviceEndpoint": "https://api.platform.example.com/mcp/transactions/abc123",
       "description": "Model Context Protocol endpoint for AI agent access"
     }
   ],
@@ -4512,7 +4512,7 @@ Hosted by the platform at the transaction's path. For `did:web:moverly.com:trans
 
 **Key points:**
 
-- The `controller` field indicates `did:web:moverly.com` controls this transaction DID. This establishes the platform's authority over the transaction.
+- The `controller` field indicates `did:web:platform.example.com` controls this transaction DID. This establishes the platform's authority over the transaction.
 - `#pdtf-api` is the primary API endpoint for credential exchange and state retrieval.
 - `#mcp` provides the MCP (Model Context Protocol) endpoint for AI agent interaction.
 - `alsoKnownAs` links to the property UPRN for cross-referencing. Multiple URNs may be listed when a transaction involves multiple properties.
@@ -4670,9 +4670,9 @@ The primary API for interacting with a PDTF transaction.
 
 ```json
 {
-  "id": "did:web:moverly.com:transactions:abc123#pdtf-api",
+  "id": "did:web:platform.example.com:transactions:abc123#pdtf-api",
   "type": "PdtfTransactionEndpoint",
-  "serviceEndpoint": "https://api.moverly.com/v2/transactions/abc123",
+  "serviceEndpoint": "https://api.platform.example.com/v2/transactions/abc123",
   "description": "PDTF v2 transaction API"
 }
 ```
@@ -4696,9 +4696,9 @@ The Model Context Protocol endpoint for AI agent interaction.
 
 ```json
 {
-  "id": "did:web:moverly.com:transactions:abc123#mcp",
+  "id": "did:web:platform.example.com:transactions:abc123#mcp",
   "type": "McpEndpoint",
-  "serviceEndpoint": "https://api.moverly.com/mcp/transactions/abc123",
+  "serviceEndpoint": "https://api.platform.example.com/mcp/transactions/abc123",
   "description": "Model Context Protocol endpoint for AI agent access"
 }
 ```
@@ -4785,18 +4785,18 @@ Output: DID Document (see Section 4.1)
 **Resolution algorithm:**
 
 ```
-Input:  did:web:moverly.com:transactions:abc123
+Input:  did:web:platform.example.com:transactions:abc123
 Output: DID Document (fetched from HTTPS)
 
 1. Parse the DID:
    - Method: "web"
-   - Domain: "moverly.com"
+   - Domain: "platform.example.com"
    - Path segments: ["transactions", "abc123"]
 
 2. Construct the URL:
    - If path segments exist:
      https://{domain}/{path1}/{path2}/.../did.json
-     → https://moverly.com/transactions/abc123/did.json
+     → https://platform.example.com/transactions/abc123/did.json
    - If no path segments:
      https://{domain}/.well-known/did.json
 
@@ -4944,18 +4944,18 @@ When a transaction completes (or is withdrawn), the platform should:
 ```json
 {
   "@context": ["https://www.w3.org/ns/did/v1"],
-  "id": "did:web:moverly.com:transactions:abc123",
+  "id": "did:web:platform.example.com:transactions:abc123",
   "deactivated": true,
   "verificationMethod": [
     {
-      "id": "did:web:moverly.com:transactions:abc123#key-1",
+      "id": "did:web:platform.example.com:transactions:abc123#key-1",
       "type": "Ed25519VerificationKey2020",
-      "controller": "did:web:moverly.com:transactions:abc123",
+      "controller": "did:web:platform.example.com:transactions:abc123",
       "publicKeyMultibase": "z6MknGc3ocHs3zdPiJbnaaqDi58NGb4pk1Sp7eTbCt2DADLY"
     }
   ],
   "assertionMethod": [
-    "did:web:moverly.com:transactions:abc123#key-1"
+    "did:web:platform.example.com:transactions:abc123#key-1"
   ]
 }
 ```
@@ -5104,7 +5104,7 @@ const { did, publicKey, privateKey } = await generateDidKey();
 // → did = "did:key:z6Mk..."
 
 // Resolve any DID
-const didDocument = await resolveDid('did:web:moverly.com:transactions:abc123');
+const didDocument = await resolveDid('did:web:platform.example.com:transactions:abc123');
 // → { id: "did:web:...", verificationMethod: [...], service: [...] }
 
 // Resolve did:key (synchronous — no network)
@@ -5190,7 +5190,7 @@ This generates the key pair, constructs the DID document with regulatory metadat
 | Person | `did:key` | `did:key:z6Mk{base58}` | `did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK` |
 | Organisation (provider-managed) | `did:key` | `did:key:z6Mk{base58}` | `did:key:z6MkpJmqLFMmaFHCqS9jVjMNRNHriSNkFCyG3MLbiqkVMhvm` |
 | Organisation (self-hosted) | `did:web` | `did:web:{domain}` | `did:web:smithandjones.co.uk` |
-| Transaction | `did:web` | `did:web:{platform}:transactions:{id}` | `did:web:moverly.com:transactions:abc123` |
+| Transaction | `did:web` | `did:web:{platform}:transactions:{id}` | `did:web:platform.example.com:transactions:abc123` |
 | Trusted Adapter | `did:web` | `did:web:{host}:{adapter}` | `did:web:adapters.propdata.org.uk:hmlr` |
 | Property | URN | `urn:pdtf:uprn:{uprn}` | `urn:pdtf:uprn:100023456789` |
 | Title (registered) | URN | `urn:pdtf:titleNumber:{number}` | `urn:pdtf:titleNumber:DN123456` |
@@ -5228,7 +5228,7 @@ This generates the key pair, constructs the DID document with regulatory metadat
 
 **Version:** 0.1 (Draft)
 **Date:** 16 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](./00-architecture-overview.md)
 
@@ -5309,7 +5309,7 @@ Trust is not binary. The Trust Mark's `delegation.authorised_paths` claim specif
 
 Phase 1 is a flat topology (Trust Anchor → leaf issuers). Phase 2+ can introduce intermediate entities (a sector authority below the Trust Anchor, or a conveyancing regulator issuing its own Trust Marks). No schema changes are required — OpenID Federation supports arbitrary chain depth natively.
 
-> **Decision D24:** 3-phase evolution — Moverly proxies → independently hosted adapters → primary-source root issuers.
+> **Decision D24:** 3-phase evolution — platform proxies → independently hosted adapters → primary-source root issuers.
 
 ---
 
@@ -5394,8 +5394,8 @@ A subordinate entity (e.g. an adapter) publishes its own self-signed **Entity Co
   "authority_hints": ["https://trust.pdtf.org"],
   "metadata": {
     "federation_entity": {
-      "organization_name": "Moverly HMLR Adapter",
-      "contacts": ["trust@moverly.com"]
+      "organization_name": "PDTF HMLR Adapter",
+      "contacts": ["trust@propdata.org.uk"]
     },
     "openid_credential_issuer": {
       "credential_issuer": "https://adapters.propdata.org.uk/hmlr",
@@ -5452,7 +5452,7 @@ A **Trust Mark** is a signed JWT asserting that a subject entity meets a named p
 | Trust Mark ID | Meaning | Typical Subject |
 |---------------|---------|-----------------|
 | `https://propdata.org.uk/trust-marks/pdtf-verified-issuer` | Authorised to issue PDTF VCs for specific entity:path combinations | Adapters, root issuers |
-| `https://propdata.org.uk/trust-marks/account-provider` | Authorised to issue user/organisation DIDs on behalf of people | Moverly, LMS, wallet providers |
+| `https://propdata.org.uk/trust-marks/account-provider` | Authorised to issue user/organisation DIDs on behalf of people | The reference platform, LMS, wallet providers |
 | `https://propdata.org.uk/trust-marks/regulated-conveyancer` | SRA/CLC regulated conveyancing firm | Conveyancer organisations |
 
 ### 5.1 `pdtf-verified-issuer` Structure
@@ -5485,7 +5485,7 @@ The `delegation` claim is the PDTF-specific extension. Everything else is vanill
 ```json
 {
   "iss": "https://trust.pdtf.org",
-  "sub": "https://moverly.com",
+  "sub": "https://platform.example.com",
   "id": "https://propdata.org.uk/trust-marks/account-provider",
   "iat": 1776038400,
   "exp": 1807574400,
@@ -5495,7 +5495,7 @@ The `delegation` claim is the PDTF-specific extension. Everything else is vanill
       "methods": ["email", "sms", "document-check"],
       "description": "Email + SMS at registration; document-based identity checks for seller/buyer roles."
     },
-    "managed_organisations": "https://moverly.com/.well-known/pdtf-managed-orgs.json"
+    "managed_organisations": "https://platform.example.com/.well-known/pdtf-managed-orgs.json"
   }
 }
 ```
@@ -5512,7 +5512,7 @@ The `delegation.managed_organisations` URL points to a JSON document signed by t
 
 ```json
 {
-  "provider": "did:web:moverly.com",
+  "provider": "did:web:platform.example.com",
   "updated": "2026-03-24T12:00:00Z",
   "organisations": [
     {
@@ -5526,7 +5526,7 @@ The `delegation.managed_organisations` URL points to a JSON document signed by t
   "proof": {
     "type": "DataIntegrityProof",
     "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:web:moverly.com#key-1",
+    "verificationMethod": "did:web:platform.example.com#key-1",
     "created": "2026-03-24T12:00:00Z",
     "proofPurpose": "assertionMethod",
     "proofValue": "z4FXQje2VihZqE3WPgtvJh4Kv8..."
@@ -5728,14 +5728,14 @@ Reference implementations SHOULD ship with a bundled snapshot of the Trust Ancho
 
 ### 10.1 Phase 1
 
-The Trust Anchor is operated by Moverly as PDTF 2.0 steward:
+The Trust Anchor is operated by the PDTF steward:
 
 | Role | Responsibility | Phase 1 Holder |
 |------|---------------|----------------|
-| Trust Anchor operator | Signs Entity Statements and Trust Marks; operates federation endpoints | Moverly |
-| Trust Mark issuer (`pdtf-verified-issuer`) | Decides which adapters/issuers are accredited | Moverly |
-| Trust Mark issuer (`account-provider`) | Accredits account providers | Moverly |
-| Trust Mark issuer (`regulated-conveyancer`) | Issues conveyancer trust marks | Moverly (interim), SRA/CLC (target) |
+| Trust Anchor operator | Signs Entity Statements and Trust Marks; operates federation endpoints | The platform operator |
+| Trust Mark issuer (`pdtf-verified-issuer`) | Decides which adapters/issuers are accredited | The platform operator |
+| Trust Mark issuer (`account-provider`) | Accredits account providers | The platform operator |
+| Trust Mark issuer (`regulated-conveyancer`) | Issues conveyancer trust marks | The platform operator (interim), SRA/CLC (target) |
 
 ### 10.2 Accreditation Process
 
@@ -5756,13 +5756,13 @@ Verifiers polling the status endpoint (recommended every hour for high-impact tr
 
 ### 10.4 Phase 2+
 
-As PDTF 2.0 adoption grows, a multi-stakeholder property-sector governance body should operate the Trust Anchor (or become a higher-level Trust Anchor above Moverly). Multiple Trust Mark issuers will emerge (e.g. SRA issues `regulated-conveyancer` directly). No schema changes are required — this is native OpenID Federation topology.
+As PDTF 2.0 adoption grows, a multi-stakeholder property-sector governance body should operate the Trust Anchor (or become a higher-level Trust Anchor above the platform operator). Multiple Trust Mark issuers will emerge (e.g. SRA issues `regulated-conveyancer` directly). No schema changes are required — this is native OpenID Federation topology.
 
 ---
 
 ## 11. Migration Path
 
-> **Decision D24:** 3-phase evolution: Moverly proxies → separately hosted adapters → root issuers.
+> **Decision D24:** 3-phase evolution: platform proxies → separately hosted adapters → root issuers.
 
 ### 11.1 Phase 1 → Phase 2: Adapter Independence
 
@@ -5878,7 +5878,7 @@ const result = await verifyCredential(credential, {
 | **D8** | Trust infrastructure is OpenID Federation with PDTF Trust Anchor at `trust.pdtf.org` | ✅ Confirmed (supersedes earlier GitHub-TIR decision) |
 | **D20** | Authorisation expressed as entity:path combinations inside the Trust Mark `delegation` claim | ✅ Confirmed |
 | **D21** | Account providers carry an `account-provider` Trust Mark; user DIDs traced via `managed_organisations` | ✅ Confirmed |
-| **D24** | 3-phase evolution: Moverly proxies → independently hosted adapters → primary-source root issuers | ✅ Confirmed |
+| **D24** | 3-phase evolution: platform proxies → independently hosted adapters → primary-source root issuers | ✅ Confirmed |
 
 ---
 
@@ -5921,7 +5921,7 @@ const result = await verifyCredential(credential, {
 
 **Version:** 0.1 (Draft)
 **Date:** 1 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](./00-architecture-overview.md)
 
@@ -5945,7 +5945,7 @@ This spec covers key management for **credential signing and verification only**
 - TLS certificates for transport security
 - Firebase Auth tokens or session management
 - API keys for adapter or MCP server authentication
-- Encryption keys (X25519 key agreement for VC envelope encryption) — deferred to Sub-spec 12. In Phase 1, Moverly is the sole platform and VC encryption is not required. When multi-platform sync is introduced, X25519 key lifecycle management will be specified alongside the encryption model.
+- Encryption keys (X25519 key agreement for VC envelope encryption) — deferred to Sub-spec 12. In Phase 1, the reference platform is the sole platform and VC encryption is not required. When multi-platform sync is introduced, X25519 key lifecycle management will be specified alongside the encryption model.
 
 ### 1.2 Relationship to Other Sub-specs
 
@@ -6065,7 +6065,7 @@ Adapter keys are the workhorses of the system. Each trusted proxy adapter — HM
 User keys establish individual identity in the PDTF ecosystem. Each person (seller, buyer, conveyancer, estate agent) gets a key pair at onboarding. The public key is encoded as a `did:key` identifier which becomes their persistent identity across all credentials.
 
 **Current model: custodial.**
-Moverly generates and holds user keys in Cloud KMS. Users don't directly interact with their key material. This is a pragmatic choice — most property professionals don't have digital wallets, and the onboarding friction of self-sovereign keys would be a barrier to adoption.
+The platform generates and holds user keys in Cloud KMS. Users don't directly interact with their key material. This is a pragmatic choice — most property professionals don't have digital wallets, and the onboarding friction of self-sovereign keys would be a barrier to adoption.
 
 **Future model: wallet-bound.**
 When digital identity wallets mature (see §10), users will hold their own keys. The custodial model is designed to be replaceable without breaking the credential format.
@@ -6074,14 +6074,14 @@ When digital identity wallets mature (see §10), users will hold their own keys.
 
 | Property | Value |
 |----------|-------|
-| **Purpose** | Moverly's organisational identity; signs platform-level assertions |
-| **DID method** | `did:web:moverly.com` |
+| **Purpose** | The platform's organisational identity; signs platform-level assertions |
+| **DID method** | `did:web:platform.example.com` |
 | **Cardinality** | One key |
 | **Storage** | Google Cloud KMS (HSM-backed) |
 | **Rotation** | Key version rotation; DID document updated |
 | **Signs** | Trust Anchor Entity Statements, Trust Marks, platform metadata, user DID issuance attestations |
 
-The platform key represents Moverly as an organisation. It is used sparingly — primarily for signing the Trusted Issuer Registry credential and attesting that user DIDs were issued through a verified onboarding process.
+The platform key represents the platform operator as an organisation. It is used sparingly — primarily for signing the Trusted Issuer Registry credential and attesting that user DIDs were issued through a verified onboarding process.
 
 The platform key is the **root of trust** for the PDTF ecosystem in its current form. Compromise of this key would undermine confidence in the entire federation (all Entity Statements and Trust Marks signed by this key). It has the highest security requirements.
 
@@ -6136,7 +6136,7 @@ All key material in PDTF 2.0 is stored in **Google Cloud KMS**. No private keys 
 ### 4.2 Project Structure
 
 ```
-Google Cloud Organisation: moverly.com
+Google Cloud Organisation: propdata.org.uk
 │
 ├── Project: pdtf-adapters-prod
 │   │
@@ -6158,7 +6158,7 @@ Google Cloud Organisation: moverly.com
 ├── Project: pdtf-platform-prod
 │   │
 │   └── Key Ring: platform
-│       └── Key: moverly-platform-signing-key (Ed25519, HSM)
+│       └── Key: pdtf-platform-signing-key (Ed25519, HSM)
 │       # Status list VCs for platform-issued credentials are signed
 │       # with this same key (no separate status list key)
 │
@@ -6199,7 +6199,7 @@ Examples:
   hmlr-proxy-signing-key
   epc-proxy-signing-key
   ea-flood-proxy-signing-key
-  moverly-platform-signing-key
+  pdtf-platform-signing-key
   status-list-signing-key
   user-{firebase-uid}-key
 ```
@@ -6214,8 +6214,8 @@ Key version names are auto-generated by KMS (e.g., `1`, `2`, `3`). The primary v
 | `epc-adapter@pdtf-adapters-prod.iam` | pdtf-adapters-prod | `cloudkms.cryptoKeyVersions.useToSign` | `epc-proxy-signing-key` only |
 | `credential-service@pdtf-users-prod.iam` | pdtf-users-prod | `cloudkms.cryptoKeyVersions.useToSign` | All keys in `user-keys` ring |
 | `credential-service@pdtf-users-prod.iam` | pdtf-users-prod | `cloudkms.cryptoKeyVersions.viewPublicKey` | All keys in `user-keys` ring |
-| `platform-service@pdtf-platform-prod.iam` | pdtf-platform-prod | `cloudkms.cryptoKeyVersions.useToSign` | `moverly-platform-signing-key` |
-| `federation-service@pdtf-platform-prod.iam` | pdtf-platform-prod | `cloudkms.cryptoKeyVersions.useToSign` | `moverly-platform-signing-key` (signs federation Entity Statements + Trust Marks + platform status lists) |
+| `platform-service@pdtf-platform-prod.iam` | pdtf-platform-prod | `cloudkms.cryptoKeyVersions.useToSign` | `pdtf-platform-signing-key` |
+| `federation-service@pdtf-platform-prod.iam` | pdtf-platform-prod | `cloudkms.cryptoKeyVersions.useToSign` | `pdtf-platform-signing-key` (signs federation Entity Statements + Trust Marks + platform status lists) |
 | `did-resolver@pdtf-adapters-prod.iam` | pdtf-adapters-prod | `cloudkms.cryptoKeyVersions.viewPublicKey` | All adapter keys (read-only) |
 
 **Principle of least privilege:** Each service account can only sign with the keys it needs. The DID resolver can read public keys but cannot sign. Adapter service accounts are isolated to their own key ring.
@@ -6297,8 +6297,8 @@ Google Cloud KMS
 │
 └── Platform Key
     │
-    └── moverly-platform-key
-        ├── DID: did:web:moverly.com
+    └── pdtf-platform-key
+        ├── DID: did:web:platform.example.com
         ├── Signs: Trust Anchor Entity Statements, Trust Marks, platform attestations
         └── Role: federation Trust Anchor (root — signs all subordinate statements)
 ```
@@ -6308,7 +6308,7 @@ Google Cloud KMS
 The key hierarchy establishes a trust chain:
 
 ```
-Platform Key (did:web:moverly.com)
+Platform Key (did:web:platform.example.com)
     │
     ├── Signs Trust Marks ──→ Adapter DIDs receive pdtf-verified-issuer Trust Marks
     │                  for specific entity:path combinations
@@ -6454,7 +6454,7 @@ Every Ed25519 `did:key` starts with `z6Mk`. This is a useful sanity check: if a 
 
 ### 6.4 Platform Key Generation
 
-The platform key is generated once during initial PDTF 2.0 deployment. The process mirrors adapter key generation but uses the `pdtf-platform-prod` project and publishes the DID document at `https://moverly.com/.well-known/did.json`.
+The platform key is generated once during initial PDTF 2.0 deployment. The process mirrors adapter key generation but uses the `pdtf-platform-prod` project and publishes the DID document at `https://platform.example.com/.well-known/did.json`.
 
 ### 6.5 Key Generation Audit Trail
 
@@ -6575,7 +6575,7 @@ no longer controls (if the old key is disabled).
      "rotationDate": "2026-06-01T00:00:00Z",
      "reason": "scheduled_rotation"
    }
-   Signed by the platform key (did:web:moverly.com)
+   Signed by the platform key (did:web:platform.example.com)
 4. Re-issue all active credentials with the new DID
 5. Old credentials enter a grace period, then are revoked
 ```
@@ -6588,7 +6588,7 @@ no longer controls (if the old key is disabled).
 
 ### 7.3 Platform Key Rotation
 
-Platform key rotation follows the same pattern as adapter key rotation (§7.1): new key version in KMS, updated DID document at `https://moverly.com/.well-known/did.json`, old key retained in `verificationMethod`.
+Platform key rotation follows the same pattern as adapter key rotation (§7.1): new key version in KMS, updated DID document at `https://platform.example.com/.well-known/did.json`, old key retained in `verificationMethod`.
 
 **Additional consideration:** Federation Entity Statements and Trust Marks are signed by the platform key. After rotation, they must be re-signed with the new key version and republished. Verifiers should accept federation JWTs signed by any key version listed in the platform (Trust Anchor) DID document / JWKS.
 
@@ -6749,11 +6749,11 @@ async function signCredential(
     }
   },
   "credentialStatus": {
-    "id": "https://status.moverly.com/credentials/status/1#42",
+    "id": "https://status.platform.example.com/credentials/status/1#42",
     "type": "BitstringStatusListEntry",
     "statusPurpose": "revocation",
     "statusListIndex": "42",
-    "statusListCredential": "https://status.moverly.com/credentials/status/1"
+    "statusListCredential": "https://status.platform.example.com/credentials/status/1"
   },
   "proof": {
     "type": "DataIntegrityProof",
@@ -6797,7 +6797,7 @@ const [response] = await kmsClient.asymmetricSign({
 
 ## 9. Verification Operations
 
-Verification is the counterpart to signing — and it's the more important operation. Anyone can verify a PDTF credential without access to KMS, without being a Moverly customer, and without any special infrastructure. This is the core value proposition of the VC model.
+Verification is the counterpart to signing — and it's the more important operation. Anyone can verify a PDTF credential without access to KMS, without being a platform customer, and without any special infrastructure. This is the core value proposition of the VC model.
 
 ### 9.1 Verification Flow
 
@@ -7012,7 +7012,7 @@ https://adapters.propdata.org.uk/hmlr/did.json
 
 ### 9.4 Verification Without Platform Access
 
-A critical design property: **anyone can verify a PDTF credential without being a Moverly customer or having access to Moverly infrastructure.**
+A critical design property: **anyone can verify a PDTF credential without being a platform customer or having access to platform infrastructure.**
 
 They need:
 1. The signed VC (JSON document)
@@ -7030,7 +7030,7 @@ This is the fundamental difference from PDTF v1, where verification meant "trust
 
 ### 10.1 Current State: Custodial Keys
 
-Today, Moverly generates and manages user keys in Cloud KMS. Users authenticate via Firebase Auth and never directly interact with their cryptographic identity. The credential service signs on their behalf when they make assertions (e.g., completing a TA6 property information form).
+Today, the platform generates and manages user keys in Cloud KMS. Users authenticate via Firebase Auth and never directly interact with their cryptographic identity. The credential service signs on their behalf when they make assertions (e.g., completing a TA6 property information form).
 
 **Advantages of custodial model:**
 - Zero onboarding friction — users don't need a wallet
@@ -7039,25 +7039,25 @@ Today, Moverly generates and manages user keys in Cloud KMS. Users authenticate 
 - Works today, with existing infrastructure
 
 **Disadvantages:**
-- Users must trust Moverly not to sign on their behalf without consent
-- Not truly self-sovereign — Moverly can revoke access to a user's identity
+- Users must trust the platform not to sign on their behalf without consent
+- Not truly self-sovereign — the platform can revoke access to a user's identity
 - Doesn't meet the highest bar of decentralised identity frameworks
 - Single point of compromise for all user identities
 
 ### 10.2 Future State: Wallet-Bound Keys
 
-When digital identity wallets reach sufficient maturity and adoption in the UK property sector, PDTF 2.0 will support **wallet-bound keys** — where the user's private key lives in their own wallet, not in Moverly's KMS.
+When digital identity wallets reach sufficient maturity and adoption in the UK property sector, PDTF 2.0 will support **wallet-bound keys** — where the user's private key lives in their own wallet, not in the platform's KMS.
 
 **How it works:**
 
 ```
 Today (Custodial):
-  User ──→ Moverly KMS ──→ did:key:z6Mk...
-  (User authenticates, Moverly signs on their behalf)
+  User ──→ Platform KMS ──→ did:key:z6Mk...
+  (User authenticates, platform signs on their behalf)
 
 Future (Wallet-Bound):
   User ──→ Own Wallet ──→ did:key:z6Mk...
-  (User's wallet signs directly, Moverly never holds the private key)
+  (User's wallet signs directly, platform never holds the private key)
 ```
 
 ### 10.3 Migration Path
@@ -7081,7 +7081,7 @@ Phase 3: Wallet-Preferred (Future)
   - Existing custodial users can migrate:
     1. Install wallet app
     2. Wallet generates new key pair → new did:key
-    3. Moverly verifies wallet ownership (challenge-response)
+    3. Platform verifies wallet ownership (challenge-response)
     4. DID rotation attestation signed by platform key
     5. All active credentials re-issued with new DID
     6. Old KMS key disabled for signing, retained for verification
@@ -7089,7 +7089,7 @@ Phase 3: Wallet-Preferred (Future)
 Phase 4: Wallet-Required (Distant Future)
   - All users must use a wallet
   - Custodial model deprecated
-  - Moverly's role is platform + trusted proxy, not identity provider
+  - The platform's role is platform + trusted proxy, not identity provider
 ```
 
 ### 10.4 Wallet Interaction Protocol
@@ -7097,16 +7097,16 @@ Phase 4: Wallet-Required (Distant Future)
 When a user onboards with a wallet:
 
 ```
-1. User opens Moverly, selects "Connect Wallet"
-2. Moverly sends a challenge (random nonce)
+1. User opens the platform, selects "Connect Wallet"
+2. Platform sends a challenge (random nonce)
 3. Wallet signs the challenge with user's private key
-4. Moverly verifies the signature → confirms wallet ownership
+4. Platform verifies the signature → confirms wallet ownership
 5. Wallet presents verifiable identity credential
    (e.g., from a DCMS-certified identity provider)
-6. Moverly verifies identity credential
+6. Platform verifies identity credential
 7. Wallet's did:key is associated with the user account
 8. Future signing requests are routed to the wallet
-   (Moverly sends unsigned VC → wallet signs → returns signed VC)
+   (Platform sends unsigned VC → wallet signs → returns signed VC)
 ```
 
 ### 10.5 UK Digital Identity Framework Alignment
@@ -7320,7 +7320,7 @@ All KMS operations generate Cloud Audit Logs:
 | User key compromise | Forged assertions for one user | Custodial control, KMS access logging, revocation |
 | Platform key compromise | Forged Entity Statements / Trust Marks, undermined trust model | HSM, break-glass access, minimal usage, audit logging |
 | KMS region outage | Signing unavailable | Cross-region DR, verification unaffected |
-| Insider threat (Moverly employee) | Access to signing operations | IAM least-privilege, audit logs, break-glass for admin |
+| Insider threat (platform operator employee) | Access to signing operations | IAM least-privilege, audit logs, break-glass for admin |
 | Supply chain (library compromise) | Malformed signatures or key extraction | Dependency pinning, no key material in application memory |
 
 ---
@@ -7472,7 +7472,7 @@ At scale (10,000 users): ~$600/month for user keys + operations. Still modest co
 
 **Version:** 0.1 (Draft)
 **Date:** 1 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](./00-architecture-overview.md)
 
@@ -7678,7 +7678,7 @@ The composer must determine which entity type each credential targets. This is r
    - `TransactionCredential` → Transaction
    - etc.
 
-3. **Transaction DID** — credentials targeting `did:web:moverly.com:transactions:*` are Transaction credentials
+3. **Transaction DID** — credentials targeting `did:web:platform.example.com:transactions:*` are Transaction credentials
 
 ---
 
@@ -7940,7 +7940,7 @@ The composed v4 state follows the structure defined in [Sub-spec 01 §6](./01-en
 
 ```json
 {
-  "transactionId": "did:web:moverly.com:transactions:abc123",
+  "transactionId": "did:web:platform.example.com:transactions:abc123",
   "status": "Active",
   "saleContext": {
     "numberOfSellers": 2,
@@ -8539,7 +8539,7 @@ Dependency pruning changes the semantics of state assembly. It must be agreed wi
 
 **What doesn't need consensus:**
 - The deep merge algorithm (standard practice)
-- The conflict resolution rules (internal to Moverly initially)
+- The conflict resolution rules (internal to the platform initially)
 - The v4 state shape (new, no backward-compat constraint)
 
 ### 6.10 Assembler Pruning Obligation (Pending Q1.1)
@@ -8576,8 +8576,8 @@ rootIssuer > trustedProxy > accountProvider
 | Trust Level | Description | Example Issuers |
 |------------|-------------|-----------------|
 | `rootIssuer` | Primary data source — the authority itself | HMLR, MHCLG (EPC), Environment Agency, VOA |
-| `trustedProxy` | Adapter that fetches from the primary source and signs | Moverly HMLR adapter, Moverly EPC adapter |
-| `accountProvider` | User-attested data via a platform account | Moverly (on behalf of sellers/buyers) |
+| `trustedProxy` | Adapter that fetches from the primary source and signs | PDTF HMLR adapter, PDTF EPC adapter |
+| `accountProvider` | User-attested data via a platform account | The platform (on behalf of sellers/buyers) |
 
 **Rule:** A credential from a higher trust level always wins, regardless of timestamp.
 
@@ -9120,7 +9120,7 @@ For performance optimisation (future), the composer could support incremental up
 
 4. **Conflict visibility** — Should trust-level conflicts be visible to transaction participants? E.g., should a seller see "The EPC adapter says your energy rating is C, but you claimed D"? Or is this internal only?
 
-### 12.2 Internal (Moverly)
+### 12.2 Internal (Platform)
 
 5. **Dependency graph extraction from real schemas** — The pruning algorithm requires walking the actual PDTF JSON Schemas to identify discriminators. How complete are the current schemas' use of `if/then/else` and `oneOf`? Are there discriminator patterns that aren't expressed in the schema today?
 
@@ -9385,14 +9385,14 @@ A complete worked example showing composition of a realistic transaction from VC
 
 ### B.1 Input: Five VCs for a Transaction
 
-**VC 1 — Transaction metadata (Moverly platform):**
+**VC 1 — Transaction metadata (the platform):**
 ```json
 {
   "type": ["VerifiableCredential", "TransactionCredential"],
-  "issuer": "did:web:moverly.com",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-15T10:00:00Z",
   "credentialSubject": {
-    "id": "did:web:moverly.com:transactions:tx-42",
+    "id": "did:web:platform.example.com:transactions:tx-42",
     "status": "Active",
     "saleContext": {
       "numberOfSellers": 1,
@@ -9482,11 +9482,11 @@ A complete worked example showing composition of a realistic transaction from VC
 }
 ```
 
-**VC 5 — Person identity (Moverly platform):**
+**VC 5 — Person identity (the platform):**
 ```json
 {
   "type": ["VerifiableCredential", "PersonCredential"],
-  "issuer": "did:web:moverly.com",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-15T09:00:00Z",
   "credentialSubject": {
     "id": "did:key:z6Mkh...seller",
@@ -9508,7 +9508,7 @@ A complete worked example showing composition of a realistic transaction from VC
 
 | Entity ID | VCs |
 |-----------|-----|
-| `did:web:moverly.com:transactions:tx-42` | VC 1 |
+| `did:web:platform.example.com:transactions:tx-42` | VC 1 |
 | `urn:pdtf:uprn:100023456789` | VC 2, VC 3 |
 | `urn:pdtf:titleNumber:AB12345` | VC 4 |
 | `did:key:z6Mkh...seller` | VC 5 |
@@ -9583,7 +9583,7 @@ A non-exhaustive list of discriminator patterns in the PDTF schema that the prun
 
 **Version:** 0.1 (Draft)
 **Date:** 1 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](./00-architecture-overview.md)
 
@@ -9716,7 +9716,7 @@ interface ValidationResult {
 type TrustLevel =
   | 'root'          // Primary source issuer (e.g., HMLR for title data)
   | 'delegated'     // Issuer with explicit delegation from root
-  | 'proxy'         // Trusted proxy (e.g., Moverly aggregating data)
+  | 'proxy'         // Trusted proxy (e.g., a platform aggregating data)
   | 'self-asserted' // Seller/owner self-declaration
   | 'unknown';      // Issuer not found in federation
 
@@ -9990,12 +9990,12 @@ const signer = createLocalSigner({
 import { createGcpKmsSigner } from '@pdtf/vc-builder/kms/gcp';
 
 const signer = createGcpKmsSigner({
-  projectId: 'moverly-prod',
+  projectId: 'pdtf-platform-prod',
   locationId: 'europe-west2',
   keyRingId: 'pdtf-signing',
   keyId: 'property-credentials',
   keyVersion: '1',
-  did: 'did:web:moverly.com',
+  did: 'did:web:platform.example.com',
   verificationMethodFragment: '#key-1',
 });
 ```
@@ -10055,7 +10055,7 @@ const credential = await builder.buildCredential({
     retrievedAt: '2026-03-24T12:00:00Z',
   }],
   status: {
-    statusListCredential: 'https://moverly.com/.well-known/status/1',
+    statusListCredential: 'https://platform.example.com/.well-known/status/1',
     statusListIndex: 42,
     statusPurpose: 'revocation',
   },
@@ -10485,7 +10485,7 @@ Anticipated but out of scope for initial release:
 
 **Version:** 0.1 (Draft)
 **Date:** 1 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 **Status:** Draft
 **Parent:** [00 — Architecture Overview](./00-architecture-overview.md)
 
@@ -10515,7 +10515,7 @@ Anticipated but out of scope for initial release:
 
 Verifiable Credentials in PDTF 2.0 assert facts about properties, ownership, representation, and consent at a specific point in time. Those facts change. Properties are sold. Mandates are withdrawn. EPCs are superseded. Accounts are disabled. Without a mechanism to signal that a previously-issued credential is no longer valid, verifiers would continue to trust stale assertions — with real consequences for conveyancing transactions.
 
-Credential revocation is the mechanism by which an issuer declares that a credential it previously issued MUST no longer be accepted by verifiers. It is a foundational infrastructure concern: every credential in the PDTF 2.0 ecosystem — whether issued by a Moverly adapter, a primary-source authority, or the platform itself — MUST support revocation from the moment of issuance.
+Credential revocation is the mechanism by which an issuer declares that a credential it previously issued MUST no longer be accepted by verifiers. It is a foundational infrastructure concern: every credential in the PDTF 2.0 ecosystem — whether issued by a PDTF adapter, a primary-source authority, or the platform itself — MUST support revocation from the moment of issuance.
 
 ### Why Revocation Is Critical in Property Transactions
 
@@ -10812,7 +10812,7 @@ The gzip compression is highly effective for sparse bitstrings (few revocations)
 
 Each credential issuer is responsible for hosting the status lists for the credentials it issues. In the PDTF 2.0 trust evolution model, this means:
 
-- **Phase 1 (Moverly proxies):** Moverly hosts status lists for all adapter-issued credentials at `adapters.propdata.org.uk`
+- **Phase 1 (platform proxies):** The platform hosts status lists for all adapter-issued credentials at `adapters.propdata.org.uk`
 - **Phase 2 (Separate adapters):** Each adapter host manages its own status lists at its own domain
 - **Phase 3 (Primary sources):** Authoritative issuers host their own status lists
 
@@ -10835,15 +10835,15 @@ https://adapters.propdata.org.uk/status/water-drainage/00003
 #### Platform-Issued Credentials (User VCs, Consent VCs)
 
 ```
-https://moverly.com/status/{category}/{listId}
+https://platform.example.com/status/{category}/{listId}
 ```
 
 Examples:
 ```
-https://moverly.com/status/ownership/00001
-https://moverly.com/status/representation/00001
-https://moverly.com/status/consent/00001
-https://moverly.com/status/user/00001
+https://platform.example.com/status/ownership/00001
+https://platform.example.com/status/representation/00001
+https://platform.example.com/status/consent/00001
+https://platform.example.com/status/user/00001
 ```
 
 #### Primary-Source Issued Credentials (Phase 3)
@@ -11776,7 +11776,7 @@ description: "PDTF 2.0 conformance levels, test vectors, and interop protocols."
 
 **Version:** 0.1 (Draft)
 **Date:** 15 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 
 **Parent:** [00 — Architecture Overview](../00-architecture-overview/)
 

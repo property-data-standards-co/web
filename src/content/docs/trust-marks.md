@@ -25,7 +25,7 @@ Typical `authorised_paths`:
 - `Title:/registerExtract/*`
 - `Title:/ownership/*`
 
-**Example holders:** HMLR (root issuer), Moverly HMLR Adapter (trusted proxy)
+**Example holders:** HMLR (root issuer), PDTF HMLR Adapter (trusted proxy)
 
 ---
 
@@ -41,7 +41,7 @@ Typical `authorised_paths` (varies per adapter):
 - `Property:/councilTax/*` (council tax band)
 - `Property:/localAuthoritySearch/*` (local searches)
 
-**Example holders:** MHCLG EPC Register (root issuer), Environment Agency (root issuer), Moverly EPC Adapter (trusted proxy)
+**Example holders:** MHCLG EPC Register (root issuer), Environment Agency (root issuer), PDTF EPC Adapter (trusted proxy)
 
 ---
 
@@ -67,7 +67,7 @@ Authorises the holder to issue **user and organisation DIDs** — the identifier
 
 Account providers verify identity at onboarding and manage the link between a person's real-world identity and their cryptographic DID.
 
-**Example holders:** Moverly (account provider)
+**Example holders:** The reference platform (account provider)
 
 ## Trust mark structure
 

@@ -150,7 +150,7 @@ FAPI 2.0 is already the standard for UK Open Banking and is being adopted by the
 
 Not every property transaction participant will have a mobile wallet app. A seller completing their TA6 form doesn't want to install an app and manage cryptographic keys.
 
-PDTF supports **custodial cloud wallets** — server-side wallets operated by platforms (like Moverly or LMS) on behalf of users:
+PDTF supports **custodial cloud wallets** — server-side wallets operated by platforms (like LMS) on behalf of users:
 
 - The platform holds the user's keys in a secure enclave
 - Credentials are stored server-side, not on a device
@@ -160,10 +160,10 @@ PDTF supports **custodial cloud wallets** — server-side wallets operated by pl
 ### How it works
 
 ```
-1. Seller logs into Moverly and completes their TA6 form
-2. Moverly's custodial wallet receives the signed TA6 credential
+1. Seller logs into the platform and completes their TA6 form
+2. The platform's custodial wallet receives the signed TA6 credential
 3. Buyer's conveyancer requests the TA6 via OID4VP
-4. Moverly's wallet checks the seller's consent settings
+4. The platform wallet checks the seller's consent settings
 5. If consented, the wallet creates a VP and returns it
 6. The conveyancer verifies the VP — same trust chain as a mobile wallet
 ```
@@ -202,4 +202,4 @@ The protocol layer (OID4VCI/OID4VP) is the same regardless of wallet type. That'
 3. Both exchanges are secured with FAPI 2.0
 4. The conveyancer **verifies** the credential and checks the adapter's federation trust mark
 
-The credentials are portable — the conveyancer doesn't need an account with Moverly or a direct connection to HMLR. They verify the credential itself, check the trust chain, and make their own trust decision.
+The credentials are portable — the conveyancer doesn't need an account with the platform or a direct connection to HMLR. They verify the credential itself, check the trust chain, and make their own trust decision.

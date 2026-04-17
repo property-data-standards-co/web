@@ -3,10 +3,11 @@ title: "15 — Conformance Testing"
 description: "PDTF 2.0 conformance levels, test vectors, and interop protocols."
 ---
 
+# 15 Conformance Testing
 
 **Version:** 0.1 (Draft)
 **Date:** 15 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 
 **Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
 

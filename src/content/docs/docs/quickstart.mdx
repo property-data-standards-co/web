@@ -28,7 +28,7 @@ const credential = {
     "https://propdata.org.uk/ns/v4"
   ],
   "type": ["VerifiableCredential", "PropertyCredential"],
-  "issuer": "did:web:adapter.moverly.com",
+  "issuer": "did:web:adapter.propdata.org.uk",
   "credentialSubject": {
     "id": "urn:pdtf:uprn:100023336956",
     "type": "Property",
@@ -80,7 +80,7 @@ const trustResolver = new FederationRegistryResolver({
 
 // Check if an issuer has a Trust Mark authorising them for a specific path
 const isTrusted = await trustResolver.isIssuerTrusted(
-  'did:web:adapter.moverly.com', 
+  'did:web:adapter.propdata.org.uk', 
   ['Property:/energyPerformance']
 );
 
@@ -95,7 +95,7 @@ if (isTrusted) {
 
 ```typescript
 // Fetch the raw entity statement for an issuer within the federation
-const statement = await trustResolver.fetchEntityStatement('did:web:adapter.moverly.com');
+const statement = await trustResolver.fetchEntityStatement('did:web:adapter.propdata.org.uk');
 
 console.log(`Issuer: ${statement.sub}`);
 console.log(`Trust Marks:`, statement.trust_marks);
@@ -149,7 +149,7 @@ The `@pdtf/cli` package provides command-line equivalents:
 pdtf verify credential.json
 
 # Look up an issuer's Trust Marks
-pdtf trust resolve did:web:adapter.moverly.com
+pdtf trust resolve did:web:adapter.propdata.org.uk
 
 # Check revocation
 pdtf revocation check credential.json

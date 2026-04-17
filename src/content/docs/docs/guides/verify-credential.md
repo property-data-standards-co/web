@@ -21,7 +21,7 @@ const didResolver = new DidResolver({
 });
 
 const tirClient = new TirClient({
-  registryUrl: 'https://tir.moverly.com/v1/registry',
+  registryUrl: 'https://tir.platform.example.com/v1/registry',
 });
 
 const validator = new VcValidator();

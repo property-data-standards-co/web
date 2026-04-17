@@ -6,7 +6,7 @@ description: "PDTF 2.0 specification document."
 
 **Version:** 0.1 (Draft)
 **Date:** 15 April 2026
-**Author:** Ed Molyneux / Moverly
+**Author:** Ed Molyneux
 
 ---
 
@@ -100,7 +100,7 @@ The relationship is **Transaction-centric**, not Property → Title → Transact
 - The DID-based relationship model handles this naturally — a Transaction DID document references its associated Property and Title identifiers.
 
 ```
-Transaction (did:web:moverly.com:transactions:*)
+Transaction (did:web:platform.example.com:transactions:*)
     ├── Property[] (urn:pdtf:uprn:*)
     │     └── (may have no title — new build, unregistered)
     ├── Title[] (urn:pdtf:titleNumber:* OR urn:pdtf:unregisteredTitle:*)
@@ -347,7 +347,7 @@ DIDs serve as identifiers for organisations, persons, and transactions within th
 |--------------------|----------------------|---------------------------------------------------|------------------------------------------------------------------------------------------------|
 | Persons            | `did:key`            | `did:key:z6Mkh...abc`                             | Self-resolving from public key, no hosting needed                                              |
 | Organisations      | `did:key` or `did:web` | `did:key:z6Mkf...xyz` or `did:web:smithandjones.co.uk` | `did:key` when managed by account provider (e.g. LMS); `did:web` when self-hosting identity |
-| Transactions       | `did:web`            | `did:web:moverly.com:transactions:abc123`         | Hosted DID document at `https://moverly.com/transactions/abc123/did.json`                      |
+| Transactions       | `did:web`            | `did:web:platform.example.com:transactions:abc123`         | Hosted DID document at `https://platform.example.com/transactions/abc123/did.json`                      |
 | Trusted Adapters   | `did:web`            | `did:web:adapters.propdata.org.uk:hmlr`           | Hosted DID document with service endpoints for VC requests + federation entity configuration   |
 
 ### 5.2 URN Scheme
@@ -373,7 +373,7 @@ Discovery in PDTF 2.0 combines OpenID Federation metadata resolution with DID do
 
 For a transaction, the discovery flow is:
 ```
-Transaction DID (did:web:moverly.com:transactions:abc123)
+Transaction DID (did:web:platform.example.com:transactions:abc123)
   → DID Document (keys, service endpoints including PDTF API and MCP)
   → Federation entity configuration (trust chain, trust marks)
   → Credential issuer metadata (for adapters providing data to this transaction)
@@ -482,7 +482,7 @@ Each trust mark is a signed JWT issued by the trust anchor (or a delegated trust
 | `https://propdata.org.uk/trust-marks/regulated-conveyancer` | SRA/CLC regulated conveyancing firm | Conveyancer organisations |
 | `https://propdata.org.uk/trust-marks/energy-data-provider` | Authorised to issue EPC/energy credentials | MHCLG, EPC adapters |
 | `https://propdata.org.uk/trust-marks/environmental-data-provider` | Authorised to issue environmental risk credentials | EA, flood risk adapters |
-| `https://propdata.org.uk/trust-marks/account-provider` | Authorised to issue user DIDs on behalf of persons | Moverly, LMS, wallet providers |
+| `https://propdata.org.uk/trust-marks/account-provider` | Authorised to issue user DIDs on behalf of persons | The reference platform, LMS, wallet providers |
 
 **Trust mark structure:**
 
@@ -514,7 +514,7 @@ The `delegation` claim is a PDTF extension to the standard trust mark. It carrie
 How an entity obtains trust marks and joins the federation:
 
 **Phase 1 (bootstrap):**
-1. Entity applies to the trust anchor operator (initially Moverly/propdata.org.uk)
+1. Entity applies to the trust anchor operator (initially propdata.org.uk)
 2. Trust anchor verifies the entity's identity and authorisation (e.g. SRA registration for conveyancers, contractual relationship for data adapters)
 3. Trust anchor issues a subordinate entity statement and the appropriate trust marks
 4. Entity publishes its entity configuration referencing the trust anchor
@@ -555,16 +555,16 @@ EBSI's Root-TAO/TAO hierarchy is conceptually elegant — trust chains are VCs a
 
 ### 6.5 Three-Phase Evolution
 
-**Phase 1 (now): Moverly as Federation Trust Anchor**
-- Moverly operates the trust anchor at `propdata.org.uk`
+**Phase 1 (now): The Platform as Federation Trust Anchor**
+- The platform operator runs the trust anchor at `propdata.org.uk`
 - Existing collectors become OID4VCI credential issuers (adapters) as leaf entities
 - Each adapter holds trust marks issued by the trust anchor
 - Federation metadata served from the PDTF Trust Anchor at `trust.pdtf.org`
-- Moverly is the sole account provider for user DIDs
+- The reference platform is the sole account provider for user DIDs
 - "Map-and-wrap": call existing APIs (HMLR OC1, EPC API, EA flood), issue as signed VCs via OID4VCI
 
 **Phase 2 (medium-term): Federated Governance**
-- Property sector governance body operates the trust anchor (or becomes a higher-level trust anchor above Moverly)
+- Property sector governance body operates the trust anchor (or becomes a higher-level trust anchor above the platform operator)
 - Multiple organisations can run adapters (TM Group, LMS) — each with their own entity configuration and trust marks
 - Adapters hosted independently (`adapters.propdata.org.uk`) with their own federation metadata
 - SRA/CLC issue `regulated-conveyancer` trust marks directly
@@ -587,7 +587,7 @@ EBSI's Root-TAO/TAO hierarchy is conceptually elegant — trust chains are VCs a
 - **Ed25519** key algorithm (expressed as JWK in federation metadata and DID documents)
 - One key per user (generates their `did:key` identity)
 - One key per adapter (for signing VCs and federation entity configuration)
-- One key for Moverly platform / trust anchor (for signing trust marks and subordinate entity statements)
+- One key for the platform / trust anchor (for signing trust marks and subordinate entity statements)
 
 Keys are published in two places:
 1. **Federation entity configuration** — JWKS in the entity statement, used for federation trust chain verification
@@ -653,8 +653,8 @@ Google Cloud KMS
 │   ├── user-{uid}-key → did:key:z6Mkh...abc
 │   └── ...
 │
-└── Platform Key (Moverly's own identity)
-    └── moverly-platform-key → did:web:moverly.com
+└── Platform Key (platform operator identity)
+    └── pdtf-platform-key → did:web:platform.example.com
 ```
 
 ### 7.5 Custodial Cloud Wallets vs Bring-Your-Own-Wallet
@@ -874,7 +874,7 @@ Access to transaction data requires proof that the requester is a participant. A
 
 #### Phase 1: Account Provider Delegation (Custodial)
 
-In Phase 1, the account provider (LMS, Moverly) holds the user's private key in KMS. Authentication works via OAuth + OID4VP:
+In Phase 1, the account provider (e.g. LMS) holds the user's private key in KMS. Authentication works via OAuth + OID4VP:
 
 1. **Agent/client authenticates** via FAPI 2.0 flow with the account provider
 2. **Account provider verifies** the user's identity and maps to their `did:key`
@@ -897,7 +897,7 @@ In both phases, the participation credential is the authorization — no separat
 
 ### 12.4 Platform-to-Platform Sync & VC Encryption
 
-> **Phase 1 note:** Envelope encryption is the target architecture for multi-platform sync. In Phase 1, where Moverly is the sole platform, VC encryption is not implemented — data access is controlled through platform-level authentication and `termsOfUse` filtering. The encryption model described here will be specified in detail in Sub-spec 12 when multi-platform sync is introduced.
+> **Phase 1 note:** Envelope encryption is the target architecture for multi-platform sync. In Phase 1, where the reference platform is the sole platform, VC encryption is not implemented — data access is controlled through platform-level authentication and `termsOfUse` filtering. The encryption model described here will be specified in detail in Sub-spec 12 when multi-platform sync is introduced.
 
 Platforms (LMS systems, conveyancer software, orchestrators) need to sync VC collections to ensure all participants have the latest data. The challenge: GDPR exposure. A platform shouldn't hold decryptable personal data for transactions it's not a participant in.
 
@@ -918,7 +918,7 @@ PDTF uses **ECDH-ES+A256KW** (Elliptic Curve Diffie-Hellman Ephemeral Static + A
   "recipients": [
     { "header": { "kid": "did:key:z6Mk...#key-agreement" }, "encrypted_key": "..." },
     { "header": { "kid": "did:web:smithandjones.co.uk#key-agreement" }, "encrypted_key": "..." },
-    { "header": { "kid": "did:web:moverly.com#key-agreement" }, "encrypted_key": "..." }
+    { "header": { "kid": "did:web:platform.example.com#key-agreement" }, "encrypted_key": "..." }
   ],
   "iv": "...",
   "ciphertext": "...",
@@ -990,8 +990,8 @@ Staging:       did:web:adapters.staging.propdata.org.uk:{adapter}
 Production:    did:web:transactions.propdata.org.uk:txn:{id}
 Staging:       did:web:transactions.staging.propdata.org.uk:txn:{id}
 
-Production:    did:web:auth.moverly.com
-Staging:       did:web:auth.staging.moverly.com
+Production:    did:web:auth.platform.example.com
+Staging:       did:web:auth.staging.platform.example.com
 
 Federation:
 Production:    https://propdata.org.uk/.well-known/openid-federation

@@ -103,6 +103,6 @@ For participants who don't have a mobile wallet app, PDTF supports **custodial c
 
 ## Why this matters
 
-PDTF 2.0 credentials turn property data into something that can move safely between platforms, APIs, and agents without losing provenance. A verifier no longer needs to trust Moverly, LMS, or any other intermediary just because they served the JSON. It verifies the credential itself, checks the issuer's [federation trust mark](/web/docs/concepts/openid-federation/), and decides on that basis.
+PDTF 2.0 credentials turn property data into something that can move safely between platforms, APIs, and agents without losing provenance. A verifier no longer needs to trust the platform, LMS, or any other intermediary just because they served the JSON. It verifies the credential itself, checks the issuer's [federation trust mark](/web/docs/concepts/openid-federation/), and decides on that basis.
 
 That is the core trust shift in PDTF 2.0: **make trust portable, by verifying the credential itself**.

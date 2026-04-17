@@ -87,7 +87,7 @@ A lender can verify a Property credential (EPC data, flood risk) without seeing 
 
 ### Multi-issuer trust
 
-Different entities can be credentialed by different issuers. The Property credential might come from Moverly (as a trusted proxy for the EPC register), while the Title credential comes from a different adapter connected to HM Land Registry. The Trusted Issuer Registry governs who can issue what.
+Different entities can be credentialed by different issuers. The Property credential might come from the reference platform (as a trusted proxy for the EPC register), while the Title credential comes from a different adapter connected to HM Land Registry. The Trusted Issuer Registry governs who can issue what.
 
 ### Data portability
 
