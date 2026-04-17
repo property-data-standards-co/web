@@ -13,7 +13,7 @@ The PDTF packages are in active development and not yet published. Code examples
 
 ## Install the packages
 
-<Tabs>
+<Tabs syncKey="language">
   <TabItem label="TypeScript">
     ```bash
     npm install @pdtf/core
@@ -40,7 +40,7 @@ The PDTF packages are in active development and not yet published. Code examples
 
 Given a W3C Verifiable Credential containing PDTF entity data, verify its signature, issuer authorisation, and revocation status in one call:
 
-<Tabs>
+<Tabs syncKey="language">
   <TabItem label="TypeScript">
     ```typescript
     import { VcValidator, DidResolver, FederationRegistryResolver } from '@pdtf/core';
@@ -230,7 +230,7 @@ Given a W3C Verifiable Credential containing PDTF entity data, verify its signat
 
 The OpenID Federation Trust Anchor dictates who is authorised to issue which types of credentials:
 
-<Tabs>
+<Tabs syncKey="language">
   <TabItem label="TypeScript">
     ```typescript
     import { FederationRegistryResolver } from '@pdtf/core';
@@ -325,7 +325,7 @@ The OpenID Federation Trust Anchor dictates who is authorised to issue which typ
 
 ### Fetch an Entity Statement
 
-<Tabs>
+<Tabs syncKey="language">
   <TabItem label="TypeScript">
     ```typescript
     // Fetch the raw entity statement for an issuer within the federation
@@ -369,7 +369,7 @@ The OpenID Federation Trust Anchor dictates who is authorised to issue which typ
 
 Every PDTF credential includes a `credentialStatus` field pointing to a Bitstring Status List. Check it directly:
 
-<Tabs>
+<Tabs syncKey="language">
   <TabItem label="TypeScript">
     ```typescript
     import { StatusListResolver } from '@pdtf/core';
@@ -442,7 +442,7 @@ The status list is a compact bitstring where each credential is assigned an inde
 
 Look up a DID document for any PDTF entity that uses `did:web`:
 
-<Tabs>
+<Tabs syncKey="language">
   <TabItem label="TypeScript">
     ```typescript
     import { DidResolver } from '@pdtf/core';
