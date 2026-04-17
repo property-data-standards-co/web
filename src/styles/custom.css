@@ -434,8 +434,16 @@ html[data-has-hero] body::before {
    Override Starlight's default 7fr/4fr grid so content takes full width
    and can centre properly (no empty image column on the right).
    Also zero out the sidebar padding on splash pages so content is truly centred. */
+/* On the splash page, zero out all sidebar/content offsets so everything centres */
 html[data-has-hero] .main-frame {
 	padding-inline-start: 0 !important;
+	padding-inline-end: 0 !important;
+}
+
+html[data-has-hero] .main-pane {
+	max-width: 64rem;
+	margin-inline: auto;
+	padding-inline: 1.5rem;
 }
 
 .hero {
