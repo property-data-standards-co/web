@@ -94,15 +94,15 @@ Property is too high-friction an environment to act as the wedge for consumer wa
 If anyone can issue a Verifiable Credential, how does a relying party (like a lender) know if the issuer is actually authorised to provide that data? (e.g., How do we know this DID belongs to a legitimate EPC assessor?)
 
 **The Options:**
-- **Option A:** Every platform maintains its own proprietary whitelist of trusted issuers.
-- **Option B:** A bespoke, git-hosted Trusted Issuer Registry (the PDTF v0.8 approach).
-- **Option C (OpenID Federation):** Adopt the OpenID Federation standard, using Trust Anchors, Entity Statements, and Trust Marks to cryptographically prove an issuer's authority.
+- **Option A (Proprietary Whitelists):** Every platform maintains its own list of trusted issuers.
+- **Option B (Centralised Issuer Registry):** A bespoke, git-hosted or API-driven Trusted Issuer Registry (the PDTF v0.8 approach). *Benefits:* Extremely simple for developers to implement, provides a fully transparent audit trail (if git-backed), and allows for immediate, synchronous issuer revocation without dealing with complex JWT trust chains.
+- **Option C (OpenID Federation):** Adopt the OpenID Federation standard, using Trust Anchors, Entity Statements, and Trust Marks to cryptographically prove an issuer's authority. *Benefits:* Decentralised, aligns with wider government identity initiatives, and prevents any single registry from becoming a commercial bottleneck.
 
 **Our Recommendation (Option C):** 
 OpenID Federation is an established standard designed exactly for this problem. It allows dynamic trust resolution without relying on a bespoke registry format.
 
 **Consultation Question:**
-> *Does OpenID Federation provide the correct framework for governing trust and issuer authorisation in the UK property market?*
+> *Does OpenID Federation provide the correct framework for governing trust and issuer authorisation, or do the simplicity and immediate revocation benefits of a Centralised Issuer Registry outweigh the decentralisation benefits?*
 
 ---
 
@@ -305,17 +305,17 @@ This avoids a central bottleneck while ensuring every credential has a stable, u
 ### Q17. Intent-Based Access Control
 
 **The Problem:** 
-Property data is highly sensitive. How do we ensure that only authorised parties (e.g., a mortgage lender) can access the data, without relying on a central, proprietary Access Control List (ACL)?
+Property data is highly sensitive. How do we ensure that only authorised parties (e.g., a mortgage lender) can access the data?
 
 **The Options:**
-- **Option A:** Central API gateways enforce access rules based on user accounts.
-- **Option B (Intent-based Graph Traversal):** The graph itself dictates access. A `Transaction` represents the intent to sell; an `Offer` represents the intent to buy. If a buyer grants a lender a `DelegatedConsent` credential referencing their accepted `Offer`, the lender is cryptographically authorised to traverse the graph and read the property data.
+- **Option A (Centralised Hub ACL):** A designated platform or "transaction hub" acts as the data custodian for a specific property transaction. The hub maintains a dynamic Access Control List (ACL) and enforces role-based access rules via secure API gateways. *Benefits:* Immediate certainty of access revocation (no waiting for credential status lists to sync), far simpler to implement for data consumers (standard API keys rather than complex OID4VP presentation logic), and provides a clear single point of accountability for data governance.
+- **Option B (Intent-based Graph Traversal):** The graph itself dictates access. A `Transaction` represents the intent to sell; an `Offer` represents the intent to buy. If a buyer grants a lender a `DelegatedConsent` credential referencing their accepted `Offer`, the lender is cryptographically authorised to traverse the graph and read the property data directly from the issuers. *Benefits:* Removes the need for central API gatekeepers and prevents vendor lock-in around access routing.
 
 **Our Recommendation (Option B):** 
-Using relationship credentials (`Representation`, `DelegatedConsent`) as capability tokens removes the need for central API gatekeepers.
+Using relationship credentials (`Representation`, `DelegatedConsent`) as capability tokens aligns with the distributed nature of Verifiable Credentials and removes central bottlenecks.
 
 **Consultation Question:**
-> *Does the framing of Transaction (Intent to Sell) and Offer (Intent to Buy) provide a robust enough foundation for distributed access control?*
+> *Does the framing of Transaction (Intent to Sell) and Offer (Intent to Buy) provide a robust enough foundation for distributed access control, or are the practical simplicity and immediate revocation benefits of a Centralised Hub ACL more appropriate for the property industry?*
 
 ---
 
@@ -325,11 +325,28 @@ Using relationship credentials (`Representation`, `DelegatedConsent`) as capabil
 Once a credential exists, how is it requested and delivered between different platforms?
 
 **The Options:**
-- **Option A:** Define a custom REST API specification for the property industry.
-- **Option B:** Adopt OID4VCI (OpenID for Verifiable Credential Issuance) and OID4VP (OpenID for Verifiable Presentations).
+- **Option A (Custom Property REST API):** Define a bespoke, property-specific REST API specification for exchanging data packets. *Benefits:* Can be tailored exactly to conveyancing workflows (e.g., `/fetch-property-pack`, `/submit-enquiries`), uses standard web patterns familiar to all property tech teams, and avoids the steep learning curve of generic credential protocols.
+- **Option B (OID4VCI / OID4VP):** Adopt OID4VCI (OpenID for Verifiable Credential Issuance) and OID4VP (OpenID for Verifiable Presentations). *Benefits:* Standardised, heavily vetted by the global identity community, and ensures interoperability with non-property wallets and infrastructure.
 
 **Our Recommendation (Option B):** 
 Adopting existing OIDF standards ensures compatibility with generic enterprise identity infrastructure and reduces the maintenance burden on the property industry.
 
 **Consultation Question:**
-> *Should OID4VCI and OID4VP be mandated as the standard protocols for exchanging property credentials?*
+> *Should OID4VCI and OID4VP be mandated as the standard protocols for exchanging property credentials, or does a custom, property-specific REST API offer a more realistic path to industry adoption?*
+
+---
+
+### Q19. File Handling and Evidence Access
+
+**The Problem:** 
+Conveyancers rely heavily on source documents (e.g., title register PDFs, search reports). Verifiable Credentials must not embed large files directly. While we use standard W3C `digestMultibase` properties to hash and reference these files via URLs, how should downstream parties (who did not issue the credential) negotiate access to these protected URLs?
+
+**The Options:**
+- **Option A (Standard HTTP 401 Challenge):** Keep the Verifiable Credential clean. When a system attempts to fetch the file URL, the server returns a standard `401 Unauthorized` with a `WWW-Authenticate` header pointing to the authorisation server. *Benefits:* Decouples the VC data model entirely from the transport/access layer, adhering strictly to web standards.
+- **Option B (Explicit Routing Hint in VC):** Include a bespoke `pdtf:access` hint directly inside the VC's evidence object, specifying the exact mechanism (e.g., `OID4VP`) and the `authorizationServer` URL. *Benefits:* Massively simplifies implementation for client software (like a conveyancer's CMS) by telling them exactly how to authenticate before they even make the request, saving round-trips and ambiguity.
+
+**Our Recommendation (Option B):** 
+An explicit routing hint embedded in the credential makes integrations substantially more developer-friendly, which is critical for early ecosystem adoption.
+
+**Consultation Question:**
+> *Should access mechanisms for protected files be explicitly encoded into the Verifiable Credential, or should we rely on standard HTTP negotiation (401 Challenges) to keep the credential transport-agnostic?*
