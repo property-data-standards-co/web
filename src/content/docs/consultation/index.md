@@ -37,8 +37,8 @@ Verifiable Credentials are the globally adopted standard for digital trust. Alig
 PDTF v1 represents a property transaction as a single JSON document (around 4,000 data paths). If an EPC rating updates, the entire transaction document is conceptually altered. Furthermore, data collected during a failed transaction is locked inside that transaction's context, rather than surviving alongside the property for the next buyer.
 
 **The Options:**
-- **Option A (Monolithic):** Retain a single massive transaction document.
-- **Option B (Entity Graph):** Decompose the schema into nine distinct, independently credentialed entities: `Property` (physical facts), `Title` (legal facts), `Transaction` (this-sale facts), `Person`, `Organisation`, and relationship credentials (`SellerCapacity`, `Representation`, `DelegatedConsent`, `Offer`).
+- **Option A (Unified Document):** Retain a single, comprehensive transaction document covering all data paths. *Benefits:* Extremely simple to query, transmit, and store (one API call gets everything), avoids the complexity of graph traversal, and perfectly matches the mental model of a traditional assembled property "pack".
+- **Option B (Entity Graph):** Decompose the schema into nine distinct, independently credentialed entities: `Property` (physical facts), `Title` (legal facts), `Transaction` (this-sale facts), `Person`, `Organisation`, and relationship credentials (`SellerCapacity`, `Representation`, `DelegatedConsent`, `Offer`). *Benefits:* Enables genuine data reuse across aborted transactions (facts survive the transaction context), reduces payload sizes for targeted updates, and aligns cleanly with disparate authoritative sources.
 
 **Our Recommendation (Option B):** 
 The entity graph follows the "Logbook Test" — facts that belong to the property (EPCs, flood risks) stay with the property entity and survive the transaction. Facts that belong to the title stay with the title. This enables genuine data reuse across aborted transactions.
