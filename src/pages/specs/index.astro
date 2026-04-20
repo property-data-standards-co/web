@@ -1,0 +1,69 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const specs = [
+  { href: '/specs/00-architecture-overview', number: '00', title: 'Architecture Overview', description: 'High-level architecture, design principles, and the shift from platform-bound claims to portable credentials' },
+  { href: '/specs/01-entity-graph', number: '01', title: 'Entity Graph & Schema', description: '9 composable entities: Transaction, Property, Title, Person, Organisation, SellerCapacity, Representation, DelegatedConsent, Offer' },
+  { href: '/specs/02-vc-data-model', number: '02', title: 'Verifiable Credentials Data Model', description: 'W3C VC 2.0 profile for property data — credential structure, evidence model, confidentiality controls' },
+  { href: '/specs/03-did-methods', number: '03', title: 'DID Methods & Identifiers', description: 'Decentralised identifiers (did:key, did:web) and URN scheme for all PDTF entities' },
+  { href: '/specs/04-trusted-issuer-registry', number: '04', title: 'Trusted Issuer Registry', description: 'Maps issuer DIDs to authorised credential types — who can issue what' },
+  { href: '/specs/06-key-management', number: '06', title: 'Key Management', description: 'Ed25519 keys, Cloud KMS architecture, signing operations, and future wallet binding' },
+  { href: '/specs/07-state-assembly', number: '07', title: 'State Assembly', description: 'Composing individual VCs into coherent transaction state with merge semantics' },
+  { href: '/specs/13-reference-implementations', number: '13', title: 'Reference Implementations', description: 'Open-source npm packages: VC validator, DID resolver, credential builder, graph composer' },
+  { href: '/specs/14-credential-revocation', number: '14', title: 'Credential Revocation', description: 'W3C Bitstring Status List v2 for credential lifecycle management' },
+  { href: '/specs/15-conformance-testing', number: '15', title: 'Conformance Testing', description: 'Test suites and conformance requirements for PDTF implementers' },
+];
+---
+
+<BaseLayout title="PDTF 2.0 Specifications" description="Technical specifications for the Property Data Trust Framework v2.0">
+  <!-- Hero -->
+  <section class="bg-gradient-to-br from-pdtf-navy to-pdtf-navy-light text-white py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <h1 class="text-4xl md:text-5xl font-bold mb-6 font-heading">PDTF 2.0 Specifications</h1>
+        <p class="text-xl text-gray-200">
+          The complete technical specification suite for the Property Data Trust Framework v2.0 — W3C Verifiable Credentials, Decentralised Identifiers, and federated trust for UK property transactions.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Industry Consensus Banner -->
+  <section class="bg-pdtf-orange text-white py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div class="flex-1">
+        <h2 class="text-lg font-semibold font-heading">Industry Consensus Session</h2>
+        <p class="text-white/90 text-sm mt-1">18 questions requiring multi-stakeholder agreement before specification completion.</p>
+      </div>
+      <a href="/specs/industry-consensus" class="inline-flex items-center px-5 py-2.5 bg-white text-pdtf-orange font-semibold rounded-lg hover:bg-gray-100 transition-colors text-sm whitespace-nowrap">
+        View Consensus Questions &rarr;
+      </a>
+    </div>
+  </section>
+
+  <!-- Spec List -->
+  <section class="py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid gap-4">
+        {specs.map((spec) => (
+          <a href={spec.href} class="group block bg-white border border-gray-200 rounded-xl p-6 hover:border-pdtf-orange hover:shadow-md transition-all">
+            <div class="flex items-start gap-4">
+              <span class="flex-shrink-0 w-10 h-10 bg-pdtf-stone-light text-pdtf-navy rounded-lg flex items-center justify-center font-mono font-semibold text-sm">
+                {spec.number}
+              </span>
+              <div class="flex-1 min-w-0">
+                <h3 class="text-lg font-semibold text-pdtf-navy group-hover:text-pdtf-orange transition-colors font-heading">
+                  {spec.title}
+                </h3>
+                <p class="text-gray-600 mt-1 text-sm">{spec.description}</p>
+              </div>
+              <svg class="w-5 h-5 text-gray-400 group-hover:text-pdtf-orange transition-colors flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</BaseLayout>

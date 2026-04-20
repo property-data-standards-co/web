@@ -1,0 +1,33 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+const { frontmatter } = Astro.props;
+const title = frontmatter?.title || 'Specification';
+const description = frontmatter?.description || 'PDTF 2.0 Specification';
+---
+
+<BaseLayout title={title} description={description}>
+  <section class="py-12 md:py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="mb-8">
+        <a href="/specs" class="text-pdtf-orange hover:underline text-sm font-medium">&larr; All Specifications</a>
+      </div>
+      <article class="prose prose-lg prose-gray max-w-none
+        prose-headings:font-heading prose-headings:text-pdtf-navy
+        prose-h1:text-3xl prose-h1:md:text-4xl prose-h1:mb-4
+        prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4 prose-h2:border-b prose-h2:border-gray-200 prose-h2:pb-2
+        prose-h3:text-xl prose-h3:mt-8
+        prose-a:text-pdtf-orange prose-a:no-underline hover:prose-a:underline
+        prose-strong:text-pdtf-navy
+        prose-code:text-pdtf-navy prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
+        prose-pre:bg-pdtf-navy prose-pre:text-gray-100
+        prose-table:text-sm
+        prose-th:bg-pdtf-stone-light prose-th:text-pdtf-navy prose-th:font-semibold
+        prose-td:border-gray-200
+        prose-blockquote:border-pdtf-orange prose-blockquote:bg-pdtf-stone-light prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg
+      ">
+        <slot />
+      </article>
+    </div>
+  </section>
+</BaseLayout>
