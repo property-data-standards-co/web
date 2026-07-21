@@ -9,6 +9,16 @@ PDTF 2.0 is designed for incremental adoption. The architecture supports a gradu
 
 This happens in three phases.
 
+## Policy context
+
+This roadmap does not exist in isolation — it is directed towards two external anchors that set the direction and the delivery vehicle for the work.
+
+- **MHCLG's [Home Buying and Selling Reform Roadmap](https://www.gov.uk/government/consultations/home-buying-and-selling-reform/outcome/home-buying-and-selling-reform-roadmap)** (consultation outcome, June 2026) is the government mandate. It commits to publishing a call for evidence on a *smart data scheme for the property sector* (2026), creating a *voluntary accreditation scheme to identify data standards* and consulting on that smart data scheme (2027–2028), and legislating to *support the secure sharing of data* with digital sales packs and logbooks as a standard feature of transactions. It states that upfront information should be "drawn from trusted data sources, underpinned by clear standards, and updated as needed" — precisely source-signed, revocable Verifiable Credentials.
+
+- **CFIT's Smart Data / Open Property coalition (Phase 2)** is the industry delivery vehicle. It is co-designing and piloting a *Digital Property ID* built from Smart Data Clusters, and defining a common conformance framework to which existing property data standards — PDTF included — can map. Its Trust, Legal & Policy workstream targets exactly the reliance and consent conditions that let verified data be reused rather than re-checked by default.
+
+The three PDTF phases below are the technical substrate both anchors point to: PDTF's Trust Marks and OpenID Federation model are built to satisfy the accreditation and conformance hooks in the government roadmap, and its entity graph and Verifiable Credentials underpin the Digital Property ID that CFIT is proving in real transactions.
+
 ## Phase 1: Trusted proxies
 
 **Status: Current phase**

@@ -19,3 +19,6 @@ pnpm-debug.log*
 
 # macOS-specific files
 .DS_Store
+
+# local framing/context anchors — not served to the web, not committed
+context/
