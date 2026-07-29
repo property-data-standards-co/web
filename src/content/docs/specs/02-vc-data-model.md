@@ -14,7 +14,7 @@ description: "PDTF 2.0 specification document."
 
 ## 1. Purpose
 
-This sub-spec defines how PDTF property data is represented as W3C Verifiable Credentials. It specifies the credential types, their structure, the claims representation model, evidence, terms of use, revocation, proof format, and the JSON-LD context that binds it all together.
+This sub-spec defines how PDTF property data is represented as Verifiable Credentials. It specifies the credential types, their structure, the claims representation model, evidence, terms of use, revocation, the securing mechanism (SD-JWT-VC — provisional; see §2.4), and the type metadata / optional JSON-LD context that binds it all together.
 
 Every piece of property data in PDTF 2.0 — from an EPC rating to an ownership assertion to a conveyancer's mandate — is a signed, independently verifiable credential. This document is the authoritative reference for how those credentials are structured.
 
@@ -25,8 +25,8 @@ Every piece of property data in PDTF 2.0 — from an EPC rating to an ownership 
 - Evidence model (simplified from OIDC-derived schema)
 - Terms of use (access control metadata)
 - Credential status (revocation via Bitstring Status List)
-- Proof format (DataIntegrityProof with eddsa-jcs-2022)
-- JSON-LD context definition
+- Securing mechanism (SD-JWT-VC — provisional; Data Integrity / eddsa-jcs-2022 retained as superseded fallback)
+- Type metadata (`vct`) and optional JSON-LD context definition
 - Migration path from current OIDC verified claims
 
 **Out of scope:**
@@ -48,13 +48,13 @@ Every PDTF credential MUST include:
 
 | Property | W3C Status | PDTF Requirement | Notes |
 |----------|-----------|-------------------|-------|
-| `@context` | Required | Required | Always includes VC v2 context + PDTF v2 context |
+| `@context` | Optional | Optional | Optional JSON-LD semantic overlay only (§10) — not required under SD-JWT-VC |
 | `type` | Required | Required | Always includes `VerifiableCredential` + PDTF-specific type |
 | `issuer` | Required | Required | DID string (not object form) |
 | `validFrom` | Optional in W3C | **Required** in PDTF | ISO 8601 datetime — when data was asserted/retrieved |
 | `credentialSubject` | Required | Required | Single subject (not array). `id` is always present. |
 | `credentialStatus` | Optional in W3C | **Required** in PDTF | BitstringStatusListEntry — see §8 |
-| `proof` | Req. for VC | Required | DataIntegrityProof — see §9 |
+| `proof` | — | — | Under SD-JWT-VC the credential is JWS-secured (§9), not an embedded `proof`; the `proof` block appears only in the superseded Data-Integrity representation |
 
 ### 2.2 Optional Properties (Used)
 
@@ -76,21 +76,21 @@ Every PDTF credential MUST include:
 
 ### 2.4 Securing Mechanism
 
-PDTF uses **embedded proofs** (Data Integrity), not external proofs (e.g. JWT-VC, SD-JWT). Rationale:
+:::caution[Provisional decision — pending consultation Q20]
+This section documents PDTF's **working** securing-mechanism choice: **SD-JWT-VC**. It is **provisional** pending industry consultation ([Q20](/web/consultation/#q20-credential-format--securing-mechanism)) and confirmation against the GOV.UK Wallet's published format list. Decision record: [§13.4](#134-credential-format--securing-mechanism).
+:::
 
-1. **Self-contained** — a single JSON document can be verified without external envelope parsing.
-2. **JSON-LD native** — embedded proofs work naturally with JSON-LD contexts.
-3. **Selective disclosure** — not needed for property data (unlike personal identity credentials). Property data is either shared in full or withheld entirely, governed by `termsOfUse`.
-4. **Simplicity** — one format, one verification path, one set of tooling.
+PDTF secures credentials as **SD-JWT-VC** ([IETF SD-JWT VC](https://datatracker.ietf.org/doc/draft-ietf-oauth-sd-jwt-vc/)) — a JWS-signed credential with selective disclosure and holder key binding — and verifies **mdoc** (ISO/IEC 18013-5) at the GOV.UK identity boundary. Rationale:
 
-:::caution[Under review — securing mechanism / credential format (July 2026)]
-The Data Integrity (JSON-LD) choice above is **being reconsidered** in light of the digital-wallet ecosystem PDTF must interoperate with:
+1. **Ecosystem alignment** — SD-JWT-VC + mdoc are the formats mandated by eIDAS 2.0 and profiled by [OpenID4VC HAIP](https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0.html); the GOV.UK Wallet issues mdoc. Plain JSON-LD Data Integrity is issued by neither.
+2. **Selective disclosure / data minimisation** — native to SD-JWT-VC (salted-hash disclosures), so a holder presents only the fields a party needs, governed by `termsOfUse`. (This reverses the earlier assumption that selective disclosure was unnecessary for property data.)
+3. **Holder binding** — SD-JWT-VC key binding (`cnf` + Key Binding JWT) gives cryptographic proof of possession at presentation — the same primitive the cross-party identity-reuse flow relies on ([03 §10.5](/web/specs/03-did-methods/)).
+4. **Legibility** — SD-JWT-VC decodes to plain JSON (unlike binary-CBOR mdoc), so credentials stay developer- and inspection-friendly. (AI-agent legibility is driven by the composed entity graph exposed over the API, not the wire format — see [§13.4](#134-credential-format--securing-mechanism).)
 
-- **GOV.UK Wallet mandates `mdoc`** (ISO/IEC 18013-5, binary CBOR) for all new credentials; W3C JWT-VC survives only as a legacy exception (HM Veterans Card), and **JSON-LD Data Integrity / SD-JWT-VC are not surfaced at all** ([docs.wallet.service.gov.uk](https://docs.wallet.service.gov.uk/)).
-- **eIDAS 2.0 (EU)** mandates **SD-JWT-VC _and_ mdoc**; W3C VCDM is optional and only for EAAs. The [OpenID4VC HAIP](https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0.html) profile — the interop glue both jurisdictions use — covers **SD-JWT-VC + mdoc**, not JSON-LD Data Integrity.
-- Rationale #3 above is also challenged: **selective disclosure _is_ relevant** to property data minimisation, and is native to SD-JWT-VC and mdoc but not to plain Data Integrity (which needs BBS, far less deployed).
+**Superseded approach.** Earlier drafts used embedded W3C **Data Integrity** proofs (`DataIntegrityProof`, `eddsa-jcs-2022`) over JSON-LD; that is retained as a documented fallback/alternative in [§9.1](#91-superseded--data-integrity-eddsa-jcs-2022) but is no longer primary. PDTF MAY keep a JSON-LD `@context` purely as an optional **semantic overlay** ([§10](#10-type-metadata--json-ld-context)), decoupled from the securing mechanism.
 
-This makes **JSON-LD Data Integrity the least ecosystem-aligned option**. The emerging preference is **SD-JWT-VC as PDTF's primary credential format**, with **mdoc + OpenID4VP** spoken at the GOV.UK identity boundary (mirroring HAIP/eIDAS). Note this is largely orthogonal to AI-agent legibility, which is determined by the composed entity-graph + provenance exposed over the API, not by the wire format. Tracked as [Open Question §13.4](#134-credential-format--securing-mechanism) and consultation **Q20**. §9 (Proof) and §10 (JSON-LD Context) below are provisional pending this decision.
+:::note[Reading the examples in this spec]
+The credential examples throughout this document show the credential **claims payload** (the `credentialSubject` content) — which is unchanged by the securing-mechanism choice — still illustrated with a JSON-LD `@context` and a `DataIntegrityProof` block for readability. Under SD-JWT-VC those same claims are carried in the JWS/SD-JWT envelope defined in [§9](#9-securing-mechanism); the inline `@context`/`proof` blocks reflect the superseded approach and are pending migration.
 :::
 
 ### 2.5 Credential Subject Constraints
@@ -1468,9 +1468,35 @@ For full hosting infrastructure details, see 14 — Credential Revocation.
 
 ---
 
-## 9. Proof
+## 9. Securing Mechanism
 
-### 9.1 DataIntegrityProof with eddsa-jcs-2022
+:::caution[Provisional — SD-JWT-VC (see §2.4 and consultation Q20)]
+PDTF's provisional securing mechanism is **SD-JWT-VC**. The Data Integrity approach documented in §9.1 onward is **superseded** — retained as the prior-draft / fallback reference.
+:::
+
+PDTF issues credentials as **SD-JWT-VC** (IETF `draft-ietf-oauth-sd-jwt-vc`, built on the SD-JWT selective-disclosure mechanism): a JWS over the entity claims, with per-field selective disclosure and holder key binding.
+
+**Payload claims:**
+
+| Claim | Description |
+|-------|-------------|
+| `iss` | Issuer identifier (DID or HTTPS origin); signing key discovered via the issuer DID document or JWKS |
+| `vct` | Verifiable Credential Type — identifies the PDTF credential type and resolves to its Type Metadata (§10), e.g. `urn:pdtf:vct:PropertyCredential` |
+| `sub` | Entity identifier — the DID/URN that the claims model calls `credentialSubject.id` |
+| `iat` / `exp` | Issued-at / optional expiry |
+| `cnf` | Holder public key (confirmation), for key binding |
+| `status` | IETF **Token Status List** reference for revocation (replaces W3C BitstringStatusList — the revocation sub-spec 14 needs a matching update, tracked in §13.4) |
+| `_sd`, `_sd_alg` | Selective-disclosure digests and hash algorithm |
+| *(entity claims)* | The property/entity data (e.g. `energyEfficiency`, `registerExtract`, or a nested `credentialSubject` object) |
+
+- **Selective disclosure.** Issuer-marked claims are replaced in the payload by salted digests (`_sd`); the plaintext + salt (a *Disclosure*) travels alongside and can be withheld per verifier, honouring `termsOfUse`.
+- **Key binding.** At presentation the holder appends a **Key Binding JWT** signed over the verifier's `nonce` and `aud`, proving possession and preventing replay. This is the same proof-of-control primitive used by cross-party identity reuse ([03 §10.5](/web/specs/03-did-methods/)).
+- **Signatures.** `EdDSA` (Ed25519, per D16) or `ES256`.
+- **Verification.** Verify the issuer JWS via the `iss` key; recompute disclosure digests and reconcile against `_sd`; verify the Key Binding JWT against `cnf`; check `status` (Token Status List) and `exp`; validate `vct` against the expected type + Type Metadata (§10).
+
+### 9.1 Superseded — Data Integrity (eddsa-jcs-2022)
+
+*(Prior-draft embedded-proof mechanism, retained as a documented alternative; no longer primary.)*
 
 All PDTF credentials use the [Data Integrity](https://www.w3.org/TR/vc-data-integrity/) securing mechanism with the `eddsa-jcs-2022` cryptosuite.
 
@@ -1529,11 +1555,15 @@ The DID document is the single source of truth for which keys are valid. Key rot
 
 ---
 
-## 10. JSON-LD Context
+## 10. Type Metadata & JSON-LD Context
 
-### 10.1 PDTF v2 Context
+:::caution[Provisional — under SD-JWT-VC]
+Under SD-JWT-VC (§9), credential **type semantics come from the `vct` claim resolving to a Type Metadata document**, not from a required JSON-LD `@context`. Each PDTF credential type has a `vct` (e.g. `urn:pdtf:vct:PropertyCredential`) that resolves to Type Metadata describing its claims, display, and schema. PDTF MAY still publish the JSON-LD `@context` below as an **optional semantic overlay** — useful for linked-data / ontology tooling — but it is no longer the typing or securing mechanism.
+:::
 
-Every PDTF credential includes two `@context` entries:
+### 10.1 PDTF v2 Context (optional semantic overlay)
+
+Every PDTF credential MAY include two `@context` entries:
 
 ```json
 {
@@ -2017,7 +2047,14 @@ This is more natural, more efficient (one signature instead of four), and preser
     1. *Identity ingestion* (GOV.UK-verified identity → `Person.identityBinding`, and the cross-party reuse in [03 §10.5](/web/specs/03-did-methods/)): PDTF must be able to **verify `mdoc` via OpenID4VP** (plus One Login OIDC) regardless — this is forced by the wallet.
     2. *PDTF's own property credentials* (Property, Title, SellerCapacity, …): free choice. Leading candidate is **SD-JWT-VC** (JSON, native selective disclosure, EU-aligned, HAIP-profiled), keeping **mdoc** confined to the identity boundary.
 
-    **Working recommendation:** deprecate JSON-LD Data Integrity as the primary format; adopt **SD-JWT-VC primary + mdoc at the identity boundary** (a dual-format posture mirroring HAIP/eIDAS). AI-agent legibility is *not* a strong discriminator here — agents read the composed entity graph over the API, not raw credentials — so it does not favour JSON-LD. **Open:** confirm against the GOV.UK Wallet's current published format list before locking in, and decide whether PDTF retains an optional JSON-LD `@context` overlay for linked-data semantics. Surfaced to industry as consultation **Q20**.
+    **Provisional decision (adopted in this draft).** §2.4/§9/§10 now document **SD-JWT-VC as the primary securing mechanism + mdoc at the GOV.UK identity boundary** (dual-format, mirroring HAIP/eIDAS); Data Integrity / JSON-LD is demoted to a superseded fallback and an optional semantic overlay. AI-agent legibility is *not* a discriminator here — agents read the composed entity graph over the API, not raw credentials.
+
+    **Still open (why this remains a question):**
+    - Confirm SD-JWT-VC against the GOV.UK Wallet's current published format list, and ratify via consultation **Q20** before locking in.
+    - **Revocation:** SD-JWT-VC uses the IETF **Token Status List** (`status` claim), not W3C BitstringStatusList — sub-spec 14 (revocation) must be updated to match.
+    - **Example migration:** the ~15 inline credential examples in this spec still show the superseded JSON-LD + `DataIntegrityProof` serialisation and need reissuing as SD-JWT-VC (claims model unchanged).
+    - **Ripple:** references in the reference docs (credential-types, schemas, urn-scheme) and specs 03/04 that assume Data Integrity / `@context` need reconciling.
+    - Decide whether PDTF keeps the optional JSON-LD `@context` overlay for linked-data / ontology tooling, or drops it entirely.
 
 ---
 
