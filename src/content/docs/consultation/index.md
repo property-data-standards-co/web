@@ -361,3 +361,23 @@ An explicit routing hint embedded in the credential makes integrations substanti
 
 **Consultation Question:**
 > *Should access mechanisms for protected files be explicitly encoded into the Verifiable Credential, or should we rely on standard HTTP negotiation (401 Challenges) to keep the credential transport-agnostic?*
+
+---
+
+### Q20. Credential Format & Securing Mechanism
+
+**The Problem:**
+A verifiable credential can be serialised and secured in several ways, and the choice affects which wallets, verifiers, and government infrastructure PDTF can interoperate with. The current draft ([Sub-spec 02 §2.4](/web/specs/02-vc-data-model/)) commits to **embedded Data Integrity proofs over JSON-LD**. But the wallet ecosystem points elsewhere: the **GOV.UK Wallet mandates `mdoc`** (ISO/IEC 18013-5) for new credentials and does not surface JSON-LD Data Integrity or SD-JWT-VC; **eIDAS 2.0** mandates **SD-JWT-VC and mdoc**, with W3C VCDM optional (EAAs only). This leaves plain JSON-LD Data Integrity as the least ecosystem-aligned option — and PDTF must in any case be able to verify `mdoc` to consume GOV.UK-verified identity (relates to Q9/Q10).
+
+**The Options:**
+- **Option A (JSON-LD Data Integrity — current draft):** Embedded proofs, JSON-LD-native, one verification path. *Drawback:* not the format any target wallet issues or verifies; selective disclosure needs BBS (immature); increasingly the odd one out.
+- **Option B (SD-JWT-VC primary + mdoc at the identity boundary — recommended):** PDTF issues its property credentials as **SD-JWT-VC** (JSON, native selective disclosure for data minimisation, EU-aligned, HAIP-profiled) and verifies **`mdoc` via OpenID4VP** where it ingests GOV.UK-verified identity. A dual-format posture mirroring OpenID4VC HAIP and eIDAS.
+- **Option C (mdoc-primary):** Align fully with the GOV.UK Wallet by making `mdoc` the primary format for property credentials too. *Drawback:* binary CBOR is the least developer- and agent-legible; heavier for a document-rich, evolving property schema; no ecosystem yet issues third-party property credentials as mdoc.
+
+**Our Recommendation (Option B):**
+SD-JWT-VC gives the best fit across interoperability (aligned with eIDAS/HAIP), privacy (native selective disclosure), and developer/agent legibility (clean JSON), while `mdoc` is confined to the GOV.UK identity boundary it is actually required for. AI-agent legibility, notably, is *not* a strong discriminator — agents read PDTF's composed entity graph and provenance over the API, not raw credentials — so it does not argue for JSON-LD. PDTF may retain an optional JSON-LD `@context` as a semantic overlay without making it the securing mechanism.
+
+**Consultation Questions:**
+> *Should PDTF adopt SD-JWT-VC as the primary format for property credentials (with mdoc supported at the GOV.UK identity boundary), in preference to the JSON-LD Data Integrity approach in the current draft?*
+
+> *Is a dual-format (SD-JWT-VC + mdoc) posture the right long-term bet, or should PDTF align fully to mdoc to maximise GOV.UK Wallet compatibility?*
