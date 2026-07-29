@@ -4,11 +4,13 @@ description: "PDTF 2.0 specification document."
 ---
 
 
-**Version:** 0.1 (Draft)
-**Date:** 9 April 2026
+**Version:** 0.2 (Draft)
+**Date:** 29 July 2026
 **Author:** Ed Molyneux
 **Status:** Draft for review (LMS collaboration)
 **Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
+
+**Changes in v0.2:** Buyer-side relationship credentials (buyer's-conveyancer Representation, lender DelegatedConsent) are now nested inside the Offer rather than held at the Transaction level; the top-level `delegatedConsent` collection is removed and buyer-side credentials gain an `offerId` parent pointer (new decision **D31**). Added entity-graph diagrams (schema-level and worked example) to §3.2.
 
 ---
 
@@ -103,18 +105,11 @@ Transaction (did:web:platform.example.com:transactions:{id})
     │     }
     │   }
     │
-    ├── representation: {
+    ├── representation: {              // seller-side only
     │     "urn:pdtf:representation:{id}": {
     │         organisationId: "did:key:z6MkpJ...",
-    │         role: "sellerConveyancer",
-    │         issuedBy: "did:key:z6Mkh..."  ← the seller
-    │     }
-    │   }
-    │
-    ├── delegatedConsent: {
-    │     "urn:pdtf:consent:{id}": {
-    │         organisationId: "did:web:bigbank.co.uk",
-    │         scope: ["propertyPack", "titleRegister"]
+    │         role: "sellerConveyancer",   // or estateAgent
+    │         grantedBy: "did:key:z6Mkh..."  ← the seller
     │     }
     │   }
     │
@@ -131,10 +126,37 @@ Transaction (did:web:platform.example.com:transactions:{id})
               buyerIds: ["did:key:z6Mkh...xyz"],
               amount: 450000,
               status: "Accepted",
-              buyerCircumstances: { ... }
+              buyerCircumstances: { ... },
+
+              // buyer-side relationships are NESTED inside the offer
+              representation: {
+                  "urn:pdtf:representation:{id}": {
+                      organisationId: "did:web:joneslegal.co.uk",
+                      role: "buyerConveyancer",   // or buyerAgent, mortgageBroker
+                      grantedBy: "did:key:z6Mkh...xyz"  ← the buyer
+                  }
+              },
+              delegatedConsent: {
+                  "urn:pdtf:consent:{id}": {
+                      organisationId: "did:web:bigbank.co.uk",
+                      scope: ["propertyPack", "titleRegister"],
+                      grantedBy: "did:key:z6Mkh...xyz",  ← the buyer
+                      purpose: "mortgage valuation"
+                  }
+              }
           }
         }
 ```
+
+Relationship credentials are partitioned by **intent**. The seller's intent to sell is the Transaction, so seller-side credentials (`ownership`/SellerCapacity, seller-side `representation`) sit on the Transaction. A buyer's intent to buy is the Offer, so buyer-side credentials (`representation`, `delegatedConsent`) are **nested inside that Offer** — making each offer self-contained and scoping the buyer's conveyancer and the lender's data access to exactly the offer they belong to. There is no top-level `delegatedConsent` collection.
+
+**Figure 1 — Entity graph (schema level).** Entity types and identifiers, colour-coded by family. The Offer nests its buyer-side relationship credentials:
+
+![PDTF entity graph — entity types, identifiers, and the Offer nesting its buyer-side credentials](/web/diagrams/entity-graph.svg)
+
+**Figure 2 — Worked example.** The same model instantiated for a single sale ("14 Elm Road"), showing the two intents: seller-side credentials orbit the Transaction, buyer-side credentials nest inside the Offer:
+
+![PDTF entity graph worked example — the 14 Elm Road sale, with seller-side credentials on the Transaction and buyer-side credentials nested in the Offer](/web/diagrams/entity-graph-example-intents.svg)
 
 ### 3.3 Key Design Decisions
 
@@ -147,6 +169,8 @@ Transaction (did:web:platform.example.com:transactions:{id})
 **D29: Buyers through Offers.** Buyers exist in the transaction only through Offer entities. This models reality: a buyer doesn't participate until they make an offer, multiple competing offers can exist simultaneously, and each offer has its own status and conditions. The existing `offerId` on v3 participants provides the migration path.
 
 **D30: The Logbook Test.** Data belongs on Property if and only if it's relevant to the next owner. EPC, flood risk, legal questions, fixtures — logbook. Number of sellers, outstanding mortgage, SDLT details — not logbook. This principle governs all field placement decisions.
+
+**D31: Buyer-side relationships nest inside the Offer.** Relationship credentials are partitioned by intent: seller-side credentials (SellerCapacity, seller-side Representation) sit on the Transaction (the intent to sell); buyer-side credentials (the buyer's-conveyancer Representation and the lender's DelegatedConsent) are **nested inside the Offer** (the intent to buy). This makes each Offer self-contained, scopes the buyer's agents and the lender's data access to exactly the Offer they belong to (no ambiguity when a party has offer history), and turns the lender-access rule into pure containment — `DelegatedConsent ⊂ Offer ⊂ Transaction` — rather than a link that must be derived through the buyer. Consequently there is no top-level `delegatedConsent` collection.
 
 ---
 
@@ -353,10 +377,13 @@ Delegated authority from a seller or buyer to an Organisation.
 | `id` | Generated URN |
 | `organisationId` | DID of the instructed firm |
 | `role` | `sellerConveyancer`, `buyerConveyancer`, `estateAgent`, `buyerAgent` |
-| `issuedBy` | DID of the person granting authority |
+| `grantedBy` | DID of the person granting authority |
+| `offerId` | *(buyer-side only)* URN of the parent Offer. This is the pointer that lets an independently-signed credential be recomposed into the correct nested position (see D31). Absent for seller-side roles, which sit on the Transaction. |
 | `status` | `active`, `revoked` |
 
 **Issuer semantics:** The seller issues Representation credentials for their conveyancer and estate agent. The buyer issues Representation credentials for their conveyancer. This models the real-world instruction relationship.
+
+**Placement (per D31):** Representation entities live in two places depending on intent. Seller-side roles (`sellerConveyancer`, `estateAgent`) sit in the Transaction's top-level `representation{}` collection. Buyer-side roles (`buyerConveyancer`, `buyerAgent`, `mortgageBroker`) are **nested inside the relevant Offer** as `offers[offerId].representation{}`. The entity schema is identical in both locations; only its position in composed state differs.
 
 ### 4.8 DelegatedConsent Entity
 
@@ -367,9 +394,12 @@ Authorised data access for entities with legitimate need but no direct transacti
 | `id` | Generated URN |
 | `organisationId` | DID of the authorised entity (e.g. lender) |
 | `scope` | Data paths they may access |
-| `grantedBy` | DID of the granting party |
+| `grantedBy` | DID of the granting party (the buyer) |
+| `offerId` | URN of the parent Offer this consent belongs to. DelegatedConsent is always buyer-side, so this is always present (see D31). |
 | `purpose` | Why access is needed (e.g. "mortgage valuation") |
 | `status` | `active`, `revoked` |
+
+**Placement (per D31):** DelegatedConsent is always buyer-side — a buyer granting a lender access to issue a mortgage offer — so it is **nested inside the relevant Offer** as `offers[offerId].delegatedConsent{}`. There is no top-level `delegatedConsent` collection on the Transaction. Access control then follows by containment: a lender presents its DelegatedConsent, and the agent validates the chain *"this consent sits inside an accepted Offer on this Transaction"* before granting the lender traversal to the Property and Title.
 
 ### 4.9 Offer Entity
 
@@ -386,6 +416,10 @@ Links buyer(s) to the Transaction. Buyers exist only through Offers.
 | `offers[offerId].buyerCircumstances` | `buyerCircumstances` | First-time buyer, chain, mortgage requirement |
 | `offers[offerId].externalIds` | `externalIds` | |
 | *(new)* | `buyerIds` | Array of Person DIDs — the buyer(s) on this offer |
+| *(new)* | `representation` | Nested `{ [id]: Representation }` — buyer-side roles (buyerConveyancer, buyerAgent, mortgageBroker). See D31. |
+| *(new)* | `delegatedConsent` | Nested `{ [id]: DelegatedConsent }` — lender data-access grants for this offer. See D31. |
+
+Because buyer-side relationships are nested here, the Offer is self-describing: it carries the buyer(s), their conveyancer/broker, and any lender consent as a single detachable subtree. Withdrawing an offer removes its buyer-side relationships with it.
 
 ---
 
@@ -487,16 +521,7 @@ The v4 combined.json uses the same top-level structure but with ID-keyed maps re
     "urn:pdtf:representation:rep-1": {
       "organisationId": "did:web:smithandco.law",
       "role": "sellerConveyancer",
-      "issuedBy": "did:key:z6Mkh...abc"
-    }
-  },
-  
-  "delegatedConsent": {
-    "urn:pdtf:consent:dc-1": {
-      "organisationId": "did:web:bigbank.co.uk",
-      "scope": ["propertyPack", "titleRegister"],
-      "grantedBy": "did:key:z6Mkh...xyz",
-      "purpose": "mortgage valuation"
+      "grantedBy": "did:key:z6Mkh...abc"
     }
   },
   
@@ -506,7 +531,23 @@ The v4 combined.json uses the same top-level structure but with ID-keyed maps re
       "amount": 450000,
       "currency": "GBP",
       "status": "Accepted",
-      "buyerCircumstances": { ... }
+      "buyerCircumstances": { ... },
+
+      "representation": {
+        "urn:pdtf:representation:rep-2": {
+          "organisationId": "did:web:joneslegal.co.uk",
+          "role": "buyerConveyancer",
+          "grantedBy": "did:key:z6Mkh...xyz"
+        }
+      },
+      "delegatedConsent": {
+        "urn:pdtf:consent:dc-1": {
+          "organisationId": "did:web:bigbank.co.uk",
+          "scope": ["propertyPack", "titleRegister"],
+          "grantedBy": "did:key:z6Mkh...xyz",
+          "purpose": "mortgage valuation"
+        }
+      }
     }
   },
   
@@ -525,7 +566,8 @@ The v4 combined.json uses the same top-level structure but with ID-keyed maps re
 | Legal owners | `propertyPack.legalOwners` | Person/Org entities + SellerCapacity credentials | Yes — restructured |
 | Seller confirmations | `propertyPack.confirmationOfAccuracyByOwners`, `saleReadyDeclarations` | `sellerConfirmations` (top-level) | Yes — moved |
 | Completion | `propertyPack.completionAndMoving` | `completion` (top-level) | Yes — moved |
-| Offers | `offers{}` (ID-keyed) | `offers{}` (ID-keyed, adds `buyerIds`) | Minor — additive |
+| Offers | `offers{}` (ID-keyed) | `offers{}` (ID-keyed, adds `buyerIds`, and nests buyer-side `representation{}` + `delegatedConsent{}`) | Minor — additive |
+| DelegatedConsent | — | Nested inside `offers[offerId].delegatedConsent{}` (no top-level collection) | New — buyer-side, per D31 |
 | Enquiries | `enquiries{}` (ID-keyed) | `enquiries{}` (unchanged) | No |
 
 ---
@@ -543,7 +585,7 @@ Entity extraction generates standalone JSON Schemas for each entity from the v4 
 3. **Person** — Extract `persons[*]` value schema.
 4. **Organisation** — Extract `organisations[*]` value schema.
 5. **Transaction** — Extract top-level fields minus all entity collections.
-6. **Relationship entities** — Extract `ownership[*]`, `representation[*]`, `delegatedConsent[*]`, `offers[*]` value schemas.
+6. **Relationship entities** — Extract `ownership[*]`, `representation[*]`, `offers[*]` value schemas. Buyer-side relationships are extracted from the nested `offers[*].representation[*]` and `offers[*].delegatedConsent[*]` (there is no top-level `delegatedConsent`). The extracted Representation and DelegatedConsent schemas are shared regardless of nesting depth.
 
 The existing `decomposeSchema.js` (576 lines, branch 263) provides the foundation. It needs updating to handle the v4 structure and new entities.
 
@@ -553,10 +595,11 @@ Transforms v4 combined.json to v3 combined.json for backward compatibility.
 
 **Downgrade rules:**
 
-1. **persons + organisations + ownership + representation** → `participants[]` array
-   - Each Person/Org becomes a participant
-   - `role` derived from relationship entities (SellerCapacity → "Seller", Representation → role mapping)
+1. **persons + organisations + ownership + representation (seller-side and nested buyer-side) + offers[*].delegatedConsent** → `participants[]` array
+   - Each Person/Org becomes a participant, whether referenced from a Transaction-level or an Offer-nested relationship
+   - `role` derived from relationship entities (SellerCapacity → "Seller", Representation → role mapping, nested `offers[*].delegatedConsent` → "Lender")
    - `participantStatus` derived from relationship `status`
+   - Buyer-side participants carry the originating `offerId` (from the offer they were nested under) to preserve the v3 `offerId` linkage
 2. **properties{} → propertyPack** — unwrap from ID-keyed map (single property assumed for v3)
 3. **titles{} → propertyPack.titlesToBeSold[]** — convert to array
 4. **titles[].ownership → propertyPack.ownership.ownershipsToBeTransferred[]** — extract and convert
@@ -579,7 +622,7 @@ Assembles full transaction state from individual entity Verifiable Credentials. 
 2. Resolve Property references → merge Property VC `credentialSubject` data
 3. Resolve Title references → merge Title VC data
 4. Resolve Person/Org DIDs → merge identity data
-5. Collect SellerCapacity, Representation, DelegatedConsent, Offer VCs → populate relationship maps
+5. Collect SellerCapacity, Representation, DelegatedConsent, Offer VCs → populate relationship maps. Seller-side Representation and SellerCapacity populate the Transaction-level maps; buyer-side Representation and DelegatedConsent are placed inside their originating Offer (matched by the `offerId` the credential references) as `offers[offerId].representation{}` / `.delegatedConsent{}`
 6. Verify credential signatures and revocation status during composition
 7. Output: complete v4 state object (or further downgrade to v3)
 
@@ -697,12 +740,12 @@ The following are *value lists*, not entity collections. They remain as arrays:
 | `Seller's Conveyancer` | Organisation | Representation (`sellerConveyancer`) | Firm, not individual |
 | `Prospective Buyer` | Person | Offer (status: Pending) | Buyer exists through Offer |
 | `Buyer` | Person | Offer (status: Accepted) | |
-| `Buyer's Conveyancer` | Organisation | Representation (`buyerConveyancer`) | |
+| `Buyer's Conveyancer` | Organisation | Representation (`buyerConveyancer`) | Nested inside the buyer's Offer (D31) |
 | `Estate Agent` | Organisation | Representation (`estateAgent`) | |
 | `Buyer's Agent` | Organisation | Representation (`buyerAgent`) | |
 | `Surveyor` | Organisation | Representation (`surveyor`) | Or Person for sole practitioners? |
-| `Mortgage Broker` | Organisation | Representation (`mortgageBroker`) | |
-| `Lender` | Organisation | DelegatedConsent | Access, not representation |
+| `Mortgage Broker` | Organisation | Representation (`mortgageBroker`) | Buyer-side — nested inside the buyer's Offer (D31) |
+| `Lender` | Organisation | DelegatedConsent | Access, not representation; nested inside the buyer's Offer (D31) |
 | `Landlord` | Person | SellerCapacity (variant) | Leasehold context |
 | `Tenant` | Person | *(TBD)* | Occupancy, not ownership |
 

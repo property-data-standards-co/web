@@ -25,7 +25,7 @@ PDTF keeps the set of credential types small and aligned to the entity graph:
 
 - `PropertyCredential`
 - `TitleCredential`
-- `OwnershipCredential`
+- `SellerCapacityCredential`
 - `RepresentationCredential`
 - `DelegatedConsentCredential`
 - `OfferCredential`

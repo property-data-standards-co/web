@@ -1,0 +1,74 @@
+// PDTF entity graph — worked example, nested "two intents" radial layout.
+// Render:  twopi -Tsvg entity-graph-example-intents.dot -o entity-graph-example-intents.svg
+//          twopi -Tpng -Gdpi=192 entity-graph-example-intents.dot -o entity-graph-example-intents.png
+//
+// Nesting model (architecture/entities.md §"The Two Intents"):
+//   Transaction = intent to SELL. Holds seller-side relationships:
+//       ownership{} (SellerCapacity), representation{} (sellerConveyancer, estateAgent)
+//   Offer = intent to BUY. SELF-CONTAINED — nests its own buyer-side relationships:
+//       representation{} (buyerConveyancer), delegatedConsent{} (lender access)
+//   Lender access chain is then explicit by containment:
+//       DelegatedConsent  ⊂  Offer  ⊂  Transaction
+
+digraph pdtf {
+  layout   = twopi;
+  root     = transaction;
+  ranksep  = "1.9 equally";
+  overlap  = false;
+  splines  = true;
+  bgcolor  = "white";
+  fontname = "Helvetica";
+
+  node [shape=box, style="rounded,filled", fontname="Helvetica",
+        fontsize=13, margin="0.14,0.09", penwidth=0];
+  edge [fontname="Helvetica", fontsize=10, color="#95a5a6",
+        fontcolor="#566573", arrowsize=0.7, penwidth=1.4];
+
+  // ── The two intents ─────────────────────────────────
+  transaction [label="Transaction\n14 Elm Road sale\n(intent to sell)", fillcolor="#1a5276", fontcolor="white", fontsize=15];
+  offer       [label="Offer\n£450,000 · Accepted\n(intent to buy)",     fillcolor="#7d3c98", fontcolor="white", fontsize=14];
+
+  // ── Core entities (blue) ────────────────────────────
+  property [label="Property\n14 Elm Road, Bristol", fillcolor="#2e86c1", fontcolor="white"];
+  title    [label="Title BL54321\nFreehold",        fillcolor="#2e86c1", fontcolor="white"];
+
+  // ── Relationship credentials (gold) ─────────────────
+  capacity  [label="SellerCapacity\nverified vs HMLR",  fillcolor="#f1c40f", fontcolor="#1a1a1a"];
+  repSeller [label="Representation\nsellerConveyancer", fillcolor="#f1c40f", fontcolor="#1a1a1a"];
+  repAgent  [label="Representation\nestateAgent",       fillcolor="#f1c40f", fontcolor="#1a1a1a"];
+  repBuyer  [label="Representation\nbuyerConveyancer",  fillcolor="#f1c40f", fontcolor="#1a1a1a"];
+  consent   [label="DelegatedConsent\nmortgage valuation", fillcolor="#f1c40f", fontcolor="#1a1a1a"];
+
+  // ── People (green) & Organisations (teal) ───────────
+  john         [label="John Smith\n(seller)",             fillcolor="#1a8a5c", fontcolor="white"];
+  sarah        [label="Sarah Patel\n(buyer)",             fillcolor="#1a8a5c", fontcolor="white"];
+  smithco      [label="Smith & Co Law\n(seller's conv.)", fillcolor="#148f77", fontcolor="white"];
+  bristolhomes [label="Bristol Homes\n(estate agent)",    fillcolor="#148f77", fontcolor="white"];
+  joneslegal   [label="Jones Legal\n(buyer's conv.)",     fillcolor="#148f77", fontcolor="white"];
+  bigbank      [label="Big Bank plc\n(lender)",           fillcolor="#148f77", fontcolor="white"];
+
+  // ── Digital identity (slate) ────────────────────────
+  johnId  [label="Digital ID\nGOV.UK One Login",       fillcolor="#34495e", fontcolor="white"];
+  sarahId [label="Digital ID\nreused from prior sale", fillcolor="#34495e", fontcolor="white"];
+
+  // ══ TRANSACTION (intent to sell) — seller-side, nested ══
+  transaction -> property  [label="references", color="#2e86c1"];
+  transaction -> title     [label="references", color="#2e86c1"];
+  transaction -> capacity  [label="ownership{}",     color="#d4ac0d"];
+  transaction -> repSeller [label="representation{}", color="#d4ac0d"];
+  transaction -> repAgent  [label="representation{}", color="#d4ac0d"];
+  capacity  -> john         [label="owner",  color="#1a8a5c"];
+  capacity  -> title        [label="owns",   color="#2e86c1", constraint=false];
+  repSeller -> smithco      [label="holder", color="#148f77"];
+  repAgent  -> bristolhomes [label="holder", color="#148f77"];
+  john -> johnId [label="identityBinding", color="#34495e"];
+
+  // ══ OFFER (intent to buy) — self-contained, nests buyer-side ══
+  transaction -> offer [label="offers{}", color="#7d3c98", penwidth=2.2];
+  offer -> sarah    [label="buyerIds[]",       color="#1a8a5c", penwidth=2];
+  offer -> repBuyer [label="representation{}",  color="#8e44ad", penwidth=2];
+  offer -> consent  [label="delegatedConsent{}", color="#8e44ad", penwidth=2];
+  repBuyer -> joneslegal [label="holder",     color="#148f77"];
+  consent  -> bigbank    [label="authorises", color="#148f77"];
+  sarah -> sarahId [label="identityBinding", color="#34495e"];
+}

@@ -16,7 +16,7 @@ These URNs identify graph subjects, not issuers or authenticating parties.
 | `urn:pdtf:uprn:{uprn}` | Property | Ordnance Survey UPRN |
 | `urn:pdtf:titleNumber:{number}` | Registered title | HMLR title number |
 | `urn:pdtf:unregisteredTitle:{id}` | Unregistered title | platform-generated identifier |
-| `urn:pdtf:ownership:{id}` | Ownership relationship entity | generated |
+| `urn:pdtf:capacity:{id}` | SellerCapacity relationship entity | generated |
 | `urn:pdtf:representation:{id}` | Representation relationship entity | generated |
 | `urn:pdtf:consent:{id}` | Delegated consent relationship entity | generated |
 | `urn:pdtf:offer:{id}` | Offer relationship entity | generated |
@@ -53,14 +53,14 @@ urn:pdtf:unregisteredTitle:f47ac10b-58cc-4372-a567-0e02b2c3d479
 - minted when land has no HMLR title number
 - may later transition to a registered title URN after first registration
 
-### Ownership
+### SellerCapacity
 
 ```text
-urn:pdtf:ownership:7c9e6679-7425-40de-944b-e07fc1f90ae7
+urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7
 ```
 
 - identifies a thin ownership assertion entity
-- subject of `OwnershipCredential`
+- subject of `SellerCapacityCredential`
 
 ### Representation
 
@@ -189,7 +189,7 @@ hexdig            = DIGIT / "a" / "b" / "c" / "d" / "e" / "f"
     "urn:pdtf:titleNumber:AB12345": {}
   },
   "ownership": {
-    "urn:pdtf:ownership:own-a1b2c3": {
+    "urn:pdtf:capacity:own-a1b2c3": {
       "titleId": "urn:pdtf:titleNumber:AB12345"
     }
   },

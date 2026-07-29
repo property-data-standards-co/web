@@ -117,7 +117,7 @@ Transaction (did:web:platform.example.com:transactions:*)
     │         Verified against Title.registerExtract.proprietorship.
     │         The ownership claim is what gives the holder the
     │         right to sell — the Transaction's Titles are "for sale"
-    │         because someone with an SellerCapacity credential says so.
+    │         because someone with a SellerCapacity credential says so.
     │
     ├── Representation[] ──→ Person/Organisation
     │     ├── role: "sellerConveyancer" (issued by seller/owner)
@@ -146,7 +146,7 @@ Transaction (did:web:platform.example.com:transactions:*)
 ### 3.3 Key Design Decisions
 
 - **Buyers participate only through Offers** — no Participation entity for buyers. This models the real-world relationship: a buyer doesn't "participate" in the seller's transaction until they make an offer, and multiple offers can exist simultaneously. Buyers can be Persons or Organisations (companies buy property too).
-- **SellerCapacity establishes the right to sell** — the legal owner self-asserts ownership by issuing an SellerCapacity credential linking their DID to a Title URN. This is what puts a title "for sale" in a transaction. The platform then verifies the claim against the proprietorship register. No separate "listing" entity is needed — the SellerCapacity credential IS the assertion of the right to dispose of the title.
+- **SellerCapacity establishes the right to sell** — the legal owner self-asserts ownership by issuing a SellerCapacity credential linking their DID to a Title URN. This is what puts a title "for sale" in a transaction. The platform then verifies the claim against the proprietorship register. No separate "listing" entity is needed — the SellerCapacity credential IS the assertion of the right to dispose of the title.
 - **ID-keyed collections** — v4 moves from arrays (participants[], searches[]) to ID-keyed maps (like current offers). Breaking change to schema structure but not to the underlying data — path handling code updates required.
 - **Property-level VCs** — EPC, flood risk, searches etc. are Property VCs with paths like `/energyEfficiency/certificate`, not first-class entity VCs. Primary issuers will use the same paths when they adopt the standard.
 
@@ -383,7 +383,7 @@ Transaction DID (did:web:platform.example.com:transactions:abc123)
 
 To access restricted or confidential VCs (or the pre-composed state derived from them), a requester must:
 
-1. **Present a valid credential via OID4VP** — an SellerCapacity, Representation, or DelegatedConsent credential proving their relationship to the transaction
+1. **Present a valid credential via OID4VP** — a SellerCapacity, Representation, or DelegatedConsent credential proving their relationship to the transaction
 2. **Prove control of their DID** — implicit in the OID4VP flow (the VP is signed by the holder's key)
 3. **Revocation check** — the presented credential must not be revoked (Bitstring Status List check)
 4. **termsOfUse filtering** — the system returns only VCs whose `termsOfUse` policy permits access for the requester's role

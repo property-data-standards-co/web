@@ -30,7 +30,7 @@ The graph is **transaction-centric**. A transaction references the relevant prop
 
 ### Relationship entities
 
-- **Ownership**: links a person or organisation to a title
+- **SellerCapacity**: links a person or organisation to a title
 - **Representation**: delegated authority to act for someone
 - **DelegatedConsent**: authorised access for a third party such as a lender
 - **Offer**: links buyer parties to a transaction
@@ -53,9 +53,9 @@ Examples:
 
 PDTF 2.0 avoids vague participant records. Instead, it models precise relationship types.
 
-### Ownership
+### SellerCapacity
 
-Ownership is a **thin claim**: a person or organisation asserts ownership of a title. The supporting evidence sits on the Title entity, especially the proprietorship section of the register extract.
+SellerCapacity is a **thin claim**: a person or organisation asserts ownership of a title. The supporting evidence sits on the Title entity, especially the proprietorship section of the register extract.
 
 ### Representation
 
@@ -84,7 +84,7 @@ Transaction
 ├── Title[]
 ├── Person[]
 ├── Organisation[]
-├── Ownership[]
+├── SellerCapacity[]
 ├── Representation[]
 ├── DelegatedConsent[]
 └── Offer[]

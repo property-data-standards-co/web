@@ -16,7 +16,7 @@ PDTF 2.0 models transaction data as an entity graph. The development artifact is
 | `Title` | `urn:pdtf:titleNumber:{number}` or `urn:pdtf:unregisteredTitle:{id}` | Legal title entity | Register extract, title extents, ownership type, leasehold terms, encumbrances |
 | `Person` | `did:key:{...}` | Identity entity | Natural person, role-free, referenced by relationship entities |
 | `Organisation` | `did:key:{...}` or `did:web:{domain}` | Identity entity | Law firm, estate agent, lender, surveyor, etc. |
-| `Ownership` | `urn:pdtf:ownership:{id}` | Relationship entity | Thin signed assertion linking a person or organisation to a title |
+| `SellerCapacity` | `urn:pdtf:capacity:{id}` | Relationship entity | Thin signed assertion linking a person or organisation to a title |
 | `Representation` | `urn:pdtf:representation:{id}` | Relationship entity | Delegated authority from a person to an organisation |
 | `DelegatedConsent` | `urn:pdtf:consent:{id}` | Relationship entity | Authorised access scope for a third party |
 | `Offer` | `urn:pdtf:offer:{id}` | Relationship entity | Buyer linkage to transaction, amount, status, conditions |
@@ -50,20 +50,26 @@ The v4 combined schema uses ID-keyed collections rather than arrays.
     "urn:pdtf:titleNumber:AB12345": {}
   },
   "ownership": {
-    "urn:pdtf:ownership:own-1": {}
+    "urn:pdtf:capacity:own-1": {}
   },
   "representation": {
     "urn:pdtf:representation:rep-1": {}
   },
-  "delegatedConsent": {
-    "urn:pdtf:consent:dc-1": {}
-  },
   "offers": {
-    "urn:pdtf:offer:off-1": {}
+    "urn:pdtf:offer:off-1": {
+      "representation": {
+        "urn:pdtf:representation:rep-2": {}
+      },
+      "delegatedConsent": {
+        "urn:pdtf:consent:dc-1": {}
+      }
+    }
   },
   "enquiries": {}
 }
 ```
+
+Relationship collections are partitioned by intent: `ownership` and (seller-side) `representation` sit on the Transaction, while each `Offer` nests its own buyer-side `representation` and `delegatedConsent`. There is no top-level `delegatedConsent` collection (see [01 — Entity Graph §3.3, D31](/web/specs/01-entity-graph/)).
 
 ## Entity schema references
 
@@ -143,7 +149,7 @@ The v4 combined schema uses ID-keyed collections rather than arrays.
 | `titlesToBeSold` | `Title` |
 | `ownership.ownershipsToBeTransferred` | `Title.ownership` |
 | seller count, mortgage, Help to Buy, limited company sale | `Transaction.saleContext` |
-| legal owners | `Person` / `Organisation` + `Ownership` |
+| legal owners | `Person` / `Organisation` + `SellerCapacity` |
 | seller confirmations | `Transaction.sellerConfirmations` |
 | completion and moving | `Transaction.completion` |
 
@@ -161,7 +167,7 @@ The v4 combined schema uses ID-keyed collections rather than arrays.
 - `ownership.leaseholdDetails` where relevant
 - `isFirstRegistration`
 
-**Important:** title ownership details such as freehold or leasehold belong here, not on `Ownership`.
+**Important:** title ownership details such as freehold or leasehold belong here, not on `SellerCapacity`.
 
 ### Person
 
@@ -175,7 +181,7 @@ The v4 combined schema uses ID-keyed collections rather than arrays.
 - `verification`
 - `externalIds`
 
-**Does not contain:** transaction role. Roles are conveyed via `Ownership`, `Representation`, and `Offer`.
+**Does not contain:** transaction role. Roles are conveyed via `SellerCapacity`, `Representation`, and `Offer`.
 
 ### Organisation
 
@@ -190,15 +196,15 @@ The v4 combined schema uses ID-keyed collections rather than arrays.
 
 **Usage note:** organisations are first-class graph entities. Internal fee-earner assignment is out of scope.
 
-### Ownership
+### SellerCapacity
 
-**Identifier:** `urn:pdtf:ownership:{id}`
+**Identifier:** `urn:pdtf:capacity:{id}`
 
 **Shape:** thin relationship schema.
 
 ```json
 {
-  "id": "urn:pdtf:ownership:own-a1b2c3",
+  "id": "urn:pdtf:capacity:own-a1b2c3",
   "personId": "did:key:z6Mkh...",
   "titleId": "urn:pdtf:titleNumber:AB12345",
   "status": "verified",
@@ -241,13 +247,15 @@ The v4 combined schema uses ID-keyed collections rather than arrays.
   "id": "urn:pdtf:consent:dc-g7h8i9",
   "organisationId": "did:web:bigbank.co.uk",
   "grantedBy": "did:key:z6Mkh...",
-  "transactionId": "did:web:platform.example.com:transactions:tx-789",
+  "offerId": "urn:pdtf:offer:off-j1k2l3",
   "scope": ["Property:energyEfficiency", "Title:registerExtract"],
   "purpose": "Mortgage valuation and underwriting",
   "status": "active",
   "validUntil": "2026-09-22T16:00:00Z"
 }
 ```
+
+Always buyer-side, so it is nested inside its parent `Offer` (`offers[offerId].delegatedConsent{}`) and references that offer via `offerId`.
 
 ### Offer
 
@@ -265,6 +273,24 @@ The v4 combined schema uses ID-keyed collections rather than arrays.
   "buyerCircumstances": {
     "isFirstTimeBuyer": true,
     "mortgageRequired": true
+  },
+  "representation": {
+    "urn:pdtf:representation:rep-2": {
+      "organisationId": "did:web:joneslegal.co.uk",
+      "role": "buyerConveyancer",
+      "grantedBy": "did:key:z6Mkh...",
+      "offerId": "urn:pdtf:offer:off-j1k2l3",
+      "status": "active"
+    }
+  },
+  "delegatedConsent": {
+    "urn:pdtf:consent:dc-g7h8i9": {
+      "organisationId": "did:web:bigbank.co.uk",
+      "grantedBy": "did:key:z6Mkh...",
+      "offerId": "urn:pdtf:offer:off-j1k2l3",
+      "scope": ["Property:energyEfficiency", "Title:registerExtract"],
+      "status": "active"
+    }
   }
 }
 ```
@@ -294,9 +320,9 @@ Entity schemas are generated from the combined v4 schema, not hand-maintained se
 | `Title.json` | `titles[*]` |
 | `Person.json` | `persons[*]` |
 | `Organisation.json` | `organisations[*]` |
-| `Ownership.json` | `ownership[*]` |
-| `Representation.json` | `representation[*]` |
-| `DelegatedConsent.json` | `delegatedConsent[*]` |
+| `SellerCapacity.json` | `ownership[*]` |
+| `Representation.json` | `representation[*]` (seller-side) and `offers[*].representation[*]` (buyer-side) |
+| `DelegatedConsent.json` | `offers[*].delegatedConsent[*]` (buyer-side; no top-level collection) |
 | `Offer.json` | `offers[*]` |
 
 ## Assembly constraints
@@ -311,5 +337,5 @@ Entity schemas are generated from the combined v4 schema, not hand-maintained se
 
 - Arrays that are true value lists remain arrays.
 - Arrays that identify graph nodes or mutable collections become ID-keyed maps.
-- `Ownership` is intentionally thin. Title evidence remains on `Title.registerExtract`.
+- `SellerCapacity` is intentionally thin. Title evidence remains on `Title.registerExtract`.
 - `Property` is governed by the logbook test, `Transaction` by this sale only, `Title` by legal title intrinsic facts.

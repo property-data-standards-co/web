@@ -56,7 +56,7 @@ This allows large numbers of credentials to be checked efficiently without one s
 
 In practice, revocation matters especially for relationship credentials:
 
-- **OwnershipCredential**
+- **SellerCapacityCredential**
 - **RepresentationCredential**
 - **DelegatedConsentCredential**
 - **OfferCredential**

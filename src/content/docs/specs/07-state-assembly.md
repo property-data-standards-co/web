@@ -510,7 +510,9 @@ The composed v4 state follows the structure defined in [Sub-spec 01 §6](/web/sp
 
   "organisations": {
     "did:web:smithandco.law": { "name": "Smith & Co Solicitors", "type": "lawFirm" },
-    "did:web:acmeestates.co.uk": { "name": "Acme Estates", "type": "estateAgency" }
+    "did:web:acmeestates.co.uk": { "name": "Acme Estates", "type": "estateAgency" },
+    "did:web:joneslegal.co.uk": { "name": "Jones Legal", "type": "lawFirm" },
+    "did:web:bigbank.co.uk": { "name": "Big Bank plc", "type": "lender" }
   },
 
   "ownership": {
@@ -530,23 +532,39 @@ The composed v4 state follows the structure defined in [Sub-spec 01 §6](/web/sp
     "urn:pdtf:representation:rep-1": {
       "organisationId": "did:web:smithandco.law",
       "role": "sellerConveyancer",
-      "issuedBy": "did:key:z6Mkh...seller1"
+      "grantedBy": "did:key:z6Mkh...seller1"
     },
     "urn:pdtf:representation:rep-2": {
       "organisationId": "did:web:acmeestates.co.uk",
       "role": "estateAgent",
-      "issuedBy": "did:key:z6Mkh...seller1"
+      "grantedBy": "did:key:z6Mkh...seller1"
     }
   },
-
-  "delegatedConsent": {},
 
   "offers": {
     "urn:pdtf:offer:off-1": {
       "buyerIds": ["did:key:z6Mkh...buyer"],
       "amount": 450000,
       "currency": "GBP",
-      "status": "Accepted"
+      "status": "Accepted",
+
+      "representation": {
+        "urn:pdtf:representation:rep-3": {
+          "organisationId": "did:web:joneslegal.co.uk",
+          "role": "buyerConveyancer",
+          "grantedBy": "did:key:z6Mkh...buyer",
+          "offerId": "urn:pdtf:offer:off-1"
+        }
+      },
+      "delegatedConsent": {
+        "urn:pdtf:consent:dc-1": {
+          "organisationId": "did:web:bigbank.co.uk",
+          "scope": ["propertyPack", "titleRegister"],
+          "grantedBy": "did:key:z6Mkh...buyer",
+          "offerId": "urn:pdtf:offer:off-1",
+          "purpose": "mortgage valuation"
+        }
+      }
     }
   },
 
@@ -614,8 +632,8 @@ The most complex transformation. V4 decomposes v3's `participants[]` array into 
 - `persons{}` — identity data (name, contact, address)
 - `organisations{}` — firm data (name, type)
 - `ownership{}` — links person → title (seller role)
-- `representation{}` — links organisation → transaction (professional role)
-- `offers{}` — links person → transaction (buyer role)
+- `representation{}` — seller-side: links organisation → transaction (professional role)
+- `offers{}` — links person → transaction (buyer role); **nests** the buyer-side `representation{}` and `delegatedConsent{}` for that offer (D31)
 
 **Reconstruction algorithm:**
 
@@ -650,8 +668,10 @@ function reconstructParticipants(v4State: ComposedStateV4): Participant[] {
     });
   }
 
-  // 3. Buyers — persons referenced by accepted/pending Offers
+  // 3. Offers — each offer carries its buyer(s) plus the buyer-side
+  //    relationships nested inside it (D31).
   for (const [offerId, offer] of Object.entries(v4State.offers)) {
+    // 3a. Buyers — persons referenced by this offer
     for (const buyerId of offer.buyerIds || []) {
       const person = v4State.persons[buyerId];
       if (!person) continue;
@@ -663,19 +683,34 @@ function reconstructParticipants(v4State: ComposedStateV4): Participant[] {
         participantStatus: mapOfferStatus(offer.status)
       });
     }
-  }
 
-  // 4. Delegated consent entities (lenders, etc.)
-  for (const [dcId, consent] of Object.entries(v4State.delegatedConsent)) {
-    const org = v4State.organisations[consent.organisationId];
-    if (!org) continue;
+    // 3b. Buyer-side representatives — nested representation{} on the offer
+    for (const [repId, representation] of Object.entries(offer.representation || {})) {
+      const org = v4State.organisations[representation.organisationId];
+      if (!org) continue;
 
-    participants.push({
-      ...flattenOrgToParticipant(org),
-      role: "Lender", // Or derive from consent.purpose
-      participantStatus: "Active",
-      _consentId: dcId
-    });
+      participants.push({
+        ...flattenOrgToParticipant(org),
+        role: mapRepresentationRole(representation.role),
+        offerId: offerId,
+        participantStatus: "Active",
+        _representationId: repId
+      });
+    }
+
+    // 3c. Lenders — nested delegatedConsent{} on the offer
+    for (const [dcId, consent] of Object.entries(offer.delegatedConsent || {})) {
+      const org = v4State.organisations[consent.organisationId];
+      if (!org) continue;
+
+      participants.push({
+        ...flattenOrgToParticipant(org),
+        role: "Lender", // Or derive from consent.purpose
+        offerId: offerId,
+        participantStatus: "Active",
+        _consentId: dcId
+      });
+    }
   }
 
   return participants;
@@ -1374,22 +1409,29 @@ V3: participants[] (mixed array of all participant types)
 V4: persons{}            — keyed by did:key
     organisations{}      — keyed by did:web
     ownership{}          — keyed by urn:pdtf:capacity:*
-    representation{}     — keyed by urn:pdtf:representation:*
-    delegatedConsent{}   — keyed by urn:pdtf:consent:*
+    representation{}     — seller-side, keyed by urn:pdtf:representation:*
+    offers{}             — keyed by urn:pdtf:offer:*, each nesting the
+                           buyer-side representation{} + delegatedConsent{} (D31)
 ```
 
 **V3 → V4 (decomposition):**
 ```typescript
 function decomposeParticipants(
   participants: V3Participant[]
-): { persons, organisations, ownership, representation, delegatedConsent } {
+): { persons, organisations, ownership, representation, offerRelationships } {
   const result = {
     persons: {},
     organisations: {},
     ownership: {},
-    representation: {},
-    delegatedConsent: {}
+    representation: {},      // seller-side only
+    // Buyer-side relationships keyed by the participant's offerId, ready to be
+    // merged into offers[offerId].{representation,delegatedConsent} (D31).
+    offerRelationships: {}
   };
+
+  // Lazily create the { representation, delegatedConsent } bucket for an offer
+  const offerBucket = (offerId: string) =>
+    (result.offerRelationships[offerId] ??= { representation: {}, delegatedConsent: {} });
 
   for (const p of participants) {
     if (isOrganisation(p)) {
@@ -1399,16 +1441,26 @@ function decomposeParticipants(
 
       if (isRepresentative(p.role)) {
         const repUrn = generateRepresentationUrn();
-        result.representation[repUrn] = {
+        const rep = {
           organisationId: orgDid,
           role: mapRoleToV4(p.role),
           status: p.participantStatus
         };
+        if (isBuyerSideRole(p.role)) {
+          // Buyer-side representation nests under the buyer's offer (D31)
+          offerBucket(p.offerId).representation[repUrn] = { ...rep, offerId: p.offerId };
+        } else {
+          // Seller-side representation sits on the Transaction
+          result.representation[repUrn] = rep;
+        }
       } else if (p.role === 'Lender') {
+        // DelegatedConsent is always buyer-side — nests under the buyer's offer (D31)
         const dcUrn = generateConsentUrn();
-        result.delegatedConsent[dcUrn] = {
+        offerBucket(p.offerId).delegatedConsent[dcUrn] = {
           organisationId: orgDid,
           scope: ['propertyPack', 'titleRegister'],
+          grantedBy: resolveOfferBuyer(p.offerId),
+          offerId: p.offerId,
           purpose: 'mortgage'
         };
       }
@@ -1432,6 +1484,11 @@ function decomposeParticipants(
   return result;
 }
 ```
+
+`offerRelationships` is keyed by `offerId`; the caller merges each entry into the
+matching `offers[offerId]` so the buyer-side `representation{}` and
+`delegatedConsent{}` end up nested inside their offer. `isBuyerSideRole` returns
+true for `Buyer's Conveyancer`, `Buyer's Agent`, and `Mortgage Broker`.
 
 **V4 → V3 (reconstruction):** See §5.3.
 

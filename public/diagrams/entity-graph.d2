@@ -5,7 +5,7 @@ direction: down
 *.style.font-size: 16
 
 # Core entities (blue)
-transaction: "Transaction\ndid:web:moverly.com:txn:*" {
+transaction: "Transaction\ndid:web:{platform}:transactions:{id}" {
   style.fill: "#1a5276"
   style.font-color: "#ffffff"
 }
@@ -21,111 +21,103 @@ title: "Title\nurn:pdtf:titleNumber:{n}" {
 }
 
 # Identity (green) — Person and Organisation
-person: "Person\ndid:key:*" {
+person: "Person\ndid:key" {
   style.fill: "#1a8a5c"
   style.font-color: "#ffffff"
 }
 
-organisation: "Organisation\ndid:key:* or did:web:*" {
+organisation: "Organisation\ndid:key or did:web" {
   style.fill: "#148f77"
   style.font-color: "#ffffff"
 }
 
-# Offer (purple)
-offer: "Offer\nurn:pdtf:offer:{id}" {
+# Seller-side relationship credentials (gold, rounded) — held on the Transaction
+sellerCapacity: "SellerCapacity\nurn:pdtf:capacity:{id}" {
+  style.fill: "#f1c40f"
+  style.font-color: "#1a1a1a"
+  style.border-radius: 16
+}
+
+representation: "Representation\nsellerConveyancer / estateAgent" {
+  style.fill: "#f1c40f"
+  style.font-color: "#1a1a1a"
+  style.border-radius: 16
+}
+
+# Offer (purple) — the intent to buy. Self-contained: it NESTS its own
+# buyer-side relationship credentials.
+offer: "Offer  ·  urn:pdtf:offer:{id}" {
   style.fill: "#7d3c98"
   style.font-color: "#ffffff"
-}
 
-# Relationship credentials (gold, rounded)
-ownership: "Ownership\nself-asserted → verified" {
-  style.fill: "#f1c40f"
-  style.font-color: "#1a1a1a"
-  style.border-radius: 16
-}
-
-representation: "Representation\nconveyancer / estate agent" {
-  style.fill: "#f1c40f"
-  style.font-color: "#1a1a1a"
-  style.border-radius: 16
-}
-
-consent: "DelegatedConsent\nlender / authorised entity" {
-  style.fill: "#f1c40f"
-  style.font-color: "#1a1a1a"
-  style.border-radius: 16
+  buyerRep: "Representation\nbuyerConveyancer / buyerAgent" {
+    style.fill: "#f1c40f"
+    style.font-color: "#1a1a1a"
+    style.border-radius: 16
+  }
+  consent: "DelegatedConsent\nurn:pdtf:consent:{id}" {
+    style.fill: "#f1c40f"
+    style.font-color: "#1a1a1a"
+    style.border-radius: 16
+  }
 }
 
 # Transaction → core entities
-transaction -> property: "references []" {
+transaction -> property: "properties{}" {
   style.stroke: "#2e86c1"
   style.stroke-width: 2
 }
-transaction -> title: "references []" {
+transaction -> title: "titles{}" {
   style.stroke: "#2e86c1"
   style.stroke-width: 2
 }
 
-# Transaction → relationship credentials
-transaction -> ownership: "links []" {
+# Transaction → seller-side relationship credentials
+transaction -> sellerCapacity: "ownership{}" {
   style.stroke: "#d4ac0d"
   style.stroke-width: 2
 }
-transaction -> representation: "links []" {
-  style.stroke: "#d4ac0d"
-  style.stroke-width: 2
-}
-transaction -> consent: "links []" {
+transaction -> representation: "representation{}" {
   style.stroke: "#d4ac0d"
   style.stroke-width: 2
 }
 
-# Transaction → offer
-transaction -> offer: "contains []" {
+# Transaction → offers (which nest the buyer-side credentials)
+transaction -> offer: "offers{}" {
   style.stroke: "#7d3c98"
   style.stroke-width: 2
 }
 
-# Ownership links Person/Org to Title (the right to sell)
-ownership -> person: "owner (Person)" {
+# SellerCapacity links Person/Org to Title (the right to sell)
+sellerCapacity -> person: "owner (Person)" {
   style.stroke: "#1a8a5c"
   style.stroke-width: 2
 }
-ownership -> organisation: "owner (Org)" {
+sellerCapacity -> organisation: "owner (Org)" {
   style.stroke: "#148f77"
   style.stroke-width: 2
 }
-ownership -> title: "asserts ownership of" {
+sellerCapacity -> title: "asserts ownership of" {
   style.stroke: "#2e86c1"
   style.stroke-width: 2
 }
 
-# Representation → Person or Organisation
-representation -> person: "holder (Person)" {
-  style.stroke: "#1a8a5c"
-  style.stroke-width: 2
-}
-representation -> organisation: "holder (Org)" {
+# Seller-side Representation → the instructed Organisation
+representation -> organisation: "holder" {
   style.stroke: "#148f77"
   style.stroke-width: 2
 }
 
-# Consent → Person or Organisation
-consent -> person: "authorises (Person)" {
+# Offer → buyer Person(s); nested credentials → their Organisations
+offer -> person: "buyerIds []" {
   style.stroke: "#1a8a5c"
   style.stroke-width: 2
 }
-consent -> organisation: "authorises (Org)" {
+offer.buyerRep -> organisation: "holder" {
   style.stroke: "#148f77"
   style.stroke-width: 2
 }
-
-# Offer → Person or Organisation (buyer)
-offer -> person: "buyer (Person)" {
-  style.stroke: "#1a8a5c"
-  style.stroke-width: 2
-}
-offer -> organisation: "buyer (Org)" {
+offer.consent -> organisation: "authorises" {
   style.stroke: "#148f77"
   style.stroke-width: 2
 }

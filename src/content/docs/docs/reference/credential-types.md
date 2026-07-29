@@ -23,7 +23,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 |---|---|---|---|---|
 | `PropertyCredential` | Property | `urn:pdtf:uprn:{uprn}` | trusted proxy, root issuer, platform | Property facts and logbook data |
 | `TitleCredential` | Title | `urn:pdtf:titleNumber:{n}` or `urn:pdtf:unregisteredTitle:{id}` | HMLR proxy or root issuer | Register extract, title extents, legal title details |
-| `OwnershipCredential` | Ownership | `urn:pdtf:ownership:{id}` | account provider / platform | Thin assertion that a person or organisation owns a title |
+| `SellerCapacityCredential` | SellerCapacity | `urn:pdtf:capacity:{id}` | account provider / platform | Thin assertion that a person or organisation owns a title |
 | `RepresentationCredential` | Representation | `urn:pdtf:representation:{id}` | platform on behalf of granting party | Delegated authority to an organisation |
 | `DelegatedConsentCredential` | DelegatedConsent | `urn:pdtf:consent:{id}` | platform on behalf of granting party | Third-party access scope and purpose |
 | `OfferCredential` | Offer | `urn:pdtf:offer:{id}` | platform on behalf of buyer | Buyer linkage, amount, conditions, status |
@@ -139,9 +139,9 @@ PDTF credentials use a single `credentialSubject`, never an array.
 }
 ```
 
-## OwnershipCredential
+## SellerCapacityCredential
 
-**Subject:** `urn:pdtf:ownership:{id}`
+**Subject:** `urn:pdtf:capacity:{id}`
 
 **Design rule:** thin claim only. It links actor to title, it does not duplicate title register content.
 
@@ -159,9 +159,9 @@ PDTF credentials use a single `credentialSubject`, never an array.
 
 ```json
 {
-  "type": ["VerifiableCredential", "OwnershipCredential"],
+  "type": ["VerifiableCredential", "SellerCapacityCredential"],
   "credentialSubject": {
-    "id": "urn:pdtf:ownership:own-a1b2c3",
+    "id": "urn:pdtf:capacity:own-a1b2c3",
     "personId": "did:key:z6MkhSellerAbc123",
     "titleId": "urn:pdtf:titleNumber:AB12345",
     "status": "verified",
@@ -368,7 +368,7 @@ All PDTF credentials use:
 |---|---|
 | `PropertyCredential` | contributes sparse property state |
 | `TitleCredential` | contributes sparse title state |
-| `OwnershipCredential` | links person/org to title |
+| `SellerCapacityCredential` | links person/org to title |
 | `RepresentationCredential` | links person grantor to organisation role |
 | `DelegatedConsentCredential` | links person grantor to authorised access scope |
 | `OfferCredential` | links buyer person(s) to transaction |

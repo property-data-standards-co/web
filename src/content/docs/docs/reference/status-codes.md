@@ -207,7 +207,7 @@ Access-Control-Allow-Origin: *
 
 | Credential type | Revocation trigger |
 |---|---|
-| `OwnershipCredential` | title transfers on sale completion |
+| `SellerCapacityCredential` | title transfers on sale completion |
 | `RepresentationCredential` | mandate withdrawn, conveyancer replaced, transaction completed or cancelled |
 | `PropertyCredential` | underlying data superseded by new issue (e.g. new EPC) |
 | `DelegatedConsentCredential` | consent withdrawn, access period expired, transaction completed |

@@ -205,7 +205,7 @@ An adapter DID document SHOULD advertise issuance and status endpoints.
       "id": "did:web:adapters.propdata.org.uk:hmlr#vc-issuance",
       "type": "VcIssuanceEndpoint",
       "serviceEndpoint": "https://adapters.propdata.org.uk/hmlr/credentials/issue",
-      "credentialTypes": ["TitleCredential", "OwnershipCredential"]
+      "credentialTypes": ["TitleCredential", "SellerCapacityCredential"]
     },
     {
       "id": "did:web:adapters.propdata.org.uk:hmlr#status",

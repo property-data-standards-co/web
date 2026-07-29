@@ -67,7 +67,7 @@ urn:pdtf:titleNumber:DN123456
 urn:pdtf:unregisteredTitle:f47ac10b-58cc-4372-a567-0e02b2c3d479
 ```
 
-Relationship entities such as Ownership, Representation, Consent, and Offer also use URNs.
+Relationship entities such as SellerCapacity, Representation, Consent, and Offer also use URNs.
 
 ## DID documents
 

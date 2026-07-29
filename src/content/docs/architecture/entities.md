@@ -37,10 +37,14 @@ A core design principle of the graph is partitioning entities by intent:
 2. **Offer = Intent to Buy.** The `Offer` entity represents a buyer's intent to purchase them.
 
 **Relationship credentials orbit these intents:**
-- The Estate Agent and Seller's Conveyancer hold `Representation` credentials orbiting the **Transaction** (they are representing the intent to sell).
-- The Buyer's Conveyancer and Mortgage Broker hold `Representation` credentials orbiting the **Offer** (they are supporting the intent to buy).
+- The Estate Agent and Seller's Conveyancer hold `Representation` credentials held on the **Transaction** (they are representing the intent to sell).
+- The Buyer's Conveyancer and Mortgage Broker hold `Representation` credentials — and the lender holds a `DelegatedConsent` — **nested inside the Offer** (they are supporting the intent to buy). Each Offer is therefore self-contained, and buyer-side access is scoped to exactly the offer it belongs to.
 
 Buyers participate *only* through Offers until exchange of contracts.
+
+![PDTF entity graph worked example — the 14 Elm Road sale, with seller-side credentials on the Transaction and buyer-side credentials nested in the Offer](/web/diagrams/entity-graph-example-intents.svg)
+
+*A worked example of the two intents: seller-side credentials (SellerCapacity, seller's conveyancer, estate agent) sit on the Transaction, while buyer-side credentials (buyer's conveyancer, lender DelegatedConsent) nest inside the Offer.*
 
 ### Access Control and Traversal
 
@@ -70,18 +74,20 @@ Relationship entities (SellerCapacity, Representation, DelegatedConsent, Offer) 
 The Transaction is the root of the entity graph. All other entities are referenced from it:
 
 ```
-Transaction (did:web)
+Transaction (did:web)                          ← intent to sell
 ├── propertyIds → Property (urn:pdtf:uprn)
 ├── titleIds → Title (urn:pdtf:titleNumber)
-├── ownerships
+├── ownership
 │   └── SellerCapacity → links Person (did:key) to Title
-├── representations
-│   └── Representation → links Person to Organisation (did:web)
-├── offers
-│   └── Offer → links buyer Person(s) to Transaction
-├── delegatedConsents
-│   └── DelegatedConsent → authorises data access
-└── participants (resolved from relationship entities)
+├── representation                             ← seller-side only
+│   └── Representation → sellerConveyancer / estateAgent → Organisation
+└── offers
+    └── Offer (urn:pdtf:offer)                 ← intent to buy
+        ├── buyerIds → Person(s)
+        ├── representation                     ← buyer-side, NESTED
+        │   └── Representation → buyerConveyancer / buyerAgent / mortgageBroker
+        └── delegatedConsent                   ← lender access, NESTED
+            └── DelegatedConsent → authorises Organisation (lender)
 ```
 
 This is deliberate. The Transaction provides the context — *this sale of this property* — and the graph fans out to the entities involved. But each entity exists independently of the Transaction and can participate in multiple transactions over time.
@@ -131,7 +137,7 @@ A single Property can have multiple Titles (e.g. the freehold and a long leaseho
 
 A Person entity represents a natural person. Critically, it is **role-free**. A Person has no inherent role in a transaction — their role is determined entirely by the relationship entities that reference them:
 
-- Referenced by an **SellerCapacity** → they're a property owner
+- Referenced by a **SellerCapacity** → they're a property owner
 - Referenced by an **Offer** → they're a buyer
 - Referenced by a **Representation** → they've instructed a firm
 
@@ -153,8 +159,8 @@ SellerCapacity is a **thin credential** — a signed assertion of the capacity u
 {
   "credentialSubject": {
     "id": "urn:pdtf:capacity:abc123",
-    "owner": "did:key:z6MkhPersonDID",
-    "title": "urn:pdtf:titleNumber:ABC12345",
+    "personId": "did:key:z6MkhPersonDID",
+    "titleId": "urn:pdtf:titleNumber:ABC12345",
     "status": "verified",
     "verificationLevel": "register-confirmed"
   }
@@ -173,19 +179,23 @@ Representation is another thin credential that delegates authority from a transa
 {
   "credentialSubject": {
     "id": "urn:pdtf:representation:def456",
-    "representative": "did:web:smithandco.law",
-    "representedParty": "did:key:z6MkhSellerDID",
-    "role": "seller-conveyancer",
-    "transaction": "did:web:platform.example.com:transactions:abc123"
+    "organisationId": "did:web:smithandco.law",
+    "grantedBy": "did:key:z6MkhSellerDID",
+    "role": "sellerConveyancer",
+    "status": "active"
   }
 }
 ```
+
+Placement follows intent: **seller-side** Representations (`sellerConveyancer`, `estateAgent`) are held on the Transaction, while **buyer-side** Representations (`buyerConveyancer`, `buyerAgent`, `mortgageBroker`) are **nested inside the buyer's Offer** and carry an `offerId` pointing to it.
 
 Like SellerCapacity, it's revocable — because clients can and do change solicitors mid-transaction.
 
 ### DelegatedConsent
 
 DelegatedConsent authorises specific entities to access transaction data. This is primarily used for lenders and other parties who need visibility but aren't direct participants in the sale.
+
+Because it is always granted by a buyer, a DelegatedConsent is **nested inside that buyer's Offer** (`offers[offerId].delegatedConsent`) rather than held at the Transaction level — there is no top-level `delegatedConsent` collection. This makes the access rule pure containment: the lender's consent sits inside an accepted Offer on the Transaction. It is revocable, so access can be withdrawn when circumstances change.
 
 ### Offer
 
