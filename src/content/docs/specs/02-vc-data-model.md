@@ -164,18 +164,21 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](/web/specs/
 | `connectivity.*` | Broadband, mobile | Ofcom data / seller |
 | `address.*` | Property address | Platform / OS AddressBase |
 
-**Minimal PropertyCredential (EPC only):**
+**Minimal PropertyCredential (EPC only)** — shown as the SD-JWT-VC issuer-signed payload (decoded; the compact JWS and any selective-disclosure digests are omitted for readability — see §9 for the full envelope). This is a public adapter credential, so it is not holder-bound (no `cnf`):
 
 ```json
 {
-  "@context": [
-    "https://www.w3.org/ns/credentials/v2",
-    "https://trust.propdata.org.uk/ns/pdtf/v2"
-  ],
-  "type": ["VerifiableCredential", "PropertyCredential"],
-  "issuer": "did:web:adapters.propdata.org.uk:epc",
-  "validFrom": "2026-03-24T10:00:00Z",
-  "validUntil": "2036-03-24T00:00:00Z",
+  "iss": "did:web:adapters.propdata.org.uk:epc",
+  "vct": "urn:pdtf:vct:PropertyCredential",
+  "sub": "urn:pdtf:uprn:100023456789",
+  "iat": 1774339200,
+  "exp": 2088547200,
+  "status": {
+    "status_list": {
+      "idx": 18293,
+      "uri": "https://adapters.propdata.org.uk/status/epc/list-042"
+    }
+  },
   "credentialSubject": {
     "id": "urn:pdtf:uprn:100023456789",
     "energyEfficiency": {
@@ -200,24 +203,11 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](/web/specs/
     "type": "PdtfAccessPolicy",
     "confidentiality": "public",
     "pii": false
-  }],
-  "credentialStatus": {
-    "id": "https://adapters.propdata.org.uk/status/epc/list-042#18293",
-    "type": "BitstringStatusListEntry",
-    "statusPurpose": "revocation",
-    "statusListIndex": "18293",
-    "statusListCredential": "https://adapters.propdata.org.uk/status/epc/list-042"
-  },
-  "proof": {
-    "type": "DataIntegrityProof",
-    "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:web:adapters.propdata.org.uk:epc#key-1",
-    "proofPurpose": "assertionMethod",
-    "created": "2026-03-24T10:00:00Z",
-    "proofValue": "z4oJ9Bvn..."
-  }
+  }]
 }
 ```
+
+The signature is the enclosing JWS (§9), not an embedded `proof`; revocation is the `status` (Token Status List) claim, replacing the former `credentialStatus`.
 
 **Seller-attested PropertyCredential (heating):**
 
@@ -1493,6 +1483,54 @@ PDTF issues credentials as **SD-JWT-VC** (IETF `draft-ietf-oauth-sd-jwt-vc`, bui
 - **Key binding.** At presentation the holder appends a **Key Binding JWT** signed over the verifier's `nonce` and `aud`, proving possession and preventing replay. This is the same proof-of-control primitive used by cross-party identity reuse ([03 §10.5](/web/specs/03-did-methods/)).
 - **Signatures.** `EdDSA` (Ed25519, per D16) or `ES256`.
 - **Verification.** Verify the issuer JWS via the `iss` key; recompute disclosure digests and reconcile against `_sd`; verify the Key Binding JWT against `cnf`; check `status` (Token Status List) and `exp`; validate `vct` against the expected type + Type Metadata (§10).
+
+**Worked example — a holder-bound SD-JWT-VC (SellerCapacity).** Entity claims stay under `credentialSubject` so the entity's own `status` field does not collide with the top-level Token Status List `status` claim.
+
+Compact serialisation — issuer-signed JWS, then `~`-separated Disclosures, then the Key Binding JWT (base64url; truncated):
+
+```text
+eyJ0eXAiOiJ2YytzZC1qd3QiLCJhbGciOiJFZERTQSJ9.eyJpc3MiOiJkaWQ6d2Vic...fQ.<sig>
+~WyJzNGw3X3NhbHQiLCJ2ZXJpZmljYXRpb25MZXZlbCIsInJlZ2lzdGVyQ3Jvc3NSZWZlcmVuY2VkIl0
+~eyJhbGciOiJFZERTQSJ9.eyJhdWQiOiJkaWQ6d2ViOmpvbmVzbGVnYWwuY28udWsi...fQ.<kbSig>
+```
+
+Decoded **issuer-signed payload**:
+
+```json
+{
+  "iss": "did:web:platform.example.com",
+  "vct": "urn:pdtf:vct:SellerCapacityCredential",
+  "sub": "urn:pdtf:capacity:own-1a2b",
+  "iat": 1774339200,
+  "cnf": { "jwk": { "kty": "OKP", "crv": "Ed25519", "x": "l8k…holderPubKey" } },
+  "status": { "status_list": { "idx": 94, "uri": "https://platform.example.com/status/capacity/1" } },
+  "_sd_alg": "sha-256",
+  "credentialSubject": {
+    "id": "urn:pdtf:capacity:own-1a2b",
+    "personId": "did:key:z6Mkh…abc",
+    "titleId": "urn:pdtf:titleNumber:AB12345",
+    "status": "verified",
+    "_sd": ["9gYy…digestOfVerificationLevel"]
+  }
+}
+```
+
+Decoded **Disclosure** (`[salt, claimName, value]`) for the selectively-disclosable `verificationLevel`:
+
+```json
+["s4l7…salt", "verificationLevel", "registerCrossReferenced"]
+```
+
+Decoded **Key Binding JWT** payload (holder proves possession over the verifier's nonce/audience):
+
+```json
+{
+  "iat": 1774340000,
+  "aud": "did:web:joneslegal.co.uk",
+  "nonce": "b3f1c9…",
+  "sd_hash": "X0pq…hashOfPresentedSDJWT"
+}
+```
 
 ### 9.1 Superseded — Data Integrity (eddsa-jcs-2022)
 

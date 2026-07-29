@@ -52,13 +52,44 @@ Credential revocation is the mechanism by which an issuer declares that a creden
 
 ### Design Principle
 
-> **D18:** All Verifiable Credentials issued within the PDTF 2.0 ecosystem MUST include a `credentialStatus` field referencing a W3C Bitstring Status List. Issuers MUST maintain status list infrastructure capable of revoking any credential they have issued.
+> **D18 (provisional — see [02 §2.4](/web/specs/02-vc-data-model/)):** Every credential issued in the PDTF 2.0 ecosystem MUST carry a revocation reference, and issuers MUST maintain status infrastructure capable of revoking any credential they have issued. Under the SD-JWT-VC securing mechanism this is the IETF **Token Status List** (`status` claim — §1.1). The W3C **Bitstring Status List** described from §2 is the equivalent mechanism for the superseded embedded-proof / JSON-LD representation.
 
 This is not optional. Credentials without revocation support MUST be rejected by conformant verifiers.
+
+### 1.1 Revocation mechanism under SD-JWT-VC (Token Status List)
+
+:::caution[Provisional]
+Following the provisional adoption of SD-JWT-VC ([02 §2.4](/web/specs/02-vc-data-model/)), PDTF's revocation mechanism is the IETF **Token Status List** ([draft-ietf-oauth-status-list](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/)). The W3C **Bitstring Status List** documented from §2 onward is retained as the equivalent mechanism for the superseded JSON-LD / Data-Integrity representation. The two are conceptually identical — a compressed bitstring of per-credential statuses, published as a signed token and fetched wholesale for herd privacy — only the encoding and the in-credential reference differ.
+:::
+
+Under Token Status List:
+
+- Each credential carries a **`status`** claim (not a `credentialStatus` property):
+
+  ```json
+  {
+    "status": {
+      "status_list": {
+        "idx": 18293,
+        "uri": "https://adapters.propdata.org.uk/status/epc/1"
+      }
+    }
+  }
+  ```
+
+- The issuer publishes a **Status List Token** at that `uri` — a signed JWT (media type `application/statuslist+jwt`) whose payload holds a `status_list` object with the gzip-compressed, base64url-encoded bitstring (`lst`) and its per-entry bit size (`bits` — 1 for a valid/revoked flag, 2 to also express *suspended*).
+- To revoke, the issuer sets the credential's entry at `idx`; to check, a verifier fetches the token, verifies its signature, decompresses `lst`, and reads the entry at `idx`. Herd privacy, cacheability, and CDN-friendliness are identical to the Bitstring approach.
+- Status values follow the Token Status List registry: `0` = VALID, `1` = INVALID (revoked), `2` = SUSPENDED.
+
+The remainder of this sub-spec (§2 onward) documents the W3C Bitstring Status List; its concepts — index assignment, bit flipping, herd privacy, dual-purpose revocation/suspension — map directly onto Token Status List.
 
 ---
 
 ## 2. W3C Bitstring Status List v2
+
+:::note[Superseded representation]
+This section describes the W3C Bitstring Status List, which applies to the **superseded** JSON-LD / Data-Integrity credential representation. Under the provisional SD-JWT-VC decision, use the **Token Status List** (§1.1) instead; the mechanics below map across directly.
+:::
 
 ### Overview
 
