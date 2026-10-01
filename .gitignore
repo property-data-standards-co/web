@@ -22,3 +22,4 @@ pnpm-debug.log*
 
 # local framing/context anchors — not served to the web, not committed
 context/
+.claude/

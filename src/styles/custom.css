@@ -325,91 +325,6 @@ header.header {
 	color: var(--sl-color-text);
 }
 
-/* ──────────── Cards (used on home page) ──────────── */
-.card {
-	position: relative;
-	overflow: hidden;
-	border-radius: var(--sl-radius-medium) !important;
-	border: 1px solid var(--sl-color-hairline) !important;
-	background: var(--sl-color-bg) !important;
-	padding: 1.5rem !important;
-	box-shadow:
-		0 0 0 0.0625rem rgba(14, 63, 126, 0.04),
-		0 1px 1px -0.5px rgba(42, 51, 69, 0.04),
-		0 3px 3px -1.5px rgba(42, 51, 70, 0.04),
-		0 6px 6px -3px rgba(42, 51, 70, 0.04),
-		0 12px 12px -6px rgba(14, 63, 126, 0.04);
-	transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
-}
-
-/* Subtle gradient accent strip on the top of each card */
-.card::before {
-	content: '';
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	height: 3px;
-	background: linear-gradient(90deg, var(--sl-color-accent), #1b396d);
-	opacity: 0.7;
-	transition: opacity 0.3s ease;
-}
-
-.card:hover {
-	border-color: var(--sl-color-hairline-shade) !important;
-	transform: translateY(-2px);
-	box-shadow:
-		0 0 0 0.0625rem rgba(14, 63, 126, 0.06),
-		0 8px 24px -4px rgba(14, 63, 126, 0.10),
-		0 16px 40px -8px rgba(14, 63, 126, 0.06);
-}
-
-.card:hover::before {
-	opacity: 1;
-}
-
-.card .title {
-	font-weight: 600;
-	color: var(--sl-color-text);
-	font-size: 1.0625rem;
-	letter-spacing: -0.02em;
-}
-
-.card .icon {
-	color: #1b396d;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 2.25rem;
-	height: 2.25rem;
-	border-radius: var(--sl-radius-small);
-	background: rgba(27, 57, 109, 0.08);
-	padding: 0.5rem;
-}
-
-:root[data-theme='dark'] .card .icon {
-	color: #6b8fc8;
-	background: rgba(107, 143, 200, 0.12);
-}
-
-.card .body {
-	color: var(--sl-color-text-accent);
-	font-size: 0.9375rem;
-	line-height: 1.55;
-}
-
-.card .body p:last-child a {
-	display: inline-block;
-	margin-top: 0.5rem;
-	color: var(--sl-color-accent);
-	font-weight: 500;
-	text-decoration: none;
-}
-
-.card .body p:last-child a:hover {
-	text-decoration: underline;
-}
-
 /* ──────────── Splash page texture ──────────── */
 /* Subtle entity-graph SVG behind the splash content. Uses background-image
    (not mask-image) so circles can have a white/dark fill that matches the
@@ -453,6 +368,7 @@ html[data-has-hero] .main-pane {
 .hero {
 	text-align: center;
 	position: relative;
+	isolation: isolate;
 	padding-top: 4rem;
 	padding-bottom: 4rem;
 	max-width: 64rem;
@@ -495,141 +411,178 @@ html[data-has-hero] .main-pane {
 }
 
 .hero h1 {
-	font-size: 4rem;
+	font-size: 3.5rem;
 	font-weight: 700;
 	letter-spacing: -0.04em;
 	line-height: 1.05;
 	margin: 0 auto;
-	max-width: 22ch;
-	background: linear-gradient(180deg, var(--sl-color-text) 50%, rgba(30, 31, 36, 0.55));
-	-webkit-background-clip: text;
-	background-clip: text;
-	-webkit-text-fill-color: transparent;
-}
-
-.hero h1 span {
-	-webkit-text-fill-color: initial;
+	max-width: 16ch;
 	color: var(--sl-color-text);
-	display: block;
-	margin-top: 0.5rem;
-}
-
-:root[data-theme='dark'] .hero h1 {
-	background: linear-gradient(180deg, var(--sl-color-white) 50%, rgba(252, 252, 253, 0.55));
-	-webkit-background-clip: text;
-	background-clip: text;
-	-webkit-text-fill-color: transparent;
+	text-wrap: balance;
 }
 
 .hero .tagline {
 	font-size: 1.25rem;
 	color: var(--sl-color-text-accent);
 	font-weight: 400;
-	max-width: 36rem;
+	max-width: 34rem;
 	letter-spacing: -0.01em;
-	margin: 0 auto;
-}
-
-/* Fern-style soft radial tinting — four blended glows (two on each side)
-   in soft blue-grey and pale green that mix together. Subtle and atmospheric. */
-.hero {
-	isolation: isolate;
-}
-
-.hero-glows {
-	position: absolute;
-	inset: 0;
-	overflow: hidden;
-	pointer-events: none;
-	z-index: -1;
-}
-
-.hero-glows::before,
-.hero-glows::after,
-.hero::before,
-.hero::after {
-	content: '';
-	position: absolute;
-	border-radius: 50%;
-	filter: blur(7rem);
-	pointer-events: none;
-	z-index: -1;
-}
-
-/* LEFT side — soft blue-grey glow.
-   Positioned at the very edge of the viewport via calc(50% - 50vw)
-   minus extra inset, so they sit mostly off-page on standard screens. */
-.hero::before {
-	width: 32rem;
-	height: 32rem;
-	background: radial-gradient(circle, rgba(150, 175, 210, 0.28) 0%, rgba(150, 175, 210, 0) 65%);
-	top: -8rem;
-	left: calc(50% - 50vw - 16rem);
-}
-
-/* LEFT side — secondary pale green wash */
-.hero::after {
-	width: 24rem;
-	height: 24rem;
-	background: radial-gradient(circle, rgba(195, 251, 183, 0.20) 0%, rgba(195, 251, 183, 0) 65%);
-	top: 4rem;
-	left: calc(50% - 50vw - 8rem);
-}
-
-/* Use a wrapping pseudo on the splash content to add the right-side glows.
-   Since :before/:after on .hero are used, we mirror via .hero > .stack pseudos. */
-.hero .stack {
-	position: relative;
-}
-
-.hero .stack::before,
-.hero .stack::after {
-	content: '';
-	position: absolute;
-	border-radius: 50%;
-	filter: blur(7rem);
-	pointer-events: none;
-	z-index: -1;
-}
-
-/* RIGHT side — soft blue-grey glow */
-.hero .stack::before {
-	width: 32rem;
-	height: 32rem;
-	background: radial-gradient(circle, rgba(150, 175, 210, 0.28) 0%, rgba(150, 175, 210, 0) 65%);
-	top: -10rem;
-	right: calc(50% - 50vw - 16rem);
-}
-
-/* RIGHT side — secondary pale green wash */
-.hero .stack::after {
-	width: 24rem;
-	height: 24rem;
-	background: radial-gradient(circle, rgba(195, 251, 183, 0.18) 0%, rgba(195, 251, 183, 0) 65%);
-	top: 2rem;
-	right: calc(50% - 50vw - 8rem);
-}
-
-/* Dark mode — toned down */
-:root[data-theme='dark'] .hero::before,
-:root[data-theme='dark'] .hero .stack::before {
-	background: radial-gradient(circle, rgba(107, 143, 200, 0.22) 0%, rgba(107, 143, 200, 0) 65%);
-}
-
-:root[data-theme='dark'] .hero::after,
-:root[data-theme='dark'] .hero .stack::after {
-	background: radial-gradient(circle, rgba(81, 194, 51, 0.18) 0%, rgba(81, 194, 51, 0) 65%);
+	line-height: 1.5;
+	margin: 0.5rem auto 0;
+	text-wrap: pretty;
 }
 
 @media (max-width: 768px) {
-	.hero h1 { font-size: 2.75rem; }
+	.hero { padding-top: 2.5rem; padding-bottom: 2.5rem; }
+	.hero h1 { font-size: 2.5rem; }
 	.hero .tagline { font-size: 1.0625rem; }
-	.hero::before, .hero::after,
-	.hero .stack::before, .hero .stack::after {
-		width: 16rem;
-		height: 16rem;
-		filter: blur(4rem);
+}
+
+/* ──────────── Home page sections ──────────── */
+html[data-has-hero] .main-pane {
+	position: relative;
+	z-index: 1;
+}
+
+.home {
+	max-width: 44rem;
+	margin-inline: auto;
+	padding-bottom: 4rem;
+}
+
+.home-section + .home-section {
+	margin-top: 5rem;
+}
+
+.home .home-section > h2 {
+	font-size: 1.625rem;
+	margin-top: 0;
+	margin-bottom: 1rem;
+}
+
+.home .home-section > p {
+	max-width: 68ch;
+}
+
+/* Sentence-level links on the home page: underline from the palette, not a browser default */
+.home a:not(.sl-link-button) {
+	color: var(--sl-color-text);
+	text-decoration: underline;
+	text-decoration-color: var(--sl-color-accent);
+	text-decoration-thickness: 1.5px;
+	text-underline-offset: 0.2em;
+	transition: text-decoration-color 0.15s ease, color 0.15s ease;
+}
+
+.home a:not(.sl-link-button):hover {
+	color: var(--sl-color-accent-high);
+}
+
+.home a:focus-visible {
+	outline: 2px solid var(--sl-color-accent);
+	outline-offset: 3px;
+	border-radius: 2px;
+}
+
+/* Audiences: three plain columns, no boxes */
+.home-audiences {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 2rem;
+	margin-top: 1.5rem;
+}
+
+.home-audiences h3 {
+	font-size: 1rem;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0 0 0.5rem;
+}
+
+.home-audiences p {
+	font-size: 0.9375rem;
+	line-height: 1.55;
+	color: var(--sl-color-text-accent);
+	margin: 0;
+}
+
+.home-audiences p + p {
+	margin-top: 0.625rem;
+}
+
+@media (max-width: 640px) {
+	.home-audiences {
+		grid-template-columns: 1fr;
+		gap: 1.5rem;
 	}
+	.home-section + .home-section {
+		margin-top: 3.5rem;
+	}
+}
+
+/* Specification list: the number is part of the name */
+.home-specs {
+	list-style: none;
+	padding: 0;
+	margin: 1.5rem 0 0;
+	border-top: 1px solid var(--sl-color-hairline);
+}
+
+.home-specs li {
+	display: grid;
+	grid-template-columns: minmax(0, 21rem) 1fr;
+	gap: 0.25rem 1.5rem;
+	align-items: baseline;
+	padding: 0.875rem 0;
+	margin: 0;
+	border-bottom: 1px solid var(--sl-color-hairline);
+}
+
+.home .home-specs li a {
+	display: flex;
+	align-items: baseline;
+	gap: 0.75rem;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	text-decoration: none;
+}
+
+.home .home-specs li a:hover {
+	text-decoration: underline;
+	text-decoration-color: var(--sl-color-accent);
+	text-decoration-thickness: 1.5px;
+	text-underline-offset: 0.2em;
+}
+
+.home-specs li a span {
+	font-family: var(--sl-font-mono);
+	font-size: 0.8125rem;
+	font-weight: 500;
+	color: var(--sl-color-text-accent);
+	font-variant-numeric: tabular-nums;
+	flex: none;
+}
+
+.home-specs li p {
+	margin: 0;
+	font-size: 0.9375rem;
+	line-height: 1.5;
+	color: var(--sl-color-text-accent);
+}
+
+@media (max-width: 640px) {
+	.home-specs li {
+		grid-template-columns: 1fr;
+	}
+	.home-specs li p {
+		padding-left: 2.1rem;
+	}
+}
+
+/* Selection colour from the palette */
+.home ::selection {
+	background: var(--sl-color-accent-low);
+	color: var(--sl-color-text);
 }
 
 /* ──────────── Banner: Proposed Specification ──────────── */

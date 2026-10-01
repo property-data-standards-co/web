@@ -3,111 +3,109 @@ title: PDTF 2.0
 description: An open standard for verifiable property data in UK conveyancing.
 template: splash
 hero:
-  title: 'PDTF2 <br> <span style="font-size: 0.6em; font-weight: 500; opacity: 0.85;">Property Data Trust Framework</span>'
-  tagline: Property data you can trust.
+  title: Property Data Trust Framework
+  tagline: An open standard for property data that any party to a transaction can verify for themselves, without having to trust whoever sent it.
   actions:
     - text: Read the overview
       link: /architecture/overview/
       icon: right-arrow
       variant: primary
-    - text: Developer quickstart
-      link: /docs/quickstart/
+    - text: Open questions for consultation
+      link: /consultation/
       variant: secondary
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+<div class="home">
 
-## What is PDTF 2.0?
+<section class="home-section">
 
-The Property Data Trust Framework is an open standard for making property data independently verifiable. Every piece of data — from title registers to EPC certificates — is cryptographically signed by its source, can be verified by anyone, and can be revoked when it's no longer valid.
+## What it is
 
-No need to trust the platform serving the data. Verify the proof.
+PDTF 2.0 makes each piece of property data independently verifiable. A title register extract, an EPC, a local authority search, a verified identity: each is signed by the organisation that produced it, can be checked by anyone who receives it, and can be revoked when it stops being true.
 
-### The Agentic Shift
+That removes the need to trust the platform or the inbox the data arrived through. The receiving conveyancer, lender or agent checks the signature, not the sender.
 
-As property professional workflows transition to AI-assisted and agentic models, **data trust** is the fundamental constraint. An AI model hallucinating legal constraints or operating on stale API data carries severe financial consequences.
+The same property applies when the receiving party is software. As more of the work in a transaction is done by AI assistants acting for professionals, a signed credential is a fact an agent can rely on, where a document pulled from an API is only a claim.
 
-PDTF 2.0 solves this by ensuring every data point is a cryptographically verified fact. Built on W3C Verifiable Credentials and OpenID Federation, it provides the essential infrastructure for a property data ecosystem where provenance is mathematically provable, making it safe for the next generation of property intelligence engines.
+PDTF 2.0 is built on W3C Verifiable Credentials for the data and OpenID Federation for deciding who is allowed to issue what. [The trust model, explained without jargon.](/about/trust-model/)
 
----
+</section>
 
-## Federated Governance
+<section class="home-section">
 
-Technology without governance is just a schema. PDTF 2.0 is designed from the ground up to align with the UK Government's (DBT) vision for Smart Data.
+## Governance
 
-It acts as the prototype **Sector-Specific Implementation Entity** for property, operating an OpenID Federation Trust Anchor that issues Trust Marks (accreditations) to Authorised Third-party Providers. This ensures a clear regulatory path, with HM Land Registry identified as the likely lead regulator for enforcement.
+The framework is designed to sit inside the UK Government's Smart Data model. The Property Data Standards Company acts as the sector-specific implementation entity for property, operating a federation trust anchor that issues trust marks to accredited third-party providers. HM Land Registry is identified as the likely lead regulator.
 
-This effort is directed towards two anchors. It answers the digitalisation commitments in MHCLG's [Home Buying and Selling Reform Roadmap](https://www.gov.uk/government/consultations/home-buying-and-selling-reform/outcome/home-buying-and-selling-reform-roadmap) — a smart data scheme for property, a voluntary accreditation scheme for data standards, and secure sharing of trusted information between professionals. And it feeds the [CFIT](https://cfit.org.uk/) Smart Data / Open Property coalition (Phase 2), which is building the shared trust, interoperability and Digital Property ID infrastructure the market needs, mapping existing standards (PDTF included) to a common conformance framework.
+Two pieces of policy frame the work. MHCLG's [Home Buying and Selling Reform Roadmap](https://www.gov.uk/government/consultations/home-buying-and-selling-reform/outcome/home-buying-and-selling-reform-roadmap) commits to a smart data scheme for property, a voluntary accreditation scheme for data standards, and secure sharing of trusted information between professionals. The [CFIT](https://cfit.org.uk/) Open Property coalition is building the shared trust, interoperability and digital property ID infrastructure the market needs, and mapping existing standards, PDTF among them, to a common conformance framework.
 
-[Read the Governance Model →](/community/governance/)
+[How the framework is governed](/community/governance/)
 
----
+</section>
 
-## Who is this for?
+<section class="home-section">
 
-<CardGrid>
-  <Card title="Property professionals" icon="document">
-    Estate agents, conveyancers, lenders, and regulators who need to trust the data they're working with.
+## Where to start
 
-    [Understand the problem →](/about/problem/)
-  </Card>
-  <Card title="Technical leaders" icon="setting">
-    CTOs, architects, and product managers evaluating PDTF for integration into their systems.
+<div class="home-audiences">
+  <div>
+    <h3>Property professionals</h3>
+    <p>Agents, conveyancers, lenders and regulators who need to rely on the data in front of them.</p>
+    <p><a href="/about/problem/">Why property data breaks today</a></p>
+  </div>
+  <div>
+    <h3>Technical leaders</h3>
+    <p>CTOs, architects and product managers weighing PDTF for their own systems.</p>
+    <p><a href="/architecture/overview/">The architecture in ten minutes</a></p>
+  </div>
+  <div>
+    <h3>Developers</h3>
+    <p>Engineers building adapters, verifying credentials, or pulling property data into an application.</p>
+    <p><a href="/docs/quickstart/">Quickstart</a></p>
+  </div>
+</div>
 
-    [Read the architecture →](/architecture/overview/)
-  </Card>
-  <Card title="Developers" icon="laptop">
-    Engineers building adapters, verifying credentials, or integrating property data into applications.
+</section>
 
-    [Get started →](/docs/quickstart/)
-  </Card>
-</CardGrid>
-
----
+<section class="home-section">
 
 ## The entity graph
 
-PDTF 2.0 decomposes the monolithic property data pack into nine distinct entities — Transaction, Property, Title, Person, Organisation, SellerCapacity, Representation, DelegatedConsent, and Offer — each independently verifiable and composable.
+Instead of one large property data pack, PDTF 2.0 works with nine entities: Transaction, Property, Title, Person, Organisation, SellerCapacity, Representation, DelegatedConsent and Offer. Each is verifiable on its own and composes with the others.
 
-This means a title register credential issued by HM Land Registry can be verified independently of the transaction it belongs to. An EPC credential can travel with the property, not just the transaction. And ownership changes can be revoked without invalidating the entire data pack.
+So a title credential from HM Land Registry can be checked without the transaction it was issued for. An EPC travels with the property rather than with one sale. A change of seller can be revoked without invalidating everything else in the pack.
 
-[Learn about the entity graph →](/architecture/entities/)
+[How the entities fit together](/architecture/entities/)
 
----
+</section>
 
-## Specifications
+<section class="home-section">
 
-The complete PDTF 2.0 specification suite covers architecture, entity schemas, credential formats, identifier methods, trust infrastructure, and more.
+## The specification
 
-<CardGrid>
-  <Card title="Architecture Overview" icon="open-book">
-    The high-level design and trust evolution model.
+Ten documents, numbered as they are in the [spec repository](https://github.com/property-data-standards-co/spec). Gaps in the numbering are specifications still being drafted.
 
-    [Read spec →](/specs/00-architecture-overview/)
-  </Card>
-  <Card title="Entity Graph" icon="list-format">
-    Nine entities, their schemas, and how they compose.
+<ol class="home-specs">
+  <li><a href="/specs/00-architecture-overview/"><span>00</span>Architecture overview</a><p>The design as a whole and how trust is expected to evolve.</p></li>
+  <li><a href="/specs/01-entity-graph/"><span>01</span>Entity graph and schema</a><p>The nine entities, their schemas, and how they compose.</p></li>
+  <li><a href="/specs/02-vc-data-model/"><span>02</span>Verifiable credentials data model</a><p>How property data maps onto W3C Verifiable Credentials.</p></li>
+  <li><a href="/specs/03-did-methods/"><span>03</span>DID methods and identifiers</a><p>Identifiers for people, organisations, transactions and properties.</p></li>
+  <li><a href="/specs/04-openid-federation/"><span>04</span>OpenID Federation trust architecture</a><p>Who may issue what, and how a verifier finds out.</p></li>
+  <li><a href="/specs/06-key-management/"><span>06</span>Key management</a><p>Generating, rotating and protecting signing keys.</p></li>
+  <li><a href="/specs/07-state-assembly/"><span>07</span>State assembly</a><p>Building the current state of a transaction from its credentials.</p></li>
+  <li><a href="/specs/13-reference-implementations/"><span>13</span>Reference implementations</a><p>Validator, graph composer and resolver behaviour.</p></li>
+  <li><a href="/specs/14-credential-revocation/"><span>14</span>Credential revocation</a><p>Status lists and how a credential is withdrawn.</p></li>
+  <li><a href="/specs/15-conformance-testing/"><span>15</span>Conformance testing</a><p>What an implementation has to pass.</p></li>
+</ol>
 
-    [Read spec →](/specs/01-entity-graph/)
-  </Card>
-  <Card title="VC Data Model" icon="approve-check-circle">
-    How property data maps to W3C Verifiable Credentials.
+</section>
 
-    [Read spec →](/specs/02-vc-data-model/)
-  </Card>
-  <Card title="OpenID Federation" icon="star">
-    The federated registry that establishes who can issue what.
-
-    [Read spec →](/specs/04-openid-federation/)
-  </Card>
-</CardGrid>
-
-[View all specifications →](/specs/00-architecture-overview/)
-
----
+<section class="home-section">
 
 ## Open standard, open source
 
-PDTF 2.0 is developed by the Property Data Standards Company and published under an open licence. The specifications, reference implementations, and tooling are all available on GitHub.
+PDTF 2.0 is developed by the Property Data Standards Company and published under an open licence. The specifications, reference implementations and tooling are on [GitHub](https://github.com/property-data-standards-co). The architecture is still proposed, not settled: the [consultation](/consultation/) lists the questions we most want challenged.
 
-[Visit us on GitHub →](https://github.com/property-data-standards-co)
+</section>
+
+</div>
