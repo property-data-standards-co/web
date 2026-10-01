@@ -1,11 +1,24 @@
 ---
-// Custom Banner override — shows proposed specification notice on every page
+// Custom Banner override — shows the proposed-specification notice on every page.
+// The banner is fixed to the top of the viewport; the header and sidebars are
+// offset by --sl-banner-height, which the script below keeps in step with the
+// banner's rendered height so wrapped text on narrow screens is never clipped.
 const { banner } = Astro.locals.starlightRoute.entry.data;
 ---
 
 <div class="sl-banner candidate-banner" data-pagefind-ignore>
-	<div style="font-weight: 600; margin-bottom: 0.25rem;">⚠️ Proposed Specification for Review</div>
-	<div style="font-size: 0.85em; opacity: 0.9;">We are currently seeking feedback on key architectural choices. Please review the <a href="/consultation/" style="color: inherit; text-decoration: underline;">Industry Consultation</a>.</div>
+	<strong>Proposed specification for review.</strong>
+	<span>We are seeking feedback on key architectural choices in the <a href="/consultation/">industry consultation</a>.</span>
 </div>
 
 {banner && <div class="sl-banner" data-pagefind-ignore set:html={banner.content} />}
+
+<script>
+	const banner = document.querySelector<HTMLElement>('.candidate-banner');
+	if (banner) {
+		const sync = () =>
+			document.documentElement.style.setProperty('--sl-banner-height', `${banner.offsetHeight}px`);
+		sync();
+		new ResizeObserver(sync).observe(banner);
+	}
+</script>
