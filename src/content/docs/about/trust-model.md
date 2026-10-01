@@ -97,4 +97,4 @@ The OpenID Federation records the trust level of each issuer, so verifiers alway
 
 The fundamental shift is from *trusting people* to *verifying proofs*. The people are still there — conveyancers, search providers, registries — but their data now carries its own evidence.
 
-[See the roadmap →](/web/about/roadmap/)
+[See the roadmap →](/about/roadmap/)

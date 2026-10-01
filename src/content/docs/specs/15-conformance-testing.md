@@ -9,7 +9,7 @@ description: "PDTF 2.0 conformance levels, test vectors, and interop protocols."
 **Date:** 15 April 2026
 **Author:** Ed Molyneux
 
-**Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
+**Parent:** [00 — Architecture Overview](/specs/00-architecture-overview/)
 
 This specification defines how a software package proves it correctly implements PDTF 2.0. Conformance is established by verifying output against the official test vectors and participating in interop testing.
 
@@ -97,4 +97,4 @@ The interop protocol requires:
 
 ---
 
-*This document is part of the PDTF 2.0 specification suite. For the complete list of sub-specs, see [00 — Architecture Overview](/web/specs/00-architecture-overview/).*
+*This document is part of the PDTF 2.0 specification suite. For the complete list of sub-specs, see [00 — Architecture Overview](/specs/00-architecture-overview/).*

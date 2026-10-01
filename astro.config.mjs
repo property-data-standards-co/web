@@ -4,8 +4,7 @@ import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://property-data-standards-co.github.io',
-	base: '/web',
+	site: 'https://propdata.org.uk',
 	integrations: [
 		starlight({
 			title: 'PDTF2',

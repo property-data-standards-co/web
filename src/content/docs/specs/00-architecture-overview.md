@@ -90,7 +90,7 @@ Consider a mortgage lender who needs to view the property data to issue a formal
 
 ### 3.5 Entity Relationship Diagram
 
-![PDTF 2.0 Entity Relationship Model](/web/diagrams/entity-graph.png)
+![PDTF 2.0 Entity Relationship Model](/diagrams/entity-graph.png)
 
 ### 3.6 Relationship Model
 
@@ -471,7 +471,7 @@ PDTF 2.0 uses **OpenID Federation (RFC 9396)** as its trust infrastructure. The 
 
 ### 6.2 Property Trust Marks
 
-Trust marks are the PDTF-specific mechanism for expressing what an entity is authorised to do within the property ecosystem. They use the OpenID Federation trust mark standard (see [Sub-spec 04](/web/specs/04-openid-federation/)).
+Trust marks are the PDTF-specific mechanism for expressing what an entity is authorised to do within the property ecosystem. They use the OpenID Federation trust mark standard (see [Sub-spec 04](/specs/04-openid-federation/)).
 
 Each trust mark is a signed JWT issued by the trust anchor (or a delegated trust mark issuer), asserting that an entity meets the requirements for a specific role:
 
@@ -524,7 +524,7 @@ How an entity obtains trust marks and joins the federation:
 2. Multiple trust mark issuers may exist (e.g. SRA issues `regulated-conveyancer` trust marks directly)
 3. Trust chains can be deeper — a sector authority issues subordinate statements for categories of issuers
 
-All federation metadata is signed-JWT-based: Entity Configurations, Subordinate Entity Statements, and Trust Marks. See [Sub-spec 04: OpenID Federation](/web/specs/04-openid-federation/) for the full trust architecture.
+All federation metadata is signed-JWT-based: Entity Configurations, Subordinate Entity Statements, and Trust Marks. See [Sub-spec 04: OpenID Federation](/specs/04-openid-federation/) for the full trust architecture.
 
 ### 6.4 Trust Infrastructure Comparison
 
@@ -1032,7 +1032,7 @@ For local development and unit testing, `did:key` eliminates all infrastructure 
 | 01 | `01-entity-graph.md` | DRAFTED | V4 schema decomposition, ID-keyed collections, entity relationships |
 | 02 | `02-vc-data-model.md` | DRAFTED | W3C VC mapping, evidence model, termsOfUse, claims representation |
 | 03 | `03-did-methods.md` | DRAFTED | did:key, did:web, URN schemes, DID document structure |
-| 04 | [`04-openid-federation.md`](/web/specs/04-openid-federation/) | Drafted | OpenID Federation trust architecture: Trust Anchor, Entity Statements, Trust Marks, entity:path `delegation` claim. |
+| 04 | [`04-openid-federation.md`](/specs/04-openid-federation/) | Drafted | OpenID Federation trust architecture: Trust Anchor, Entity Statements, Trust Marks, entity:path `delegation` claim. |
 | 05 | `05-hosted-adapter-services.md` | TODO | Adapter architecture as OID4VCI issuers, federation leaf entities, issuance flow, deployment |
 | 06 | `06-key-management.md` | DRAFTED | Google Cloud KMS, key hierarchy, rotation, wallet binding, federation key handling. X25519 encryption key management deferred to Sub-spec 12. |
 | 07 | `07-state-assembly.md` | DRAFTED | composeV3/V4StateFromGraph, dependency pruning, migration |

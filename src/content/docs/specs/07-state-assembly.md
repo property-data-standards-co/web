@@ -8,13 +8,13 @@ description: "PDTF 2.0 specification document."
 **Date:** 1 April 2026
 **Author:** Ed Molyneux
 **Status:** Draft
-**Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
+**Parent:** [00 — Architecture Overview](/specs/00-architecture-overview/)
 
 ---
 
 ## 1. Purpose
 
-State assembly is the process of compositing individual Verifiable Credentials into a coherent, complete transaction state object. It is the reverse of entity decomposition: where [Sub-spec 01](/web/specs/01-entity-graph/) defines how a monolithic transaction is *decomposed* into entities and credentials, this spec defines how those credentials are *recomposed* into usable state.
+State assembly is the process of compositing individual Verifiable Credentials into a coherent, complete transaction state object. It is the reverse of entity decomposition: where [Sub-spec 01](/specs/01-entity-graph/) defines how a monolithic transaction is *decomposed* into entities and credentials, this spec defines how those credentials are *recomposed* into usable state.
 
 This is the central read-path operation in PDTF 2.0. Every consumer of transaction data — the diligence engine, the conveyancing UI, the MCP API, the v3 backward-compatible endpoints — depends on state assembly to turn a bag of signed credentials into a structured object they can query.
 
@@ -470,7 +470,7 @@ function deepMerge(target: object, source: object): object {
 
 ### 4.4 V4 Output Shape
 
-The composed v4 state follows the structure defined in [Sub-spec 01 §6](/web/specs/01-entity-graph/):
+The composed v4 state follows the structure defined in [Sub-spec 01 §6](/specs/01-entity-graph/):
 
 ```json
 {

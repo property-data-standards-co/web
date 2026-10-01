@@ -42,7 +42,7 @@ A core design principle of the graph is partitioning entities by intent:
 
 Buyers participate *only* through Offers until exchange of contracts.
 
-![PDTF entity graph worked example — the 14 Elm Road sale, with seller-side credentials on the Transaction and buyer-side credentials nested in the Offer](/web/diagrams/entity-graph-example-intents.svg)
+![PDTF entity graph worked example — the 14 Elm Road sale, with seller-side credentials on the Transaction and buyer-side credentials nested in the Offer](/diagrams/entity-graph-example-intents.svg)
 
 *A worked example of the two intents: seller-side credentials (SellerCapacity, seller's conveyancer, estate agent) sit on the Transaction, while buyer-side credentials (buyer's conveyancer, lender DelegatedConsent) nest inside the Offer.*
 
@@ -239,6 +239,6 @@ The entity decomposition is a **mechanical transformation**, not a creative rede
 | `transaction.*` | Transaction |
 | `offers[*].*` | Offer |
 
-The mapping is documented exhaustively in the [State Assembly specification](/web/specs/07-state-assembly/), which defines both `composeV3StateFromGraph()` (backward-compatible reassembly) and `composeV4StateFromGraph()` (new ID-keyed format).
+The mapping is documented exhaustively in the [State Assembly specification](/specs/07-state-assembly/), which defines both `composeV3StateFromGraph()` (backward-compatible reassembly) and `composeV4StateFromGraph()` (new ID-keyed format).
 
-[Read the full entity graph specification →](/web/specs/01-entity-graph/)
+[Read the full entity graph specification →](/specs/01-entity-graph/)

@@ -3,7 +3,7 @@
 > The Property Data Trust Framework version 2.0 replaces OpenID Connect verified claims with W3C Verifiable Credentials, decomposes the monolithic property data schema into an entity graph, and introduces decentralised identifiers and cryptographic signing.
 
 ## Overview
-- Website: https://property-data-standards-co.github.io/web/
+- Website: https://propdata.org.uk/
 - GitHub: https://github.com/property-data-standards-co
 - Author: Ed Molyneux / Moverly
 
@@ -16,15 +16,15 @@
 - Three trust phases: Moverly trusted proxies → hosted adapters → primary source root issuers
 
 ## Specifications
-- [Architecture Overview](https://property-data-standards-co.github.io/web/specs/00-architecture-overview/)
-- [Entity Graph](https://property-data-standards-co.github.io/web/specs/01-entity-graph/)
-- [VC Data Model](https://property-data-standards-co.github.io/web/specs/02-vc-data-model/)
-- [DID Methods](https://property-data-standards-co.github.io/web/specs/03-did-methods/)
-- [OpenID Federation](https://property-data-standards-co.github.io/web/specs/04-openid-federation/)
-- [Key Management](https://property-data-standards-co.github.io/web/specs/06-key-management/)
-- [State Assembly](https://property-data-standards-co.github.io/web/specs/07-state-assembly/)
-- [Reference Implementations](https://property-data-standards-co.github.io/web/specs/13-reference-implementations/)
-- [Credential Revocation](https://property-data-standards-co.github.io/web/specs/14-credential-revocation/)
+- [Architecture Overview](https://propdata.org.uk/specs/00-architecture-overview/)
+- [Entity Graph](https://propdata.org.uk/specs/01-entity-graph/)
+- [VC Data Model](https://propdata.org.uk/specs/02-vc-data-model/)
+- [DID Methods](https://propdata.org.uk/specs/03-did-methods/)
+- [OpenID Federation](https://propdata.org.uk/specs/04-openid-federation/)
+- [Key Management](https://propdata.org.uk/specs/06-key-management/)
+- [State Assembly](https://propdata.org.uk/specs/07-state-assembly/)
+- [Reference Implementations](https://propdata.org.uk/specs/13-reference-implementations/)
+- [Credential Revocation](https://propdata.org.uk/specs/14-credential-revocation/)
 
 ## Implementation
 - [@pdtf/core](https://github.com/property-data-standards-co/core) — signing, verification, DIDs, status lists, TIR client
@@ -128,7 +128,7 @@ Consider a mortgage lender who needs to view the property data to issue a formal
 
 ### 3.5 Entity Relationship Diagram
 
-![PDTF 2.0 Entity Relationship Model](/web/diagrams/entity-graph.png)
+![PDTF 2.0 Entity Relationship Model](/diagrams/entity-graph.png)
 
 ### 3.6 Relationship Model
 

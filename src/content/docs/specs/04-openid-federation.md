@@ -8,7 +8,7 @@ description: "PDTF 2.0 specification document."
 **Date:** 16 April 2026
 **Author:** Ed Molyneux
 **Status:** Draft
-**Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
+**Parent:** [00 — Architecture Overview](/specs/00-architecture-overview/)
 
 ---
 
@@ -59,7 +59,7 @@ Earlier drafts of this specification described a bespoke GitHub-hosted Trusted I
 
 ### 1.2 What the Federation Is Not
 
-The federation is **not** a certificate authority. Issuers manage their own key material (see [Sub-spec 06: Key Management](/web/specs/06-key-management/)). The Trust Anchor signs Entity Statements and Trust Marks, not issuer keys.
+The federation is **not** a certificate authority. Issuers manage their own key material (see [Sub-spec 06: Key Management](/specs/06-key-management/)). The Trust Anchor signs Entity Statements and Trust Marks, not issuer keys.
 
 The federation is **not** a DID registry. DID resolution happens separately via the appropriate DID method (`did:web`, `did:key`). Entity Statements and DID documents are complementary: Entity Statements describe what an entity is authorised to *do* in the federation; DID documents describe how to cryptographically verify the entity's signatures.
 
@@ -357,7 +357,7 @@ function isPathAuthorised(entityType, dataPath, authorisedPaths):
 
 ### 6.4 Multiple Issuers Per Path
 
-Multiple issuers are permitted for the same entity:path — for example, competing search providers or valuers. The federation does not enforce exclusivity; state assembly (see [Sub-spec 07](/web/specs/07-state-assembly/)) merges credentials from multiple issuers for the same path using timestamp-ordered semantics.
+Multiple issuers are permitted for the same entity:path — for example, competing search providers or valuers. The federation does not enforce exclusivity; state assembly (see [Sub-spec 07](/specs/07-state-assembly/)) merges credentials from multiple issuers for the same path using timestamp-ordered semantics.
 
 ---
 

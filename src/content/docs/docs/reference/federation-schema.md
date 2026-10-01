@@ -116,7 +116,7 @@ General information about the organisation:
 
 ### `openid_credential_issuer`
 
-Present when the entity issues credentials via [OID4VCI](/web/docs/concepts/oid4vc/):
+Present when the entity issues credentials via [OID4VCI](/docs/concepts/oid4vc/):
 
 ```json
 {

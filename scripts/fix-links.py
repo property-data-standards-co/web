@@ -9,15 +9,15 @@ def fix_links(content, in_impl=False):
         if url.startswith('http') or url.startswith('mailto:') or url.startswith('#'):
             return m.group(0)
             
-        if url.startswith('/web/'):
+        if url.startswith('/'):
             return m.group(0)
 
-        # Image / asset paths: rewrite to /web/-rooted public asset URL
-        # e.g. `diagrams/entity-graph.png` -> `/web/diagrams/entity-graph.png`
+        # Image / asset paths: rewrite to /-rooted public asset URL
+        # e.g. `diagrams/entity-graph.png` -> `/diagrams/entity-graph.png`
         asset_exts = ('.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.pdf')
         if url.lower().endswith(asset_exts):
             clean = re.sub(r'^[\./]+', '', url).lstrip('/')
-            return f'[{text}](/web/{clean})'
+            return f'[{text}](/{clean})'
             
         clean_url = url.replace('.md', '')
         clean_url = re.sub(r'^[\./]+', '', clean_url)
@@ -26,7 +26,7 @@ def fix_links(content, in_impl=False):
             clean_url = clean_url[:-1]
             
         if clean_url in ['00-architecture-overview', '01-entity-graph', '02-vc-data-model', '03-did-methods', '04-openid-federation', '06-key-management', '07-state-assembly', '13-reference-implementations', '14-credential-revocation', '15-conformance-testing']:
-            return f'[{text}](/web/specs/{clean_url}/)'
+            return f'[{text}](/specs/{clean_url}/)'
             
         if clean_url in ['05-hosted-adapter-services', '12-adapter-access-control']:
             return f'{text} (Coming Soon)'
@@ -36,7 +36,7 @@ def fix_links(content, in_impl=False):
             return text
             
         # fallback
-        return f'[{text}](/web/specs/{clean_url}/)'
+        return f'[{text}](/specs/{clean_url}/)'
         
     return re.sub(r'\[([^\]]+)\]\(([^)]+)\)', repl, content)
 
