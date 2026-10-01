@@ -591,13 +591,15 @@ html[data-has-hero] .main-pane {
 	color: #1e1f24;
 	border-bottom: 1px solid #e6c700;
 	font-size: 0.875rem;
+	line-height: 1.4;
 	letter-spacing: 0.01em;
 	text-align: center;
-	padding: 0.75rem 1rem;
+	padding: 0.625rem 1rem;
 	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 0.2rem;
+	flex-wrap: wrap;
+	justify-content: center;
+	column-gap: 0.4em;
+	row-gap: 0.1em;
 	/* Position at the absolute top of the viewport */
 	position: fixed;
 	top: 0;
@@ -606,9 +608,27 @@ html[data-has-hero] .main-pane {
 	z-index: 1000;
 }
 
-/* CSS variable for the banner height so all offsets stay in sync */
+.candidate-banner.sl-banner a {
+	color: inherit;
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+}
+
+.candidate-banner.sl-banner a:hover {
+	text-decoration-thickness: 2px;
+}
+
+@media (max-width: 640px) {
+	.candidate-banner.sl-banner {
+		font-size: 0.8125rem;
+		padding: 0.5rem 0.875rem;
+	}
+}
+
+/* Fallback height for the fixed banner; Banner.astro updates this to the
+   rendered height so all offsets stay in sync when the text wraps. */
 :root {
-	--sl-banner-height: 3.75rem;
+	--sl-banner-height: 2.6rem;
 }
 
 /* Push the Starlight header and sidebar down to make room for the fixed banner */
@@ -624,6 +644,13 @@ html[data-has-hero] .main-pane {
 	}
 	.main-frame {
 		padding-top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height) + var(--sl-banner-height)) !important;
+	}
+	/* Mobile-only fixed elements: the menu toggle and the "On this page" bar */
+	starlight-menu-button button {
+		top: calc(var(--sl-banner-height) + (var(--sl-nav-height) - var(--sl-menu-button-size)) / 2) !important;
+	}
+	mobile-starlight-toc nav {
+		top: calc(var(--sl-nav-height) + var(--sl-banner-height) - 1px) !important;
 	}
 }
 
