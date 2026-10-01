@@ -72,15 +72,24 @@ Here's how it works for a real example — a local authority search:
 
 ## Trust levels
 
-Not all issuers are equal. PDTF 2.0 recognises three trust levels:
+Not all issuers are equal. PDTF 2.0 recognises four trust levels:
 
 | Level | Description | Example |
 |-------|-------------|---------|
 | **Root issuer** | The original source of the data | HM Land Registry, the EPC Register |
 | **Accredited issuer** | An organisation independently authorised to issue data | A CLC-regulated conveyancer issuing property information |
 | **Trusted proxy** | An intermediary that issues on behalf of a root source | An adapter that re-signs data sourced from a root issuer |
+| **Assertion** | A human stating something as true, bound to their verified identity | A seller answering the Law Society TA6 property information form |
 
 During the early adoption phase, most credentials will come from trusted proxies — organisations that source data from existing systems and wrap it in Verifiable Credentials. Over time, the goal is for root issuers (like HMLR) to issue credentials directly, removing the need for proxies.
+
+### Assertions
+
+Much of what a conveyancing transaction runs on is not a fact held by any registry. Whether the boiler has been serviced, whether there has been a dispute with a neighbour, whether the loft conversion had building regulations approval: the only source is the person who lives there. The legal process already relies on these statements. The TA6 is completed and signed by the seller, and the seller carries liability for what it says.
+
+An assertion is potentially less reliable than data from a root issuer, because it rests on one person's knowledge and honesty. What makes it powerful is the binding. In PDTF 2.0 the statement is signed against the person's verified digital identity, so the assertion is traceable to a real, identified individual and the liability that attaches to them. That is as good as can be achieved for this class of fact, and it is better than today's practice: a physically signed form cannot be traced to a specific individual with any certainty, and a scanned signature can be anyone's.
+
+Verifiers treat an assertion as exactly that. It is a signed, attributable statement, not independent confirmation, and the credential's evidence marks it as a user attestation so that nothing downstream mistakes it for registry data.
 
 The OpenID Federation records the trust level of each issuer, so verifiers always know the provenance chain.
 
