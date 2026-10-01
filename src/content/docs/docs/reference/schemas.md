@@ -69,7 +69,7 @@ The v4 combined schema uses ID-keyed collections rather than arrays.
 }
 ```
 
-Relationship collections are partitioned by intent: `ownership` and (seller-side) `representation` sit on the Transaction, while each `Offer` nests its own buyer-side `representation` and `delegatedConsent`. There is no top-level `delegatedConsent` collection (see [01 — Entity Graph §3.3, D31](/web/specs/01-entity-graph/)).
+Relationship collections are partitioned by intent: `ownership` and (seller-side) `representation` sit on the Transaction, while each `Offer` nests its own buyer-side `representation` and `delegatedConsent`. There is no top-level `delegatedConsent` collection (see [01 — Entity Graph §3.3, D31](/specs/01-entity-graph/)).
 
 ## Entity schema references
 

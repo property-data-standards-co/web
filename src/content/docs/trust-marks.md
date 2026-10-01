@@ -95,7 +95,7 @@ Key points:
 
 1. Extract the trust mark JWT from the entity's federation statement
 2. Verify the JWT signature against the Trust Anchor's public key
-3. Check `exp` hasn't passed (or query the [trust mark status endpoint](/web/docs/reference/federation-schema/#trust-mark-status-endpoint))
+3. Check `exp` hasn't passed (or query the [trust mark status endpoint](/docs/reference/federation-schema/#trust-mark-status-endpoint))
 4. Confirm `authorised_paths` covers the credential paths being checked
 
 ```typescript

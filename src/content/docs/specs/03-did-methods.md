@@ -8,7 +8,7 @@ description: "PDTF 2.0 specification document."
 **Date:** 1 April 2026
 **Author:** Ed Molyneux
 **Status:** Draft
-**Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
+**Parent:** [00 — Architecture Overview](/specs/00-architecture-overview/)
 
 ---
 
@@ -36,8 +36,8 @@ This spec covers:
 
 It does **not** cover:
 
-- Verifiable Credential data model (see [Sub-spec 02: VC Data Model](/web/specs/02-vc-data-model/))
-- OpenID Federation trust architecture (see [Sub-spec 04: OpenID Federation](/web/specs/04-openid-federation/))
+- Verifiable Credential data model (see [Sub-spec 02: VC Data Model](/specs/02-vc-data-model/))
+- OpenID Federation trust architecture (see [Sub-spec 04: OpenID Federation](/specs/04-openid-federation/))
 - Access control and credential presentation protocols (see Sub-spec 12: Adapter Access Control (Coming Soon))
 
 ### 1.2 Normative References
@@ -1237,11 +1237,11 @@ This generates the key pair, constructs the DID document with regulatory metadat
 
 | Sub-spec | Relevance |
 |----------|-----------|
-| [01 — Entity Graph & Schema](/web/specs/01-entity-graph/) | Entity types that these identifiers address |
-| [02 — VC Data Model](/web/specs/02-vc-data-model/) | How DIDs appear in `issuer` and `credentialSubject.id` fields |
-| [04 — OpenID Federation](/web/specs/04-openid-federation/) | Federation accreditation of `did:web` entities via Entity Statements and Trust Marks |
+| [01 — Entity Graph & Schema](/specs/01-entity-graph/) | Entity types that these identifiers address |
+| [02 — VC Data Model](/specs/02-vc-data-model/) | How DIDs appear in `issuer` and `credentialSubject.id` fields |
+| [04 — OpenID Federation](/specs/04-openid-federation/) | Federation accreditation of `did:web` entities via Entity Statements and Trust Marks |
 | 12 — Adapter Access Control (Coming Soon) | DID Auth and credential presentation protocols |
-| [07 — State Assembly](/web/specs/07-state-assembly/) | How identifiers are used in graph composition |
+| [07 — State Assembly](/specs/07-state-assembly/) | How identifiers are used in graph composition |
 
 ---
 

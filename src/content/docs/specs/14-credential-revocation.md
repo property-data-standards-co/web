@@ -8,7 +8,7 @@ description: "PDTF 2.0 specification document."
 **Date:** 1 April 2026
 **Author:** Ed Molyneux
 **Status:** Draft
-**Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
+**Parent:** [00 — Architecture Overview](/specs/00-architecture-overview/)
 
 ---
 
@@ -52,14 +52,14 @@ Credential revocation is the mechanism by which an issuer declares that a creden
 
 ### Design Principle
 
-> **D18 (provisional — see [02 §2.4](/web/specs/02-vc-data-model/)):** Every credential issued in the PDTF 2.0 ecosystem MUST carry a revocation reference, and issuers MUST maintain status infrastructure capable of revoking any credential they have issued. Under the SD-JWT-VC securing mechanism this is the IETF **Token Status List** (`status` claim — §1.1). The W3C **Bitstring Status List** described from §2 is the equivalent mechanism for the superseded embedded-proof / JSON-LD representation.
+> **D18 (provisional — see [02 §2.4](/specs/02-vc-data-model/)):** Every credential issued in the PDTF 2.0 ecosystem MUST carry a revocation reference, and issuers MUST maintain status infrastructure capable of revoking any credential they have issued. Under the SD-JWT-VC securing mechanism this is the IETF **Token Status List** (`status` claim — §1.1). The W3C **Bitstring Status List** described from §2 is the equivalent mechanism for the superseded embedded-proof / JSON-LD representation.
 
 This is not optional. Credentials without revocation support MUST be rejected by conformant verifiers.
 
 ### 1.1 Revocation mechanism under SD-JWT-VC (Token Status List)
 
 :::caution[Provisional]
-Following the provisional adoption of SD-JWT-VC ([02 §2.4](/web/specs/02-vc-data-model/)), PDTF's revocation mechanism is the IETF **Token Status List** ([draft-ietf-oauth-status-list](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/)). The W3C **Bitstring Status List** documented from §2 onward is retained as the equivalent mechanism for the superseded JSON-LD / Data-Integrity representation. The two are conceptually identical — a compressed bitstring of per-credential statuses, published as a signed token and fetched wholesale for herd privacy — only the encoding and the in-credential reference differ.
+Following the provisional adoption of SD-JWT-VC ([02 §2.4](/specs/02-vc-data-model/)), PDTF's revocation mechanism is the IETF **Token Status List** ([draft-ietf-oauth-status-list](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/)). The W3C **Bitstring Status List** documented from §2 onward is retained as the equivalent mechanism for the superseded JSON-LD / Data-Integrity representation. The two are conceptually identical — a compressed bitstring of per-credential statuses, published as a signed token and fetched wholesale for herd privacy — only the encoding and the in-credential reference differ.
 :::
 
 Under Token Status List:
@@ -1253,7 +1253,7 @@ PDTF v1/v3 does not have credential revocation (claims are asserted through OIDC
 - V2 credentials MUST include `credentialStatus`
 - V3 state assembly (`composeV3StateFromGraph`) ignores revocation — it operates on OIDC claims
 - V4 state assembly (`composeV4StateFromGraph`) MUST check revocation before including any credential in the assembled state
-- The transition period may surface inconsistencies where a V3 state includes data from a revoked V2 credential — this is a known limitation addressed in the state assembly migration path (see [07 — State Assembly](/web/specs/07-state-assembly/))
+- The transition period may surface inconsistencies where a V3 state includes data from a revoked V2 credential — this is a known limitation addressed in the state assembly migration path (see [07 — State Assembly](/specs/07-state-assembly/))
 
 ---
 
@@ -1307,11 +1307,11 @@ PDTF v1/v3 does not have credential revocation (claims are asserted through OIDC
 
 - [W3C Bitstring Status List v1.0](https://www.w3.org/TR/vc-bitstring-status-list/)
 - [W3C Verifiable Credentials Data Model v2.0](https://www.w3.org/TR/vc-data-model-2.0/)
-- [Sub-spec 02 — VC Data Model](/web/specs/02-vc-data-model/) (credential structure)
-- [Sub-spec 03 — DID Methods & Identifiers](/web/specs/03-did-methods/) (issuer DIDs)
-- [Sub-spec 04 — OpenID Federation](/web/specs/04-openid-federation/) (issuer trust)
+- [Sub-spec 02 — VC Data Model](/specs/02-vc-data-model/) (credential structure)
+- [Sub-spec 03 — DID Methods & Identifiers](/specs/03-did-methods/) (issuer DIDs)
+- [Sub-spec 04 — OpenID Federation](/specs/04-openid-federation/) (issuer trust)
 - Sub-spec 05 — Hosted Adapter Services (Coming Soon) (adapter-hosted status lists)
-- [Sub-spec 07 — State Assembly](/web/specs/07-state-assembly/) (dual-state assembly)
+- [Sub-spec 07 — State Assembly](/specs/07-state-assembly/) (dual-state assembly)
 
 ---
 

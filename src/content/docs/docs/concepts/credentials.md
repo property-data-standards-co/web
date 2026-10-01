@@ -99,10 +99,10 @@ Both protocols run on top of **FAPI 2.0** — a hardened OAuth 2.0 profile with 
 
 For participants who don't have a mobile wallet app, PDTF supports **custodial cloud wallets** — server-side wallets operated by platforms on behalf of users. The exchange protocols are identical; only the wallet location differs.
 
-→ [Read more about credential exchange protocols](/web/docs/concepts/oid4vc/)
+→ [Read more about credential exchange protocols](/docs/concepts/oid4vc/)
 
 ## Why this matters
 
-PDTF 2.0 credentials turn property data into something that can move safely between platforms, APIs, and agents without losing provenance. A verifier no longer needs to trust the platform, LMS, or any other intermediary just because they served the JSON. It verifies the credential itself, checks the issuer's [federation trust mark](/web/docs/concepts/openid-federation/), and decides on that basis.
+PDTF 2.0 credentials turn property data into something that can move safely between platforms, APIs, and agents without losing provenance. A verifier no longer needs to trust the platform, LMS, or any other intermediary just because they served the JSON. It verifies the credential itself, checks the issuer's [federation trust mark](/docs/concepts/openid-federation/), and decides on that basis.
 
 That is the core trust shift in PDTF 2.0: **make trust portable, by verifying the credential itself**.

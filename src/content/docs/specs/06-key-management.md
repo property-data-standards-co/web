@@ -8,7 +8,7 @@ description: "PDTF 2.0 specification document."
 **Date:** 1 April 2026
 **Author:** Ed Molyneux
 **Status:** Draft
-**Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
+**Parent:** [00 — Architecture Overview](/specs/00-architecture-overview/)
 
 ---
 
@@ -36,7 +36,7 @@ This spec covers key management for **credential signing and verification only**
 
 | Sub-spec | Relationship |
 |----------|-------------|
-| [01 — Entity Graph](/web/specs/01-entity-graph/) | Entities that hold DIDs backed by keys defined here |
+| [01 — Entity Graph](/specs/01-entity-graph/) | Entities that hold DIDs backed by keys defined here |
 | 03 — DID Methods | DID documents reference `verificationMethod` entries whose keys are managed here |
 | 04 — VC Data Model | Credentials signed using the operations defined here |
 | 04 — OpenID Federation | Trust Marks reference issuer DIDs whose keys are managed here |

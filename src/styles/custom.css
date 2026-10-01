@@ -421,7 +421,7 @@ html[data-has-hero] body::before {
 	inset: 0;
 	pointer-events: none;
 	z-index: 0;
-	background-image: url('/web/entity-graph-light.svg');
+	background-image: url('/entity-graph-light.svg');
 	background-size: cover;
 	background-position: center top;
 	background-repeat: no-repeat;
@@ -429,7 +429,7 @@ html[data-has-hero] body::before {
 }
 
 :root[data-theme='dark'] html[data-has-hero] body::before {
-	background-image: url('/web/entity-graph-dark.svg');
+	background-image: url('/entity-graph-dark.svg');
 	opacity: 0.25;
 }
 

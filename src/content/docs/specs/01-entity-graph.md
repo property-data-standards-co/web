@@ -8,7 +8,7 @@ description: "PDTF 2.0 specification document."
 **Date:** 29 July 2026
 **Author:** Ed Molyneux
 **Status:** Draft for review (LMS collaboration)
-**Parent:** [00 — Architecture Overview](/web/specs/00-architecture-overview/)
+**Parent:** [00 — Architecture Overview](/specs/00-architecture-overview/)
 
 **Changes in v0.2:** Buyer-side relationship credentials (buyer's-conveyancer Representation, lender DelegatedConsent) are now nested inside the Offer rather than held at the Transaction level; the top-level `delegatedConsent` collection is removed and buyer-side credentials gain an `offerId` parent pointer (new decision **D31**). Added entity-graph diagrams (schema-level and worked example) to §3.2.
 
@@ -152,11 +152,11 @@ Relationship credentials are partitioned by **intent**. The seller's intent to s
 
 **Figure 1 — Entity graph (schema level).** Entity types and identifiers, colour-coded by family. The Offer nests its buyer-side relationship credentials:
 
-![PDTF entity graph — entity types, identifiers, and the Offer nesting its buyer-side credentials](/web/diagrams/entity-graph.svg)
+![PDTF entity graph — entity types, identifiers, and the Offer nesting its buyer-side credentials](/diagrams/entity-graph.svg)
 
 **Figure 2 — Worked example.** The same model instantiated for a single sale ("14 Elm Road"), showing the two intents: seller-side credentials orbit the Transaction, buyer-side credentials nest inside the Offer:
 
-![PDTF entity graph worked example — the 14 Elm Road sale, with seller-side credentials on the Transaction and buyer-side credentials nested in the Offer](/web/diagrams/entity-graph-example-intents.svg)
+![PDTF entity graph worked example — the 14 Elm Road sale, with seller-side credentials on the Transaction and buyer-side credentials nested in the Offer](/diagrams/entity-graph-example-intents.svg)
 
 ### 3.3 Key Design Decisions
 
