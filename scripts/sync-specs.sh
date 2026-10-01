@@ -98,7 +98,7 @@ LLMS_FULL="$(dirname "$0")/../public/llms-full.txt"
     [ -f "$spec" ] || continue
     echo "---"
     echo ""
-    cat "$spec"
+    sed "s@](/web/@](/@g" "$spec"
     echo ""
   done
   # NOTE: impl specs excluded from public llms-full.txt (internal only)

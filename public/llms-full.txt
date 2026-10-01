@@ -1973,7 +1973,7 @@ Every PDTF credential MUST include:
 ### 2.4 Securing Mechanism
 
 :::caution[Provisional decision — pending consultation Q20]
-This section documents PDTF's **working** securing-mechanism choice: **SD-JWT-VC**. It is **provisional** pending industry consultation ([Q20](/web/consultation/#q20-credential-format--securing-mechanism)) and confirmation against the GOV.UK Wallet's published format list. Decision record: [§13.4](#134-credential-format--securing-mechanism).
+This section documents PDTF's **working** securing-mechanism choice: **SD-JWT-VC**. It is **provisional** pending industry consultation ([Q20](/consultation/#q20-credential-format--securing-mechanism)) and confirmation against the GOV.UK Wallet's published format list. Decision record: [§13.4](#134-credential-format--securing-mechanism).
 :::
 
 PDTF secures credentials as **SD-JWT-VC** ([IETF SD-JWT VC](https://datatracker.ietf.org/doc/draft-ietf-oauth-sd-jwt-vc/)) — a JWS-signed credential with selective disclosure and holder key binding — and verifies **mdoc** (ISO/IEC 18013-5) at the GOV.UK identity boundary. Rationale:
