@@ -9,6 +9,10 @@ def fix_links(content, in_impl=False):
         if url.startswith('http') or url.startswith('mailto:') or url.startswith('#'):
             return m.group(0)
             
+        # Legacy absolute links written for the old /web base path
+        if url.startswith('/web/'):
+            return f'[{text}]({url[4:]})'
+
         if url.startswith('/'):
             return m.group(0)
 
