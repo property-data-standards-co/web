@@ -130,10 +130,11 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](/specs/01-e
 |----------------|--------|-------------------|--------|-------------|
 | `PropertyCredential` | Property | `urn:pdtf:uprn:{uprn}` | Trusted proxy / root issuer / user | Property facts: EPC, flood, build info, legal questions, fixtures, searches |
 | `TitleCredential` | Title | `urn:pdtf:titleNumber:{n}` or `urn:pdtf:unregisteredTitle:{id}` | HMLR proxy / root issuer | Register extract, ownership type, leasehold terms, encumbrances |
-| `SellerCapacityCredential` | SellerCapacity | `urn:pdtf:capacity:{id}` | Account provider | Thin assertion: Person/Org DID → Title URN, status, verification level |
-| `RepresentationCredential` | Representation | `urn:pdtf:representation:{id}` | Person (seller/buyer) | Organisation DID, role, granted by instructing party |
-| `DelegatedConsentCredential` | DelegatedConsent | `urn:pdtf:consent:{id}` | Person (granting party) | Authorised entity, access scope, terms |
-| `OfferCredential` | Offer | `urn:pdtf:offer:{id}` | Buyer (Person) or platform | Buyer DID, amount, status, conditions |
+| `SellerCapacityCredential` | SellerCapacity | `urn:pdtf:capacity:{id}` | Account provider | The capacity in which a party sells. Implies Seller. |
+| `OfferCredential` | Offer | `urn:pdtf:offer:{id}` | Buyer (Person) or platform | Buyer DID, amount, status, conditions. Implies Buyer. |
+| `GiftCredential` | Gift | `urn:pdtf:gift:{id}` | Giftor or platform | Donor DID, offer, gift terms. Implies Giftor. |
+| `RepresentationCredential` | Representation | `urn:pdtf:representation:{id}` | Instructing party (Person/Org) | Representative DID, represented party DID, kind of representation |
+| `TransactionRoleCredential` | TransactionRole | `urn:pdtf:role:{id}` | Platform | Participant DID, role, where no more specific relationship applies |
 | `TransactionCredential` | Transaction | `did:web:...` | Platform | Transaction metadata, status, milestones, financial context |
 
 ### 3.2 PropertyCredential
@@ -370,13 +371,13 @@ The signature is the enclosing JWS (§9), not an embedded `proof`; revocation is
 
 ### 3.4 SellerCapacityCredential
 
-**Purpose:** A thin signed assertion linking a Person or Organisation DID to a Title URN. States "this person/organisation owns this title" with a status and verification level.
+**Purpose:** A thin signed assertion of the capacity in which a Person or Organisation sells — legal owner, personal representative for a deceased owner, attorney under a power of attorney, mortgagee in possession, company director, trustee. It **embodies the Seller role**: the Transaction roster carries no role, so a party is a seller because this credential says so (01 §3.2, D32).
 
-**Key design decision (D28):** The SellerCapacityCredential does NOT duplicate title register details. Those belong on the TitleCredential. The ownership claim is verified by cross-referencing against `Title.registerExtract.proprietorship` — **claim-vs-evidence separation**. The SellerCapacityCredential says "X owns Y". The TitleCredential provides the evidence from HMLR that proves it.
+**Key design decision (D28):** The SellerCapacityCredential does NOT duplicate title register details. Those belong on the TitleCredential. The claim is verified by cross-referencing against `Title.registerExtract.proprietorship` — **claim-vs-evidence separation**. The SellerCapacityCredential says "X sells, as legal owner". The TitleCredential provides the evidence from HMLR that proves it.
 
-**Subject ID:** `urn:pdtf:capacity:{id}` — a generated URN for this ownership assertion.
+**Subject ID:** `urn:pdtf:capacity:{id}` — a generated URN for this assertion.
 
-**Issuer:** The account provider (the account provider) that verified the user's identity and cross-referenced against the title register.
+**Issuer:** The account provider that verified the user's identity and cross-referenced against the title register. Issued for **every** seller, whether or not a capacity has been declared yet, so the credential embodying the Seller role is never missing while a form is still being filled in.
 
 ```json
 {
@@ -389,11 +390,10 @@ The signature is the enclosing JWS (§9), not an embedded `proof`; revocation is
   "validFrom": "2026-03-18T09:00:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:capacity:own-a1b2c3",
-    "personId": "did:key:z6MkhSellerAbc123",
-    "titleId": "urn:pdtf:titleNumber:AB12345",
-    "status": "verified",
-    "verificationLevel": "registerCrossReferenced",
-    "verifiedAt": "2026-03-18T09:00:00Z"
+    "seller": "did:key:z6MkhSellerAbc123",
+    "transaction": "did:web:platform.example.com:transactions:tx-789",
+    "sellersCapacity": { "capacity": "Legal Owner" },
+    "dateBecameOwnerOrAuthority": "2014-06-01"
   },
   "evidence": [{
     "type": "ElectronicRecord",
@@ -405,14 +405,14 @@ The signature is the enclosing JWS (§9), not an embedded `proof`; revocation is
     "type": "PdtfAccessPolicy",
     "confidentiality": "restricted",
     "pii": true,
-    "roleRestrictions": ["sellerConveyancer", "buyerConveyancer", "estateAgent"]
+    "roleRestrictions": ["Seller's Conveyancer", "Buyer's Conveyancer", "Estate Agent"]
   }],
   "credentialStatus": {
-    "id": "https://api.platform.example.com/status/ownership/list-001#892",
+    "id": "https://api.platform.example.com/status/capacity/list-001#892",
     "type": "BitstringStatusListEntry",
     "statusPurpose": "revocation",
     "statusListIndex": "892",
-    "statusListCredential": "https://api.platform.example.com/status/ownership/list-001"
+    "statusListCredential": "https://api.platform.example.com/status/capacity/list-001"
   },
   "proof": {
     "type": "DataIntegrityProof",
@@ -429,36 +429,31 @@ The signature is the enclosing JWS (§9), not an embedded `proof`; revocation is
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `personId` | DID string | One of `personId` / `organisationId` | DID of the person claiming ownership |
-| `organisationId` | DID string | One of `personId` / `organisationId` | DID of the organisation (limited company) claiming ownership |
-| `titleId` | URN string | Required | `urn:pdtf:titleNumber:*` or `urn:pdtf:unregisteredTitle:*` |
-| `status` | enum | Required | `claimed`, `verified`, `disputed` |
-| `verificationLevel` | enum | Required | `selfDeclared`, `nameMatched`, `registerCrossReferenced`, `professionallyVerified` |
-| `verifiedAt` | ISO datetime | Conditional | Required when status is `verified` |
+| `seller` | DID string | Required | DID of the Person or Organisation selling |
+| `transaction` | DID string | Required | `did:web` of the transaction |
+| `title` | URN string | Optional | `urn:pdtf:titleNumber:*` or `urn:pdtf:unregisteredTitle:*`, where a capacity is specific to one of several titles |
+| `sellersCapacity.capacity` | enum | Optional | `Legal Owner`, `Personal Representative for a Deceased Owner`, `Under Power of Attorney`, `Mortgagee in Possession`, `Company Director`, `Company Secretary`, `Trustee`, `Assistant`, `Other` |
+| `dateBecameOwnerOrAuthority` | ISO date | Optional | When the seller acquired the title or the authority to sell it |
 
-**Verification levels:**
-- `selfDeclared` — owner says they own it, no cross-reference yet
-- `nameMatched` — name on title register matches declared name (automated)
-- `registerCrossReferenced` — full proprietorship data cross-referenced against HMLR OC1 (automated)
-- `professionallyVerified` — conveyancer has confirmed identity + ownership (manual)
+**How verified:** the degree of verification is carried in `evidence`, not in the subject: `UserAttestation` (the seller's own declaration), `ElectronicRecord` (OC1 proprietorship cross-reference), `ProfessionalVerification` (conveyancer confirmation). A verifier reads the strongest evidence present.
 
-**Why thin?** A verifier who wants to confirm ownership checks:
-1. The SellerCapacityCredential links Person DID X to Title URN Y with `status: "verified"`
-2. The TitleCredential for URN Y has `registerExtract.proprietorship` showing the registered owner
+**Why thin?** A verifier who wants to confirm the right to sell checks:
+1. The SellerCapacityCredential links Person DID X to the Transaction with a declared capacity
+2. The TitleCredential for each title in `Transaction.titlesToBeSold` has `registerExtract.proprietorship` showing the registered owner
 3. The two are consistent — the SellerCapacityCredential's `evidence` points back to the register cross-reference
 4. Both credentials are signed and not revoked
 
-This separation means ownership can be revoked (sale completes, mandate withdrawn) without affecting the title register data. And title data can be updated (charge removed) without re-issuing the ownership assertion.
+This separation means the capacity can be revoked (sale completes, a personal representative is replaced) without affecting the title register data. And title data can be updated (charge removed) without re-issuing the capacity assertion.
 
 ### 3.5 RepresentationCredential
 
-**Purpose:** Delegates authority from a seller or buyer to an Organisation (conveyancer firm, estate agency). Records the instruction relationship: "I, the seller, instruct Smith & Co Solicitors as my conveyancer."
+**Purpose:** Records that one party has been instructed by another: "I, the seller, instruct Smith & Co Solicitors as my conveyancer." It carries the **kind** of representation as its `role` — a property of the representation, not a duplicated participant attribute. Acting for a seller tells you the side, not whether the party is the conveyancer, the agent or the surveyor.
 
 **Subject ID:** `urn:pdtf:representation:{id}` — a generated URN for this representation.
 
-**Issuer:** The Person (seller or buyer) granting the authority. In practice, during Phase 1, the platform signs on behalf of the person (custodial keys), so the `issuer` is `did:web:platform.example.com` and the `evidence` records the person's DID and their explicit instruction.
+**Issuer:** The party granting the authority. In practice, during Phase 1, the platform signs on behalf of the person (custodial keys), so the `issuer` is `did:web:platform.example.com` and the `evidence` records the person's DID and their explicit instruction.
 
-**Key design decision (D3):** Representation credentials are issued to **Organisations** (the firm), not to individual solicitors. The professional duty, PI insurance, and regulatory obligations sit with the firm. If your solicitor goes on holiday, the firm still has access.
+**Key design decision (D33):** One credential per **(representative, represented party)** pair. A conveyancer instructed jointly by two sellers holds two, each presentable or revocable on its own. A separated couple instructing their own conveyancers yields one each. The retainer is with the client, so `representedParty` is a person or organisation, never an offer — a prospective buyer with no offer yet can still be represented. The representative's firm is recorded on the Transaction roster, not here, because where someone works does not stop being true when a representation ends; the professional duty, PI insurance and regulatory obligations are resolved through that firm.
 
 ```json
 {
@@ -471,11 +466,10 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
   "validFrom": "2026-03-15T11:00:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:representation:rep-d4e5f6",
-    "organisationId": "did:web:smithandco.law",
-    "role": "sellerConveyancer",
-    "grantedBy": "did:key:z6MkhSellerAbc123",
-    "transactionId": "did:web:platform.example.com:transactions:tx-789",
-    "status": "active"
+    "representative": "did:key:z6MkhConveyancerDef456",
+    "representedParty": "did:key:z6MkhSellerAbc123",
+    "role": "Seller's Conveyancer",
+    "transaction": "did:web:platform.example.com:transactions:tx-789"
   },
   "evidence": [{
     "type": "UserAttestation",
@@ -487,7 +481,7 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
     "type": "PdtfAccessPolicy",
     "confidentiality": "restricted",
     "pii": true,
-    "roleRestrictions": ["sellerConveyancer", "buyerConveyancer"]
+    "roleRestrictions": ["Seller's Conveyancer", "Buyer's Conveyancer"]
   }],
   "credentialStatus": {
     "id": "https://api.platform.example.com/status/representation/list-001#334",
@@ -511,21 +505,22 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `organisationId` | DID string | Required | `did:web` of the instructed firm |
-| `role` | enum | Required | `sellerConveyancer`, `buyerConveyancer`, `estateAgent`, `buyerAgent`, `surveyor`, `mortgageBroker` |
-| `grantedBy` | DID string | Required | `did:key` of the person granting authority |
-| `transactionId` | DID string | Required | `did:web` of the transaction this applies to |
-| `status` | enum | Required | `active`, `revoked` |
+| `representative` | DID string | Required | DID of the Person or Organisation who is instructed |
+| `representedParty` | DID string | Required | DID of the Person or Organisation who instructed them |
+| `role` | enum | Required | The kind of representation: `Seller's Conveyancer`, `Buyer's Conveyancer`, `Estate Agent`, `Buyer's Agent`, `Mortgage Broker`, `Surveyor` (the v3 participant role enum) |
+| `transaction` | DID string | Required | `did:web` of the transaction this applies to |
 
-**Revocation is critical:** When a seller changes conveyancer, the old RepresentationCredential MUST be revoked. Without revocation, a former conveyancer could still present a valid credential. See §8 for the revocation mechanism.
+**Revocation is critical:** When a seller changes conveyancer, the old RepresentationCredential MUST be revoked. Without revocation, a former conveyancer could still present a valid credential. Because role lives only here, revocation also removes the "Seller's Conveyancer" role from the transaction. See §8 for the revocation mechanism.
 
-### 3.6 DelegatedConsentCredential
+### 3.6 GiftCredential
 
-**Purpose:** Authorises a third party (typically a lender or search provider) to access specific data about the transaction. This is the consent mechanism for entities that aren't direct participants but have legitimate data access needs.
+**Purpose:** Records that a party is gifting funds towards a purchase, and the terms a conveyancer must resolve before reporting to a lender: whether the gift is repayable, whether the giftor will have a beneficial interest in the property, whether they will occupy it. It **embodies the Giftor role**.
 
-**Subject ID:** `urn:pdtf:consent:{id}` — a generated URN for this consent.
+**Subject ID:** `urn:pdtf:gift:{id}` — a generated URN for this gift.
 
-**Issuer:** The Person granting consent (typically the buyer, for mortgage lender access).
+**Issuer:** The platform on behalf of the giftor.
+
+The giftor's link to the offer lives here (`offerId`) rather than on the Offer, so that an OfferCredential always identifies a buyer.
 
 ```json
 {
@@ -533,45 +528,42 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
     "https://www.w3.org/ns/credentials/v2",
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
-  "type": ["VerifiableCredential", "DelegatedConsentCredential"],
+  "type": ["VerifiableCredential", "GiftCredential"],
   "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-22T16:00:00Z",
   "credentialSubject": {
-    "id": "urn:pdtf:consent:dc-g7h8i9",
-    "organisationId": "did:web:bigbank.co.uk",
-    "grantedBy": "did:key:z6MkhBuyerXyz789",
-    "transactionId": "did:web:platform.example.com:transactions:tx-789",
-    "scope": [
-      "Property:energyEfficiency",
-      "Property:buildInformation",
-      "Property:environmentalIssues",
-      "Property:surveys",
-      "Property:valuations",
-      "Title:registerExtract",
-      "Title:ownership"
-    ],
-    "purpose": "Mortgage valuation and underwriting",
-    "status": "active",
-    "validUntil": "2026-09-22T16:00:00Z"
+    "id": "urn:pdtf:gift:gf-m4n5o6",
+    "donor": "did:key:z6MkhParentPqr456",
+    "transaction": "did:web:platform.example.com:transactions:tx-789",
+    "offerId": "o1",
+    "giftDetails": {
+      "amount": 50000,
+      "currency": "GBP",
+      "relationshipToBuyer": "Parent",
+      "fundsTransferred": "None",
+      "repayable": false,
+      "confersBeneficialInterest": false,
+      "willOccupyProperty": false
+    }
   },
   "evidence": [{
     "type": "UserAttestation",
-    "source": "did:key:z6MkhBuyerXyz789",
+    "source": "did:key:z6MkhParentPqr456",
     "attestedAt": "2026-03-22T15:50:00Z",
-    "method": "Consent flow — mortgage application"
+    "method": "Gift declaration flow"
   }],
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
     "confidentiality": "confidential",
     "pii": true,
-    "roleRestrictions": ["buyerConveyancer"]
+    "roleRestrictions": ["Buyer's Conveyancer", "Lender"]
   }],
   "credentialStatus": {
-    "id": "https://api.platform.example.com/status/consent/list-001#156",
+    "id": "https://api.platform.example.com/status/gift/list-001#156",
     "type": "BitstringStatusListEntry",
     "statusPurpose": "revocation",
     "statusListIndex": "156",
-    "statusListCredential": "https://api.platform.example.com/status/consent/list-001"
+    "statusListCredential": "https://api.platform.example.com/status/gift/list-001"
   },
   "proof": {
     "type": "DataIntegrityProof",
@@ -584,23 +576,75 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
 }
 ```
 
-**DelegatedConsentCredential fields:**
+**GiftCredential fields:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `organisationId` | DID string | Required | `did:web` of the entity receiving access |
-| `grantedBy` | DID string | Required | DID of the person granting consent |
-| `transactionId` | DID string | Required | Transaction scope |
-| `scope` | string[] | Required | Array of `Entity:path` patterns (same format as the Trust Mark `delegation.authorised_paths` claim) |
-| `purpose` | string | Required | Human-readable reason for access |
-| `status` | enum | Required | `active`, `revoked` |
-| `validUntil` | ISO datetime | Optional | Consent expiry (auto-revoke after this date) |
+| `donor` | DID string | Required | DID of the Person or Organisation making the gift |
+| `transaction` | DID string | Required | Transaction scope |
+| `offerId` | string | Optional | The offer this gift contributes towards, as keyed in `Transaction.offers` |
+| `giftDetails` | object | Optional | `amount`, `currency`, `relationshipToBuyer`, `fundsTransferred` (`None`, `Part`, `All`), `repayable`, `confersBeneficialInterest`, `willOccupyProperty` |
 
-**Scope patterns** use the same `Entity:path` format as the Trust Mark `delegation.authorised_paths` claim (see 04 — OpenID Federation). Wildcard patterns are permitted: `Property:*` grants access to all Property paths. Specific patterns restrict access: `Property:energyEfficiency` grants access only to EPC data.
+### 3.7 TransactionRoleCredential
 
-### 3.7 OfferCredential
+**Purpose:** Asserts a party's role where no more specific relationship credential applies — Lender, Landlord, Tenant, Surveyor, Platform Support — or where the specific relationship is not yet established. Every party carrying a role holds exactly one role-bearing credential; this is the one that guarantees it.
 
-**Purpose:** Records a buyer's offer on a transaction. Buyers exist in the transaction only through Offers — this models reality: a buyer doesn't participate until they make an offer.
+**Subject ID:** `urn:pdtf:role:{id}` — a generated URN.
+
+**Issuer:** The platform.
+
+This is how a lender becomes a party to the transaction (Q4.2 in 00). It asserts participation in a role, not a relationship to another named party. Access is then governed by `termsOfUse.roleRestrictions` on the credentials the lender requests.
+
+```json
+{
+  "@context": [
+    "https://www.w3.org/ns/credentials/v2",
+    "https://trust.propdata.org.uk/ns/pdtf/v2"
+  ],
+  "type": ["VerifiableCredential", "TransactionRoleCredential"],
+  "issuer": "did:web:platform.example.com",
+  "validFrom": "2026-03-22T16:00:00Z",
+  "credentialSubject": {
+    "id": "urn:pdtf:role:tr-g7h8i9",
+    "participant": "did:web:bigbank.co.uk",
+    "role": "Lender",
+    "transaction": "did:web:platform.example.com:transactions:tx-789"
+  },
+  "termsOfUse": [{
+    "type": "PdtfAccessPolicy",
+    "confidentiality": "restricted",
+    "pii": false,
+    "roleRestrictions": ["Buyer's Conveyancer", "Seller's Conveyancer", "Estate Agent"]
+  }],
+  "credentialStatus": {
+    "id": "https://api.platform.example.com/status/role/list-001#41",
+    "type": "BitstringStatusListEntry",
+    "statusPurpose": "revocation",
+    "statusListIndex": "41",
+    "statusListCredential": "https://api.platform.example.com/status/role/list-001"
+  },
+  "proof": {
+    "type": "DataIntegrityProof",
+    "cryptosuite": "eddsa-jcs-2022",
+    "verificationMethod": "did:web:platform.example.com#platform-key-1",
+    "proofPurpose": "assertionMethod",
+    "created": "2026-03-22T16:00:00Z",
+    "proofValue": "z9cRn4wS..."
+  }
+}
+```
+
+**TransactionRoleCredential fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `participant` | DID string | Required | DID of the Person or Organisation holding the role |
+| `role` | enum | Required | The v3 participant role enum: `Lender`, `Landlord`, `Tenant`, `Surveyor`, `Platform Support`, … |
+| `transaction` | DID string | Required | Transaction scope |
+
+### 3.7a OfferCredential
+
+**Purpose:** Records a buyer's offer on a transaction. Buyers exist in the transaction only through Offers — this models reality: a buyer doesn't participate until they make an offer. It **embodies the Buyer role**, and always identifies exactly one buyer; joint purchasers each hold an OfferCredential with the same `offerId`.
 
 **Subject ID:** `urn:pdtf:offer:{id}` — a generated URN for this offer.
 
@@ -617,8 +661,9 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
   "validFrom": "2026-03-20T09:30:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:offer:off-j1k2l3",
-    "transactionId": "did:web:platform.example.com:transactions:tx-789",
-    "buyerIds": ["did:key:z6MkhBuyerXyz789"],
+    "buyer": "did:key:z6MkhBuyerXyz789",
+    "transaction": "did:web:platform.example.com:transactions:tx-789",
+    "offerId": "o1",
     "amount": 450000,
     "currency": "GBP",
     "status": "Accepted",
@@ -643,7 +688,7 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
     "type": "PdtfAccessPolicy",
     "confidentiality": "confidential",
     "pii": true,
-    "roleRestrictions": ["sellerConveyancer", "buyerConveyancer", "estateAgent"]
+    "roleRestrictions": ["Seller's Conveyancer", "Buyer's Conveyancer", "Estate Agent"]
   }],
   "credentialStatus": {
     "id": "https://api.platform.example.com/status/offers/list-001#2041",
@@ -667,11 +712,12 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `transactionId` | DID string | Required | The transaction this offer is for |
-| `buyerIds` | DID string[] | Required | Array of buyer Person DIDs (joint purchasers) |
-| `amount` | number | Required | Offer amount |
-| `currency` | string | Required | ISO 4217 currency code |
-| `status` | enum | Required | `Pending`, `Accepted`, `Withdrawn`, `Rejected`, `NoteOfInterest` |
+| `buyer` | DID string | Required | DID of the Person or Organisation making the offer |
+| `transaction` | DID string | Required | The transaction this offer is for |
+| `offerId` | string | Optional | The key of this offer in `Transaction.offers` |
+| `amount` | number | Optional | Offer amount |
+| `currency` | string | Optional | ISO 4217 currency code |
+| `status` | enum | Optional | `Pending`, `Accepted`, `Withdrawn`, `Rejected`, `Note of Interest` |
 | `conditions` | string[] | Optional | Free-text conditions |
 | `inclusions` | string[] | Optional | Items included in the offer |
 | `exclusions` | string[] | Optional | Items excluded from the offer |
@@ -711,14 +757,19 @@ This separation means ownership can be revoked (sale completes, mandate withdraw
       "hasHelpToBuyEquityLoan": "No",
       "isLimitedCompanySale": "No"
     },
-    "propertyIds": ["urn:pdtf:uprn:100023456789"],
-    "titleIds": ["urn:pdtf:titleNumber:AB12345"]
+    "property": "urn:pdtf:uprn:100023456789",
+    "titlesToBeSold": ["urn:pdtf:titleNumber:AB12345"],
+    "participants": [
+      { "participant": "did:key:z6MkhSellerAbc123", "participantId": "s1" },
+      { "participant": "did:key:z6MkhBuyerXyz789", "participantId": "b1" },
+      { "participant": "did:key:z6MkhConveyancerDef456", "participantId": "c1", "organisation": "Smith & Co Law", "organisationReference": "SC/2026/118" }
+    ]
   },
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
     "confidentiality": "restricted",
     "pii": false,
-    "roleRestrictions": ["sellerConveyancer", "buyerConveyancer", "estateAgent"]
+    "roleRestrictions": ["Seller's Conveyancer", "Buyer's Conveyancer", "Estate Agent"]
   }],
   "credentialStatus": {
     "id": "https://api.platform.example.com/status/transactions/list-001#5567",
@@ -751,9 +802,10 @@ The `credentialSubject.id` field identifies the entity the credential makes asse
 | PropertyCredential | `urn:pdtf:uprn:{uprn}` | `urn:pdtf:uprn:100023456789` |
 | TitleCredential | `urn:pdtf:titleNumber:{n}` | `urn:pdtf:titleNumber:AB12345` |
 | SellerCapacityCredential | `urn:pdtf:capacity:{id}` | `urn:pdtf:capacity:own-a1b2c3` |
-| RepresentationCredential | `urn:pdtf:representation:{id}` | `urn:pdtf:representation:rep-d4e5f6` |
-| DelegatedConsentCredential | `urn:pdtf:consent:{id}` | `urn:pdtf:consent:dc-g7h8i9` |
 | OfferCredential | `urn:pdtf:offer:{id}` | `urn:pdtf:offer:off-j1k2l3` |
+| GiftCredential | `urn:pdtf:gift:{id}` | `urn:pdtf:gift:gf-m4n5o6` |
+| RepresentationCredential | `urn:pdtf:representation:{id}` | `urn:pdtf:representation:rep-d4e5f6` |
+| TransactionRoleCredential | `urn:pdtf:role:{id}` | `urn:pdtf:role:tr-g7h8i9` |
 | TransactionCredential | `did:web:{host}:transactions:{id}` | `did:web:platform.example.com:transactions:tx-789` |
 
 ### 4.2 Sparse Object Model
@@ -1292,37 +1344,39 @@ Every PDTF credential SHOULD include a `termsOfUse` entry defining its access po
 - `pii` may be `true` or `false`
 
 **`confidential`** — Available only to specifically authorised parties.
-- Examples: AML verification results, delegated consent details, internal financial data
+- Examples: AML verification results, gift terms, internal financial data
 - `roleRestrictions` typically limited to direct legal representatives
 - `pii` is typically `true`
 
 ### 7.4 Role Identifiers
 
-Role identifiers correspond to `RepresentationCredential.role` values plus the implicit roles from SellerCapacity and Offer credentials:
+Role identifiers are the v3 participant role enum. Each is carried by exactly one relationship credential (01 §3.2, D32): implied by `SellerCapacity`, `Offer` and `Gift`, explicit on `Representation` and `TransactionRole`.
 
 | Role | Source | Description |
 |------|--------|-------------|
-| `seller` | SellerCapacityCredential | Person who owns the title |
-| `buyer` | OfferCredential (accepted) | Person with an accepted offer |
-| `sellerConveyancer` | RepresentationCredential | Seller's instructed law firm |
-| `buyerConveyancer` | RepresentationCredential | Buyer's instructed law firm |
-| `estateAgent` | RepresentationCredential | Instructed estate agency |
-| `buyerAgent` | RepresentationCredential | Buyer's purchasing agent |
-| `surveyor` | RepresentationCredential | Instructed surveyor |
-| `mortgageBroker` | RepresentationCredential | Instructed mortgage broker |
-| `lender` | DelegatedConsentCredential | Mortgage lender with consent |
+| `Seller` | SellerCapacityCredential | Person or organisation selling, in a declared capacity |
+| `Buyer` | OfferCredential (accepted) | Person with an accepted offer |
+| `Prospective Buyer` | OfferCredential (pending) | Person with an offer not yet accepted |
+| `Giftor` | GiftCredential | Person gifting funds towards an offer |
+| `Seller's Conveyancer` | RepresentationCredential | Instructed by the seller |
+| `Buyer's Conveyancer` | RepresentationCredential | Instructed by the buyer |
+| `Estate Agent` | RepresentationCredential | Instructed by the seller |
+| `Buyer's Agent` | RepresentationCredential | Instructed by the buyer |
+| `Mortgage Broker` | RepresentationCredential | Instructed by the buyer |
+| `Surveyor` | RepresentationCredential or TransactionRoleCredential | Instructed surveyor, or surveyor with no instructing party in the graph |
+| `Lender` | TransactionRoleCredential | Mortgage lender, party to the transaction |
+| `Landlord`, `Tenant`, `Platform Support` | TransactionRoleCredential | Roles with no instructing party |
 
 ### 7.5 Query-Time Filtering
 
 When a requester queries transaction state (either via the API or through the graph composer), the system applies `termsOfUse` filtering:
 
-1. **Determine requester's roles** — from their presented credentials (SellerCapacity → `seller`, Representation → role value, Offer → `buyer`, DelegatedConsent → `lender`).
+1. **Determine requester's roles** — from their presented credentials (SellerCapacity → `Seller`, Offer → `Buyer`, Gift → `Giftor`, Representation → its `role`, TransactionRole → its `role`). Each credential MUST reference the transaction being queried.
 
 2. **Filter credentials** — for each credential in the entity graph:
    - If `confidentiality` is `public` → include
    - If `confidentiality` is `restricted` or `confidential`:
      - Check if the requester has at least one role listed in `roleRestrictions`
-     - If DelegatedConsent: also check that the credential's paths are within the consent `scope`
    - If no match → exclude the credential from the response
 
 3. **Assemble filtered state** — compose state only from included credentials.
@@ -1331,13 +1385,13 @@ This means different requesters see different views of the same transaction. A b
 
 ```
 Buyer's Conveyancer requests state
-  → Present RepresentationCredential (role: buyerConveyancer)
-  → Filter: include all public + restricted/confidential where "buyerConveyancer" ∈ roleRestrictions
+  → Present RepresentationCredential (role: Buyer's Conveyancer)
+  → Filter: include all public + restricted/confidential where "Buyer's Conveyancer" ∈ roleRestrictions
   → Result: property data, title register, ownership claims, offer details, legal questions
 
 Estate Agent requests state
-  → Present RepresentationCredential (role: estateAgent)
-  → Filter: include all public + restricted where "estateAgent" ∈ roleRestrictions
+  → Present RepresentationCredential (role: Estate Agent)
+  → Filter: include all public + restricted where "Estate Agent" ∈ roleRestrictions
   → Result: property data, basic offer info — NOT title register, NOT AML details
 
 Unauthenticated request
@@ -1443,7 +1497,8 @@ The `encodedList` is a GZIP-compressed, base64url-encoded bitstring. Each bit po
 | Sale completes | SellerCapacityCredential, RepresentationCredential, OfferCredential | Transaction closes |
 | Sale falls through | OfferCredential | Offer withdrawn |
 | Data correction | Any credential with incorrect data | Error discovered |
-| Consent withdrawn | DelegatedConsentCredential | Buyer withdraws lender consent |
+| Lender withdraws | TransactionRoleCredential | Lender no longer party to the sale |
+| Gift cancelled | GiftCredential | Giftor withdraws |
 
 ### 8.6 Hosting and Caching
 
@@ -1490,7 +1545,7 @@ Compact serialisation — issuer-signed JWS, then `~`-separated Disclosures, the
 
 ```text
 eyJ0eXAiOiJ2YytzZC1qd3QiLCJhbGciOiJFZERTQSJ9.eyJpc3MiOiJkaWQ6d2Vic...fQ.<sig>
-~WyJzNGw3X3NhbHQiLCJ2ZXJpZmljYXRpb25MZXZlbCIsInJlZ2lzdGVyQ3Jvc3NSZWZlcmVuY2VkIl0
+~WyJzNGw3X3NhbHQiLCJkYXRlQmVjYW1lT3duZXJPckF1dGhvcml0eSIsIjIwMTQtMDYtMDEiXQ
 ~eyJhbGciOiJFZERTQSJ9.eyJhdWQiOiJkaWQ6d2ViOmpvbmVzbGVnYWwuY28udWsi...fQ.<kbSig>
 ```
 
@@ -1507,18 +1562,18 @@ Decoded **issuer-signed payload**:
   "_sd_alg": "sha-256",
   "credentialSubject": {
     "id": "urn:pdtf:capacity:own-1a2b",
-    "personId": "did:key:z6Mkh…abc",
-    "titleId": "urn:pdtf:titleNumber:AB12345",
-    "status": "verified",
-    "_sd": ["9gYy…digestOfVerificationLevel"]
+    "seller": "did:key:z6Mkh…abc",
+    "transaction": "did:web:platform.example.com:transactions:tx-789",
+    "sellersCapacity": { "capacity": "Legal Owner" },
+    "_sd": ["9gYy…digestOfDateBecameOwnerOrAuthority"]
   }
 }
 ```
 
-Decoded **Disclosure** (`[salt, claimName, value]`) for the selectively-disclosable `verificationLevel`:
+Decoded **Disclosure** (`[salt, claimName, value]`) for the selectively-disclosable `dateBecameOwnerOrAuthority`:
 
 ```json
-["s4l7…salt", "verificationLevel", "registerCrossReferenced"]
+["s4l7…salt", "dateBecameOwnerOrAuthority", "2014-06-01"]
 ```
 
 Decoded **Key Binding JWT** payload (holder proves possession over the verifier's nonce/audience):
@@ -1624,9 +1679,10 @@ The PDTF v2 JSON-LD context defines:
 - `PropertyCredential`
 - `TitleCredential`
 - `SellerCapacityCredential`
-- `RepresentationCredential`
-- `DelegatedConsentCredential`
 - `OfferCredential`
+- `GiftCredential`
+- `RepresentationCredential`
+- `TransactionRoleCredential`
 - `TransactionCredential`
 
 **Evidence types:**
@@ -1641,11 +1697,13 @@ The PDTF v2 JSON-LD context defines:
 **Credential subject properties:**
 - All Property entity paths (e.g. `energyEfficiency`, `environmentalIssues`, `heating`, `buildInformation`)
 - All Title entity paths (e.g. `registerExtract`, `ownership`, `titleExtents`)
-- SellerCapacity entity fields (`personId`, `titleId`, `status`, `verificationLevel`)
-- Representation entity fields (`organisationId`, `role`, `grantedBy`)
-- DelegatedConsent entity fields (`scope`, `purpose`)
-- Offer entity fields (`buyerIds`, `amount`, `buyerCircumstances`)
-- Transaction entity fields (`milestones`, `saleContext`, `propertyIds`, `titleIds`)
+- SellerCapacity entity fields (`seller`, `title`, `sellersCapacity`, `dateBecameOwnerOrAuthority`)
+- Offer entity fields (`buyer`, `offerId`, `amount`, `status`, `buyerCircumstances`)
+- Gift entity fields (`donor`, `offerId`, `giftDetails`)
+- Representation entity fields (`representative`, `representedParty`, `role`)
+- TransactionRole entity fields (`participant`, `role`)
+- Transaction entity fields (`milestones`, `saleContext`, `property`, `titlesToBeSold`, `participants`)
+- The `transaction` reference shared by every relationship credential
 
 **Evidence properties:**
 - `source`, `retrievedAt`, `attestedAt`, `extractedAt`, `verifiedAt`
@@ -1678,9 +1736,10 @@ Minor additions (new optional fields) can be added without version bumps, follow
     "PropertyCredential": "pdtf:PropertyCredential",
     "TitleCredential": "pdtf:TitleCredential",
     "SellerCapacityCredential": "pdtf:SellerCapacityCredential",
-    "RepresentationCredential": "pdtf:RepresentationCredential",
-    "DelegatedConsentCredential": "pdtf:DelegatedConsentCredential",
     "OfferCredential": "pdtf:OfferCredential",
+    "GiftCredential": "pdtf:GiftCredential",
+    "RepresentationCredential": "pdtf:RepresentationCredential",
+    "TransactionRoleCredential": "pdtf:TransactionRoleCredential",
     "TransactionCredential": "pdtf:TransactionCredential",
     
     "ElectronicRecord": "pdtf:ElectronicRecord",
@@ -1693,16 +1752,22 @@ Minor additions (new optional fields) can be added without version bumps, follow
     "pii": {"@id": "pdtf:pii", "@type": "http://www.w3.org/2001/XMLSchema#boolean"},
     "roleRestrictions": {"@id": "pdtf:roleRestrictions", "@container": "@set"},
     
-    "personId": {"@id": "pdtf:personId", "@type": "@id"},
-    "organisationId": {"@id": "pdtf:organisationId", "@type": "@id"},
-    "titleId": {"@id": "pdtf:titleId", "@type": "@id"},
-    "transactionId": {"@id": "pdtf:transactionId", "@type": "@id"},
-    "grantedBy": {"@id": "pdtf:grantedBy", "@type": "@id"},
-    "buyerIds": {"@id": "pdtf:buyerIds", "@container": "@set", "@type": "@id"},
-    "propertyIds": {"@id": "pdtf:propertyIds", "@container": "@set", "@type": "@id"},
-    "titleIds": {"@id": "pdtf:titleIds", "@container": "@set", "@type": "@id"},
+    "seller": {"@id": "pdtf:seller", "@type": "@id"},
+    "buyer": {"@id": "pdtf:buyer", "@type": "@id"},
+    "donor": {"@id": "pdtf:donor", "@type": "@id"},
+    "representative": {"@id": "pdtf:representative", "@type": "@id"},
+    "representedParty": {"@id": "pdtf:representedParty", "@type": "@id"},
+    "participant": {"@id": "pdtf:participant", "@type": "@id"},
+    "transaction": {"@id": "pdtf:transaction", "@type": "@id"},
+    "title": {"@id": "pdtf:title", "@type": "@id"},
+    "property": {"@id": "pdtf:property", "@type": "@id"},
+    "titlesToBeSold": {"@id": "pdtf:titlesToBeSold", "@container": "@list", "@type": "@id"},
+    "participants": {"@id": "pdtf:participants", "@container": "@list"},
+    "offerId": "pdtf:offerId",
+    "sellersCapacity": "pdtf:sellersCapacity",
+    "giftDetails": "pdtf:giftDetails",
     
-    "verificationLevel": "pdtf:verificationLevel",
+    "dateBecameOwnerOrAuthority": {"@id": "pdtf:dateBecameOwnerOrAuthority", "@type": "http://www.w3.org/2001/XMLSchema#date"},
     "verifiedAt": {"@id": "pdtf:verifiedAt", "@type": "http://www.w3.org/2001/XMLSchema#dateTime"},
     "status": "pdtf:status",
     "role": "pdtf:role",
@@ -1839,11 +1904,10 @@ A complete ownership credential — thin assertion only, no duplicated title dat
   "validFrom": "2026-03-18T09:00:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:capacity:own-a1b2c3",
-    "personId": "did:key:z6MkhRqN4v5sW8xZ1bD4gJ6kM9nP2qS0tSellerAbc",
-    "titleId": "urn:pdtf:titleNumber:AB12345",
-    "status": "verified",
-    "verificationLevel": "registerCrossReferenced",
-    "verifiedAt": "2026-03-18T09:00:00Z"
+    "seller": "did:key:z6MkhRqN4v5sW8xZ1bD4gJ6kM9nP2qS0tSellerAbc",
+    "transaction": "did:web:platform.example.com:transactions:tx-789",
+    "sellersCapacity": { "capacity": "Legal Owner" },
+    "dateBecameOwnerOrAuthority": "2014-06-01"
   },
   "evidence": [
     {
@@ -1883,9 +1947,9 @@ A complete ownership credential — thin assertion only, no duplicated title dat
 }
 ```
 
-### 11.3 RepresentationCredential (Organisation)
+### 11.3 RepresentationCredential
 
-A complete representation credential — seller instructs a conveyancer firm:
+A complete representation credential — seller instructs a conveyancer, whose firm is on the Transaction roster:
 
 ```json
 {
@@ -1899,11 +1963,10 @@ A complete representation credential — seller instructs a conveyancer firm:
   "validFrom": "2026-03-15T11:00:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:representation:rep-d4e5f6",
-    "organisationId": "did:web:smithandco.law",
-    "role": "sellerConveyancer",
-    "grantedBy": "did:key:z6MkhRqN4v5sW8xZ1bD4gJ6kM9nP2qS0tSellerAbc",
-    "transactionId": "did:web:platform.example.com:transactions:tx-789",
-    "status": "active"
+    "representative": "did:key:z6MkjConveyancerT3uW8yB1dF6hI4jL9mO2pR0sV7xDef",
+    "representedParty": "did:key:z6MkhRqN4v5sW8xZ1bD4gJ6kM9nP2qS0tSellerAbc",
+    "role": "Seller's Conveyancer",
+    "transaction": "did:web:platform.example.com:transactions:tx-789"
   },
   "evidence": [{
     "type": "UserAttestation",
@@ -2158,7 +2221,8 @@ Estimated credential sizes (JSON, uncompressed):
 | TitleCredential | 2–5 KB | Register extract + ownership type |
 | SellerCapacityCredential | 0.8–1 KB | Thin — smallest credential type |
 | RepresentationCredential | 0.8–1 KB | Thin — similar to SellerCapacity |
-| DelegatedConsentCredential | 1–1.5 KB | Includes scope array |
+| TransactionRoleCredential | 0.7–0.9 KB | Thin — three claims |
+| GiftCredential | 1–1.5 KB | Includes gift terms |
 | OfferCredential | 1–2 KB | Amount, conditions, buyer circumstances |
 | TransactionCredential | 1.5–3 KB | Status, milestones, sale context |
 
@@ -2224,7 +2288,9 @@ A typical transaction might have 20–40 credentials totalling 30–80 KB of VC 
 
 | # | Decision | Status | Relevance to This Spec |
 |---|----------|--------|----------------------|
-| D3 | Representation to Organisations, not Persons | ✅ Confirmed | §3.5 — RepresentationCredential targets Organisation DIDs |
+| D3 | Representation to Organisations, not Persons | ⚪ Superseded by D33 | §3.5 — the representative is the instructed party (Person or Organisation); the firm is on the Transaction roster |
+| D32 | Role lives only on the relationship credential; every credential references the Transaction | ✅ Confirmed | §3.4–3.7a, §7.4 — no role on the roster; nothing nests |
+| D33 | One Representation per (representative, represented party) pair | ✅ Confirmed | §3.5 |
 | D4 | Property-level VCs, not first-class entity VCs | ✅ Confirmed | §3.2 — EPC is a PropertyCredential, not EPCCredential |
 | D5 | Sparse objects + dependency pruning | 🟡 Needs consensus | §5 — Claims representation model |
 | D6 | Simpler evidence model | ✅ Confirmed | §6 — Four evidence types replacing OIDC-derived schema |
@@ -2249,30 +2315,36 @@ TitleCredential
   claims: register extract, ownership type, leasehold terms
   issuer: HMLR proxy / HMLR root issuer
 
-SellerCapacityCredential
+SellerCapacityCredential                                  ⇒ Seller
   subject: urn:pdtf:capacity:{id}
-  claims: personId/organisationId → titleId, status, verificationLevel
+  claims: seller, transaction, title?, sellersCapacity, dateBecameOwnerOrAuthority
   issuer: account provider (platform)
-  NOTE: thin — no title details, just the link
+  NOTE: thin — no title details, just the capacity; one per seller
 
-RepresentationCredential
-  subject: urn:pdtf:representation:{id}
-  claims: organisationId, role, grantedBy, transactionId, status
-  issuer: platform (on behalf of person granting authority)
-
-DelegatedConsentCredential
-  subject: urn:pdtf:consent:{id}
-  claims: organisationId, scope, purpose, grantedBy, transactionId
-  issuer: platform (on behalf of person granting consent)
-
-OfferCredential
+OfferCredential                                           ⇒ Buyer
   subject: urn:pdtf:offer:{id}
-  claims: buyerIds, amount, currency, status, conditions, buyerCircumstances
+  claims: buyer, transaction, offerId, amount, currency, status, conditions, buyerCircumstances
   issuer: platform (on behalf of buyer)
+
+GiftCredential                                            ⇒ Giftor
+  subject: urn:pdtf:gift:{id}
+  claims: donor, transaction, offerId, giftDetails
+  issuer: platform (on behalf of giftor)
+
+RepresentationCredential                                  role: which kind
+  subject: urn:pdtf:representation:{id}
+  claims: representative, representedParty, role, transaction
+  issuer: platform (on behalf of the instructing party)
+  NOTE: one per (representative, represented party) pair
+
+TransactionRoleCredential                                 role: which role
+  subject: urn:pdtf:role:{id}
+  claims: participant, role, transaction
+  issuer: platform
 
 TransactionCredential
   subject: did:web:{host}:transactions:{id}
-  claims: status, milestones, saleContext, propertyIds, titleIds
+  claims: status, milestones, saleContext, offers, property, titlesToBeSold, participants (roster — no roles)
   issuer: platform
 ```
 

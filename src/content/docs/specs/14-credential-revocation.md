@@ -34,7 +34,7 @@ description: "PDTF 2.0 specification document."
 
 ## 1. Purpose
 
-Verifiable Credentials in PDTF 2.0 assert facts about properties, ownership, representation, and consent at a specific point in time. Those facts change. Properties are sold. Mandates are withdrawn. EPCs are superseded. Accounts are disabled. Without a mechanism to signal that a previously-issued credential is no longer valid, verifiers would continue to trust stale assertions — with real consequences for conveyancing transactions.
+Verifiable Credentials in PDTF 2.0 assert facts about properties, titles, and the roles and relationships of the parties at a specific point in time. Those facts change. Properties are sold. Mandates are withdrawn. EPCs are superseded. Accounts are disabled. Without a mechanism to signal that a previously-issued credential is no longer valid, verifiers would continue to trust stale assertions — with real consequences for conveyancing transactions.
 
 Credential revocation is the mechanism by which an issuer declares that a credential it previously issued MUST no longer be accepted by verifiers. It is a foundational infrastructure concern: every credential in the PDTF 2.0 ecosystem — whether issued by a PDTF adapter, a primary-source authority, or the platform itself — MUST support revocation from the moment of issuance.
 
@@ -48,7 +48,7 @@ Credential revocation is the mechanism by which an issuer declares that a creden
 
 **Account disabled.** If a user's account is suspended or terminated — for fraud, compliance reasons, or at the user's request — all credentials asserting that user's identity or roles MUST be revocable.
 
-**Consent withdrawn.** DelegatedConsent credentials grant third parties (lenders, insurers) access to transaction data. The granting party MUST be able to revoke that consent at any time, and the revocation MUST be verifiable without contacting the consent grantor.
+**Role ended.** A party's role in a transaction is recorded only on the relationship credential that embodies it (01 §3.2, D32). When a lender withdraws, an offer is rejected, or a gift is cancelled, the TransactionRole, Offer or Gift credential MUST be revoked — and because the Transaction roster carries no role, revoking the credential is what removes the role. The revocation MUST be verifiable without contacting the party who ended the relationship.
 
 ### Design Principle
 
@@ -705,33 +705,33 @@ User DID credentials bind a user's identity to their DID. They are revoked when 
 
 **Cascade:** User account revocation triggers cascade revocation of all credentials issued to or by that user. This is the most impactful revocation event and MUST be handled carefully.
 
-### 7.5 DelegatedConsent Credential Revocation
+### 7.5 TransactionRole, Offer and Gift Credential Revocation
 
-DelegatedConsent credentials grant third parties (lenders, insurers, surveyors) access to specific transaction data.
+TransactionRole credentials embody a party's role where no more specific relationship applies (lender, landlord, tenant, surveyor, platform support). Offer and Gift credentials embody the Buyer and Giftor roles. Because role lives nowhere else, revoking one of these removes the party's role from the transaction.
 
-**Trigger:** Consent withdrawn by granting party, access period expired, transaction completed
+**Trigger:** Party withdraws, offer rejected or withdrawn, gift cancelled, transaction completed
 
-**Initiator:** Granting party (consent withdrawal) or Platform (expiry/completion)
+**Initiator:** The party, the instructing party, or the Platform (completion)
 
 **Flow:**
 
 ```
-1. Consent withdrawal event
+1. Withdrawal / rejection event
        │
-2. Platform identifies DelegatedConsent credential
+2. Platform identifies the role-bearing credential
        │
 3. Revoke credential
    │  a. Set bit in revocation list
    │  b. Re-sign status list
    │  c. Publish updated status list
        │
-4. Notify affected third party (out of band)
+4. Notify affected party (out of band)
        │
 5. Platform enforcement: reject data requests
-   presenting revoked consent credential
+   presenting the revoked credential
 ```
 
-**Important:** Revocation of a consent credential does not retroactively invalidate data already shared. It prevents future access only. The third party may retain data already received, subject to their own data retention policies and GDPR obligations.
+**Important:** Revocation of a role-bearing credential does not retroactively invalidate data already shared. It prevents future access only. The party may retain data already received, subject to their own data retention policies and GDPR obligations.
 
 ---
 
@@ -935,7 +935,7 @@ Status list issuer:   did:web:evil.example.com:epc          ❌ Mismatch → REJ
 
 Several scenarios require revoking multiple credentials simultaneously:
 
-- **Transaction completion:** All representation credentials, consent credentials, and the seller's ownership credential for a transaction
+- **Transaction completion:** All relationship credentials for a transaction — SellerCapacity, Offer, Gift, Representation, TransactionRole
 - **Account termination:** All credentials issued to a user
 - **Adapter key rotation:** All credentials signed with a compromised key (reissue with new key)
 
@@ -1100,7 +1100,7 @@ PDTF 2.0 mandates **fail closed** for high-stakes credentials:
 |----------------|---------------------------|-----------|
 | SellerCapacityCredential | **REJECT** | Cannot risk accepting revoked ownership |
 | RepresentationCredential | **REJECT** | Cannot risk accepting revoked mandate |
-| DelegatedConsent | **REJECT** | Cannot risk granting revoked access |
+| OfferCredential, GiftCredential, TransactionRoleCredential | **REJECT** | Cannot risk accepting a revoked role |
 | Property data VCs | **WARN + ACCEPT** (configurable) | Lower risk; data may still be valid |
 | User DID credential | **REJECT** | Cannot verify identity without status |
 
@@ -1133,7 +1133,7 @@ A status list is a point-in-time snapshot. An attacker who captures an older ver
 
 Should all credential types support suspension, or only specific types (ownership, representation)? Suspension adds operational complexity (the ability to un-set bits and re-sign). Property data VCs may not need suspension — if data is wrong, revoke and reissue.
 
-**Proposed resolution:** Suspension is OPTIONAL for property data VCs, RECOMMENDED for ownership and representation credentials, and REQUIRED for DelegatedConsent credentials.
+**Proposed resolution:** Suspension is OPTIONAL for property data VCs and RECOMMENDED for the relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole).
 
 ### Q2: Cross-Issuer Revocation
 
@@ -1263,7 +1263,7 @@ PDTF v1/v3 does not have credential revocation (claims are asserted through OIDC
 |----|----------|-----------|------|
 | D18 | Bitstring Status List mandatory for all issuers | W3C standard, privacy-preserving, cacheable, simple infrastructure requirement | 2026-03-24 |
 | D18.1 | Minimum 16KB (131,072 bit) status lists | W3C recommendation for herd privacy; storage cost negligible | 2026-03-24 |
-| D18.2 | Fail-closed for ownership/representation/consent credentials | Risk of accepting revoked credentials in property transactions too high | 2026-03-24 |
+| D18.2 | Fail-closed for relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole) | Risk of accepting revoked credentials in property transactions too high | 2026-03-24 |
 | D18.3 | Indices never reused | Prevents confusion and replay attacks | 2026-03-24 |
 | D18.4 | 5-minute cache TTL recommended | Balance between freshness and efficiency | 2026-03-24 |
 

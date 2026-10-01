@@ -199,9 +199,10 @@ The composer must determine which entity type each credential targets. This is r
    - `urn:pdtf:uprn:*` → Property
    - `urn:pdtf:titleNumber:*` / `urn:pdtf:unregisteredTitle:*` → Title
    - `urn:pdtf:capacity:*` → SellerCapacity
-   - `urn:pdtf:representation:*` → Representation
-   - `urn:pdtf:consent:*` → DelegatedConsent
    - `urn:pdtf:offer:*` → Offer
+   - `urn:pdtf:gift:*` → Gift
+   - `urn:pdtf:representation:*` → Representation
+   - `urn:pdtf:role:*` → TransactionRole
    - `did:key:*` → Person
    - `did:web:*` (not transaction DID) → Organisation
 
@@ -515,56 +516,78 @@ The composed v4 state follows the structure defined in [Sub-spec 01 §6](/specs/
     "did:web:bigbank.co.uk": { "name": "Big Bank plc", "type": "lender" }
   },
 
-  "ownership": {
-    "urn:pdtf:capacity:own-1": {
-      "personId": "did:key:z6Mkh...seller1",
-      "titleId": "urn:pdtf:titleNumber:AB12345",
-      "status": "verified"
-    },
-    "urn:pdtf:capacity:own-2": {
-      "personId": "did:key:z6Mkh...seller2",
-      "titleId": "urn:pdtf:titleNumber:AB12345",
-      "status": "verified"
-    }
-  },
-
-  "representation": {
-    "urn:pdtf:representation:rep-1": {
-      "organisationId": "did:web:smithandco.law",
-      "role": "sellerConveyancer",
-      "grantedBy": "did:key:z6Mkh...seller1"
-    },
-    "urn:pdtf:representation:rep-2": {
-      "organisationId": "did:web:acmeestates.co.uk",
-      "role": "estateAgent",
-      "grantedBy": "did:key:z6Mkh...seller1"
-    }
-  },
+  "participants": [
+    { "participant": "did:key:z6Mkh...seller1", "participantId": "s1" },
+    { "participant": "did:key:z6Mkh...seller2", "participantId": "s2" },
+    { "participant": "did:key:z6Mkh...buyer",   "participantId": "b1" },
+    { "participant": "did:key:z6Mkj...c1", "participantId": "c1", "organisation": "Smith & Co Solicitors", "organisationReference": "SC/118" },
+    { "participant": "did:key:z6Mkj...a1", "participantId": "a1", "organisation": "Acme Estates" },
+    { "participant": "did:key:z6Mkj...c2", "participantId": "c2", "organisation": "Jones Legal", "organisationReference": "JL/42" },
+    { "participant": "did:web:bigbank.co.uk", "participantId": "l1" }
+  ],
 
   "offers": {
+    "o1": { "amount": 450000, "currency": "GBP", "status": "Accepted" }
+  },
+
+  "sellerCapacities": {
+    "urn:pdtf:capacity:own-1": {
+      "seller": "did:key:z6Mkh...seller1",
+      "transaction": "did:web:platform.example.com:transactions:tx-789",
+      "sellersCapacity": { "capacity": "Legal Owner" }
+    },
+    "urn:pdtf:capacity:own-2": {
+      "seller": "did:key:z6Mkh...seller2",
+      "transaction": "did:web:platform.example.com:transactions:tx-789",
+      "sellersCapacity": { "capacity": "Legal Owner" }
+    }
+  },
+
+  "offerCredentials": {
     "urn:pdtf:offer:off-1": {
-      "buyerIds": ["did:key:z6Mkh...buyer"],
+      "buyer": "did:key:z6Mkh...buyer",
+      "transaction": "did:web:platform.example.com:transactions:tx-789",
+      "offerId": "o1",
       "amount": 450000,
       "currency": "GBP",
-      "status": "Accepted",
+      "status": "Accepted"
+    }
+  },
 
-      "representation": {
-        "urn:pdtf:representation:rep-3": {
-          "organisationId": "did:web:joneslegal.co.uk",
-          "role": "buyerConveyancer",
-          "grantedBy": "did:key:z6Mkh...buyer",
-          "offerId": "urn:pdtf:offer:off-1"
-        }
-      },
-      "delegatedConsent": {
-        "urn:pdtf:consent:dc-1": {
-          "organisationId": "did:web:bigbank.co.uk",
-          "scope": ["propertyPack", "titleRegister"],
-          "grantedBy": "did:key:z6Mkh...buyer",
-          "offerId": "urn:pdtf:offer:off-1",
-          "purpose": "mortgage valuation"
-        }
-      }
+  "gifts": {},
+
+  "representations": {
+    "urn:pdtf:representation:rep-1": {
+      "representative": "did:key:z6Mkj...c1",
+      "representedParty": "did:key:z6Mkh...seller1",
+      "role": "Seller's Conveyancer",
+      "transaction": "did:web:platform.example.com:transactions:tx-789"
+    },
+    "urn:pdtf:representation:rep-1b": {
+      "representative": "did:key:z6Mkj...c1",
+      "representedParty": "did:key:z6Mkh...seller2",
+      "role": "Seller's Conveyancer",
+      "transaction": "did:web:platform.example.com:transactions:tx-789"
+    },
+    "urn:pdtf:representation:rep-2": {
+      "representative": "did:key:z6Mkj...a1",
+      "representedParty": "did:key:z6Mkh...seller1",
+      "role": "Estate Agent",
+      "transaction": "did:web:platform.example.com:transactions:tx-789"
+    },
+    "urn:pdtf:representation:rep-3": {
+      "representative": "did:key:z6Mkj...c2",
+      "representedParty": "did:key:z6Mkh...buyer",
+      "role": "Buyer's Conveyancer",
+      "transaction": "did:web:platform.example.com:transactions:tx-789"
+    }
+  },
+
+  "transactionRoles": {
+    "urn:pdtf:role:tr-1": {
+      "participant": "did:web:bigbank.co.uk",
+      "role": "Lender",
+      "transaction": "did:web:platform.example.com:transactions:tx-789"
     }
   },
 
@@ -626,107 +649,75 @@ Output: CombinedStateV3
 
 ### 5.3 Participant Reconstruction
 
-The most complex transformation. V4 decomposes v3's `participants[]` array into five separate entity types. The v3 composer must reconstruct participants from them.
+V4 decomposes v3's `participants[]` array into the Transaction roster, the Person entities, and five relationship credential types. The v3 composer reconstructs participants by walking the roster in order and attaching the role and relationship fields from whichever credential names each participant.
 
 **V4 entities involved:**
-- `persons{}` — identity data (name, contact, address)
-- `organisations{}` — firm data (name, type)
-- `ownership{}` — links person → title (seller role)
-- `representation{}` — seller-side: links organisation → transaction (professional role)
-- `offers{}` — links person → transaction (buyer role); **nests** the buyer-side `representation{}` and `delegatedConsent{}` for that offer (D31)
+- `participants[]` — the ordered roster: `participant` DID, `participantId`, `organisation`, `organisationReference`. No role.
+- `persons{}` — identity data (name, contact, address, verification)
+- `sellerCapacities{}` — `seller` → role `Seller`, `sellersCapacity`, `dateBecameOwnerOrAuthority`
+- `offerCredentials{}` — `buyer` → role `Buyer` / `Prospective Buyer`, `offerId`
+- `gifts{}` — `donor` → role `Giftor`, `offerId`, `giftDetails`
+- `representations{}` — `representative` → `role`, `actingFor` (the represented parties' `participantId`s)
+- `transactionRoles{}` — `participant` → `role`
 
 **Reconstruction algorithm:**
 
 ```typescript
 function reconstructParticipants(v4State: ComposedStateV4): Participant[] {
-  const participants: Participant[] = [];
+  const byDid = (coll: Record<string, any>, key: string) =>
+    Object.values(coll).filter((c) => c[key] !== undefined)
+      .reduce((m, c) => ((m[c[key]] ??= []).push(c), m), {} as Record<string, any[]>);
 
-  // 1. Sellers — persons with SellerCapacity credentials
-  for (const [ownId, ownership] of Object.entries(v4State.ownership)) {
-    const person = v4State.persons[ownership.personId];
-    if (!person) continue;
+  const capacities = byDid(v4State.sellerCapacities, "seller");
+  const offers     = byDid(v4State.offerCredentials, "buyer");
+  const gifts      = byDid(v4State.gifts, "donor");
+  const reps       = byDid(v4State.representations, "representative");
+  const roles      = byDid(v4State.transactionRoles, "participant");
+  const localId    = (did: string) =>
+    v4State.participants.find((p) => p.participant === did)?.participantId;
 
-    participants.push({
+  // Walk the roster in order — the order is authoritative for v3.
+  return v4State.participants.map((entry) => {
+    const did = entry.participant;
+    const person = v4State.persons[did] ?? {};
+    const out: Participant = {
       ...person,
-      role: "Seller",
-      participantStatus: mapSellerCapacityStatus(ownership.status),
-      // Preserve the ownership credential ID for round-trip
-      _sellerCapacityId: ownId
-    });
-  }
+      did,
+      participantId: entry.participantId,
+      organisation: entry.organisation,
+      organisationReference: entry.organisationReference
+    };
 
-  // 2. Representatives — organisations with Representation credentials
-  for (const [repId, representation] of Object.entries(v4State.representation)) {
-    const org = v4State.organisations[representation.organisationId];
-    if (!org) continue;
-
-    participants.push({
-      ...flattenOrgToParticipant(org),
-      role: mapRepresentationRole(representation.role),
-      participantStatus: "Active",
-      _representationId: repId
-    });
-  }
-
-  // 3. Offers — each offer carries its buyer(s) plus the buyer-side
-  //    relationships nested inside it (D31).
-  for (const [offerId, offer] of Object.entries(v4State.offers)) {
-    // 3a. Buyers — persons referenced by this offer
-    for (const buyerId of offer.buyerIds || []) {
-      const person = v4State.persons[buyerId];
-      if (!person) continue;
-
-      participants.push({
-        ...person,
-        role: offer.status === "Accepted" ? "Buyer" : "Prospective Buyer",
-        offerId: offerId,
-        participantStatus: mapOfferStatus(offer.status)
-      });
+    // Exactly one role-bearing credential per participant (01 §3.2).
+    if (capacities[did]) {
+      const [c] = capacities[did];
+      Object.assign(out, { role: "Seller",
+        sellersCapacity: c.sellersCapacity,
+        dateBecameOwnerOrAuthority: c.dateBecameOwnerOrAuthority });
+    } else if (offers[did]) {
+      const [o] = offers[did];
+      Object.assign(out, { role: o.status === "Accepted" ? "Buyer" : "Prospective Buyer",
+        offerId: o.offerId });
+    } else if (gifts[did]) {
+      const [g] = gifts[did];
+      Object.assign(out, { role: "Giftor", offerId: g.offerId, giftDetails: g.giftDetails });
+    } else if (reps[did]) {
+      // Several Representations (one per represented party) fold into one
+      // participant with an actingFor list; they share the same role.
+      Object.assign(out, { role: reps[did][0].role,
+        actingFor: reps[did].map((r) => localId(r.representedParty) ?? r.representedParty) });
+    } else if (roles[did]) {
+      Object.assign(out, { role: roles[did][0].role });
     }
+    // A participant named by no credential has no role — which is what
+    // revocation of their credential should mean.
 
-    // 3b. Buyer-side representatives — nested representation{} on the offer
-    for (const [repId, representation] of Object.entries(offer.representation || {})) {
-      const org = v4State.organisations[representation.organisationId];
-      if (!org) continue;
-
-      participants.push({
-        ...flattenOrgToParticipant(org),
-        role: mapRepresentationRole(representation.role),
-        offerId: offerId,
-        participantStatus: "Active",
-        _representationId: repId
-      });
-    }
-
-    // 3c. Lenders — nested delegatedConsent{} on the offer
-    for (const [dcId, consent] of Object.entries(offer.delegatedConsent || {})) {
-      const org = v4State.organisations[consent.organisationId];
-      if (!org) continue;
-
-      participants.push({
-        ...flattenOrgToParticipant(org),
-        role: "Lender", // Or derive from consent.purpose
-        offerId: offerId,
-        participantStatus: "Active",
-        _consentId: dcId
-      });
-    }
-  }
-
-  return participants;
+    return out;
+  });
 }
 ```
 
-**Role mapping (v4 → v3):**
-
-| V4 Representation Role | V3 Participant Role |
-|------------------------|-------------------|
-| `sellerConveyancer` | `Seller's Conveyancer` |
-| `buyerConveyancer` | `Buyer's Conveyancer` |
-| `estateAgent` | `Estate Agent` |
-| `buyerAgent` | `Buyer's Agent` |
-| `surveyor` | `Surveyor` |
-| `mortgageBroker` | `Mortgage Broker` |
+**Role mapping (v4 → v3):** none required. The `role` value carried on Representation and TransactionRole credentials *is* the v3 participant role enum (`Seller's Conveyancer`, `Estate Agent`, `Lender`, …), and the roles implied by SellerCapacity, Offer and Gift are `Seller`, `Buyer` / `Prospective Buyer` and `Giftor`.
 
 ### 5.4 Field Reassignment (V4 → V3)
 
@@ -1399,96 +1390,75 @@ These collections are already ID-keyed in v3 and remain so in v4:
 
 These collections change from arrays (v3) to ID-keyed maps (v4):
 
-#### 10.3.1 Participants → Multiple Entity Types
+#### 10.3.1 Participants → Roster + Entities + Credentials
 
-The most complex conversion. V3's `participants[]` explodes into five v4 entity types:
+The most complex conversion. V3's `participants[]` becomes the Transaction roster, Person entities, and the relationship credentials that carry role:
 
 ```
-V3: participants[] (mixed array of all participant types)
+V3: participants[] (mixed array of all participant types, each with a role)
     ↕
-V4: persons{}            — keyed by did:key
-    organisations{}      — keyed by did:web
-    ownership{}          — keyed by urn:pdtf:capacity:*
-    representation{}     — seller-side, keyed by urn:pdtf:representation:*
-    offers{}             — keyed by urn:pdtf:offer:*, each nesting the
-                           buyer-side representation{} + delegatedConsent{} (D31)
+V4: participants[]       — ordered roster on the Transaction: DID, local id, firm. No roles.
+    persons{}            — keyed by did:key
+    organisations{}      — keyed by did:web (outside the round trip)
+    sellerCapacities{}   — keyed by urn:pdtf:capacity:*       ⇒ Seller
+    offerCredentials{}   — keyed by urn:pdtf:offer:*          ⇒ Buyer
+    gifts{}              — keyed by urn:pdtf:gift:*           ⇒ Giftor
+    representations{}    — keyed by urn:pdtf:representation:* (role: which kind)
+    transactionRoles{}   — keyed by urn:pdtf:role:*           (role: which role)
 ```
 
 **V3 → V4 (decomposition):**
 ```typescript
-function decomposeParticipants(
-  participants: V3Participant[]
-): { persons, organisations, ownership, representation, offerRelationships } {
+function decomposeParticipants(tx: V3Transaction, ids: IdFactory) {
+  const participants = tx.participants;
   const result = {
-    persons: {},
-    organisations: {},
-    ownership: {},
-    representation: {},      // seller-side only
-    // Buyer-side relationships keyed by the participant's offerId, ready to be
-    // merged into offers[offerId].{representation,delegatedConsent} (D31).
-    offerRelationships: {}
+    roster: [] as RosterEntry[],
+    persons: {}, sellerCapacities: {}, offerCredentials: {},
+    gifts: {}, representations: {}, transactionRoles: {}
   };
+  const transaction = ids.transaction(tx);
+  const didOf = (p: V3Participant, i: number) => p.did ?? ids.person(p, i);
+  const byLocalId = (id: string) =>
+    participants.find((q) => q.participantId === id || q.did === id);
 
-  // Lazily create the { representation, delegatedConsent } bucket for an offer
-  const offerBucket = (offerId: string) =>
-    (result.offerRelationships[offerId] ??= { representation: {}, delegatedConsent: {} });
+  participants.forEach((p, i) => {
+    const did = didOf(p, i);
+    if (result.persons[did]) throw new Error(`duplicate participant ${did}`); // one party, one entry
 
-  for (const p of participants) {
-    if (isOrganisation(p)) {
-      // Estate agents, conveyancers, lenders
-      const orgDid = resolveOrgDid(p);
-      result.organisations[orgDid] = extractOrgFields(p);
+    // 1. Roster entry — only what stays true regardless of any relationship
+    result.roster.push({ participant: did, participantId: p.participantId,
+      organisation: p.organisation, organisationReference: p.organisationReference });
 
-      if (isRepresentative(p.role)) {
-        const repUrn = generateRepresentationUrn();
-        const rep = {
-          organisationId: orgDid,
-          role: mapRoleToV4(p.role),
-          status: p.participantStatus
-        };
-        if (isBuyerSideRole(p.role)) {
-          // Buyer-side representation nests under the buyer's offer (D31)
-          offerBucket(p.offerId).representation[repUrn] = { ...rep, offerId: p.offerId };
-        } else {
-          // Seller-side representation sits on the Transaction
-          result.representation[repUrn] = rep;
-        }
-      } else if (p.role === 'Lender') {
-        // DelegatedConsent is always buyer-side — nests under the buyer's offer (D31)
-        const dcUrn = generateConsentUrn();
-        offerBucket(p.offerId).delegatedConsent[dcUrn] = {
-          organisationId: orgDid,
-          scope: ['propertyPack', 'titleRegister'],
-          grantedBy: resolveOfferBuyer(p.offerId),
-          offerId: p.offerId,
-          purpose: 'mortgage'
-        };
+    // 2. Person — the party fields
+    result.persons[did] = extractPersonFields(p);
+
+    // 3. Exactly one role-bearing credential, the most specific that applies
+    if (p.role === "Seller" || p.sellersCapacity) {
+      result.sellerCapacities[ids.sellerCapacity(p)] = { seller: did, transaction,
+        sellersCapacity: p.sellersCapacity, dateBecameOwnerOrAuthority: p.dateBecameOwnerOrAuthority };
+    } else if (p.giftDetails || p.role === "Giftor") {
+      result.gifts[ids.gift(p)] = { donor: did, transaction, offerId: p.offerId, giftDetails: p.giftDetails };
+    } else if (p.offerId) {
+      result.offerCredentials[ids.offer(p)] = { buyer: did, transaction, offerId: p.offerId,
+        ...tx.offers?.[p.offerId] };
+    } else if (p.actingFor?.length) {
+      // One Representation per represented party
+      for (const target of p.actingFor) {
+        const rep = byLocalId(target);
+        result.representations[ids.representation(p, rep)] = { representative: did,
+          representedParty: didOf(rep, participants.indexOf(rep)), role: p.role, transaction };
       }
-    } else {
-      // Natural persons (sellers, buyers)
-      const personDid = resolvePersonDid(p);
-      result.persons[personDid] = extractPersonFields(p);
-
-      if (p.role === 'Seller') {
-        const ownUrn = generateSellerCapacityUrn();
-        result.ownership[ownUrn] = {
-          personId: personDid,
-          titleId: resolveSellerTitle(p),
-          status: mapSellerCapacityStatus(p.participantStatus)
-        };
-      }
-      // Buyers: handled via offers (offerId on participant)
+    } else if (p.role) {
+      result.transactionRoles[ids.transactionRole(p)] = { participant: did, role: p.role, transaction };
     }
-  }
+    // No role, no actingFor → roster entry and Person only.
+  });
 
   return result;
 }
 ```
 
-`offerRelationships` is keyed by `offerId`; the caller merges each entry into the
-matching `offers[offerId]` so the buyer-side `representation{}` and
-`delegatedConsent{}` end up nested inside their offer. `isBuyerSideRole` returns
-true for `Buyer's Conveyancer`, `Buyer's Agent`, and `Mortgage Broker`.
+The roster order is the v3 `participants[]` order and is authoritative for recomposition. `organisation` and `organisationReference` stay on the roster rather than on any credential: where someone works does not stop being true when a representation ends.
 
 **V4 → V3 (reconstruction):** See §5.3.
 
@@ -2128,7 +2098,7 @@ From the v4 state, the v3 composer:
 2. Converts `titles["urn:pdtf:titleNumber:AB12345"]` → `propertyPack.titlesToBeSold[0]`
 3. Moves `transaction.saleContext.numberOfSellers` → `propertyPack.ownership.numberOfSellers`
 4. Moves `titles[...].ownership.ownershipType` → `propertyPack.ownership.ownershipsToBeTransferred[0].ownershipType`
-5. Reconstructs `participants[]` from persons + ownership (no representation or offers in this example)
+5. Reconstructs `participants[]` by walking the roster and attaching `role: "Seller"` and `sellersCapacity` from each SellerCapacity credential (no representations or offers in this example)
 6. Adds `propertyPack.uprn = "100023456789"`
 
 **Result:** A v3 `combined.json` that matches what `composeStateFromClaims` would produce from the equivalent pathKey:value claims.
