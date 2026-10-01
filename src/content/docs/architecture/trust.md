@@ -19,11 +19,14 @@ Authority is established via the **OpenID Federation**, which grants trust at **
 
 ## Trust roles
 
-PDTF recognises three trust levels:
+PDTF recognises four trust levels:
 
 - `rootIssuer`: the primary authoritative source
 - `trustedProxy`: an adapter that issues faithfully from a primary source
 - `accountProvider`: a platform trusted to issue or manage user identities
+- `assertion`: a human stating something as true, signed against their verified identity
+
+An assertion is the only level that is not independent confirmation. It is the right level for the large class of facts that no registry holds and only the occupier knows (the TA6 property information form is the canonical case). Its value comes from the binding: the statement is traceable to an identified individual and the liability that attaches to them, which a physically signed form is not. Credentials at this level carry `UserAttestation` evidence so that verifiers never mistake them for registry data.
 
 ## Three-phase evolution
 
