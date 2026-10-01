@@ -203,10 +203,11 @@ Registrant: Property Data Standards Company
 | `urn:pdtf:uprn:{uprn}` | Property | Ordnance Survey UPRN (Unique Property Reference Number) |
 | `urn:pdtf:titleNumber:{number}` | Title (registered) | HMLR title number |
 | `urn:pdtf:unregisteredTitle:{uuid}` | Title (unregistered) | Platform-generated UUID v4 (D23) |
-| `urn:pdtf:capacity:{uuid}` | SellerCapacity claim | Platform-generated UUID v4 |
-| `urn:pdtf:representation:{uuid}` | Representation mandate | Platform-generated UUID v4 |
-| `urn:pdtf:consent:{uuid}` | Delegated consent | Platform-generated UUID v4 |
+| `urn:pdtf:capacity:{uuid}` | SellerCapacity | Platform-generated UUID v4 |
 | `urn:pdtf:offer:{uuid}` | Offer | Platform-generated UUID v4 |
+| `urn:pdtf:gift:{uuid}` | Gift | Platform-generated UUID v4 |
+| `urn:pdtf:representation:{uuid}` | Representation | Platform-generated UUID v4 |
+| `urn:pdtf:role:{uuid}` | TransactionRole | Platform-generated UUID v4 |
 
 ### 3.3 ABNF Grammar
 
@@ -220,9 +221,10 @@ pdtf-nss          = property-urn
                   / title-urn
                   / unregistered-title-urn
                   / capacity-urn
-                  / representation-urn
-                  / consent-urn
                   / offer-urn
+                  / gift-urn
+                  / representation-urn
+                  / role-urn
 
 ; Property — UPRN is a numeric identifier (up to 12 digits)
 property-urn      = "uprn:" uprn
@@ -237,16 +239,19 @@ district-prefix   = 1*4ALPHA
 unregistered-title-urn = "unregisteredTitle:" uuid-v4
 
 ; SellerCapacity — UUID v4
-capacity-urn     = "capacity:" uuid-v4
+capacity-urn      = "capacity:" uuid-v4
+
+; Offer — UUID v4
+offer-urn         = "offer:" uuid-v4
+
+; Gift — UUID v4
+gift-urn          = "gift:" uuid-v4
 
 ; Representation — UUID v4
 representation-urn = "representation:" uuid-v4
 
-; Consent — UUID v4
-consent-urn       = "consent:" uuid-v4
-
-; Offer — UUID v4
-offer-urn         = "offer:" uuid-v4
+; TransactionRole — UUID v4
+role-urn          = "role:" uuid-v4
 
 ; UUID v4 (RFC 4122 format)
 uuid-v4           = 8hexdig "-" 4hexdig "-" "4" 3hexdig "-"
@@ -269,9 +274,10 @@ urn:pdtf:titleNumber:DN123456
 urn:pdtf:titleNumber:AGL12345
 urn:pdtf:unregisteredTitle:f47ac10b-58cc-4372-a567-0e02b2c3d479
 urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7
-urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
-urn:pdtf:consent:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
 urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
+urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
+urn:pdtf:role:d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a
 ```
 
 ### 3.5 URN vs DID: When to Use Which
@@ -289,7 +295,7 @@ The boundary is clear: **actors get DIDs, subjects get URNs**.
 - **Transactions** host endpoints (PDTF API, MCP) → `did:web`
 - **Properties** are credential subjects, never issuers → `urn:pdtf:uprn:*`
 - **Titles** are credential subjects → `urn:pdtf:titleNumber:*`
-- **SellerCapacity, Representation, Consent, Offer** are credential subjects → `urn:pdtf:{type}:{uuid}`
+- **SellerCapacity, Offer, Gift, Representation, TransactionRole** are credential subjects → `urn:pdtf:{type}:{uuid}`
 
 ---
 
@@ -585,7 +591,7 @@ DID documents assign keys to specific verification relationships, which determin
 |-------------|-----------------|--------------|
 | `authentication` | Prove control of the DID (DID Auth challenge-response) | Access control — presenting credentials to access restricted data |
 | `assertionMethod` | Sign Verifiable Credentials | VC issuance — any entity that issues credentials must have a key listed here |
-| `capabilityDelegation` | Delegate authority to another DID | Person DIDs only — used when issuing Representation or DelegatedConsent credentials |
+| `capabilityDelegation` | Delegate authority to another DID | Person DIDs only — used when issuing Representation credentials |
 | `capabilityInvocation` | Invoke capabilities | Person DIDs only — included for completeness in did:key resolution |
 
 #### 5.2.1 Key Purpose by Entity Type
@@ -656,7 +662,7 @@ The primary API for interacting with a PDTF transaction.
 | Get entity | `GET` | `/entities/{entityType}/{id}` |
 | Verify credential | `POST` | `/credentials/verify` |
 
-**Authentication:** Credential presentation (SellerCapacity, Representation, or DelegatedConsent VC) with DID Auth challenge-response. Public endpoints (state/v3, state/v4 for public-only data) may be unauthenticated.
+**Authentication:** Credential presentation (SellerCapacity, Offer, Representation, or TransactionRole VC) with DID Auth challenge-response. Public endpoints (state/v3, state/v4 for public-only data) may be unauthenticated.
 
 ### 6.2 McpEndpoint
 
@@ -1041,6 +1047,8 @@ Should Organisations be allowed to have multiple active keys for different purpo
 
 If `did:web` is superseded by a more secure method (e.g., `did:webvh` with verifiable history, or `did:tdw`), what is the migration path? OpenID Federation is DID-method-agnostic and can support multiple methods simultaneously, but credential re-issuance may be needed.
 
+---
+
 ### 10.5 Cross-Party Identity Reuse
 
 **Status:** Recommended approach decided; open for industry consultation.
@@ -1096,7 +1104,7 @@ Transaction B (new):
 | **B. Firm-to-firm transfer with consent** | Person authorises Firm X to share credential with Firm Y; platform brokers the handoff | Firm-to-firm trust, both in Federated Registry | None (firm-held) | Person has no independent control over their identity. Not truly portable — tied to the originating firm's willingness to share. |
 | **C. DID-bound + platform-managed proof of control** _(recommended)_ | Person's DID is bound to credential; platform proves DID control on their behalf | Cryptographic proof of control + Federated Registry | Platform-managed (KMS) | Requires platform to manage keys on behalf of users. Person trusts platform not to sign without consent. Mitigated by audit logging and future wallet migration. |
 
-**Consultation question:** See [Industry Consultation Q10](/consultation/).
+**Consultation question:** See [Industry Consultation Q10](https://pdtf2.propdata.org.uk/consultation/).
 
 ---
 
@@ -1221,9 +1229,10 @@ This generates the key pair, constructs the DID document with regulatory metadat
 | Title (registered) | URN | `urn:pdtf:titleNumber:{number}` | `urn:pdtf:titleNumber:DN123456` |
 | Title (unregistered) | URN | `urn:pdtf:unregisteredTitle:{uuid}` | `urn:pdtf:unregisteredTitle:f47ac10b-58cc-4372-a567-0e02b2c3d479` |
 | SellerCapacity | URN | `urn:pdtf:capacity:{uuid}` | `urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7` |
-| Representation | URN | `urn:pdtf:representation:{uuid}` | `urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d` |
-| Consent | URN | `urn:pdtf:consent:{uuid}` | `urn:pdtf:consent:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e` |
 | Offer | URN | `urn:pdtf:offer:{uuid}` | `urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f` |
+| Gift | URN | `urn:pdtf:gift:{uuid}` | `urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e` |
+| Representation | URN | `urn:pdtf:representation:{uuid}` | `urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d` |
+| TransactionRole | URN | `urn:pdtf:role:{uuid}` | `urn:pdtf:role:d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a` |
 
 ## Appendix B: Decision Log
 

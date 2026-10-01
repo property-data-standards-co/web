@@ -29,7 +29,7 @@ When a relying party needs property data, they do not make a traditional REST AP
    *Example: "I need a `TitleCredential` and an `EnergyPerformanceCertificateCredential` for `urn:pdtf:title:ABC12345`."*
 2. **Authorisation Request:** The relying party sends this request to the holder (e.g., the seller's conveyancer or a data hub like NPTN).
 3. **Presentation Evaluation:** The holder checks if they possess the requested credentials.
-4. **Access Control (The Graph):** The holder checks if the relying party is authorised to receive them. In PDTF 2.0, this is evaluated by traversing the entity graph. Does the relying party hold a `DelegatedConsent` or `Representation` credential that authorises this access?
+4. **Access Control (The Graph):** The holder checks if the relying party is authorised to receive them. In PDTF 2.0, this is evaluated by traversing the entity graph. Does the relying party hold a `Representation`, `TransactionRole` or `Offer` credential that authorises this access?
 5. **Presentation Submission:** The holder packages the requested credentials into a Verifiable Presentation, signs it with their own DID, and returns it.
 
 ### Example: A Lender Requesting Property Data
@@ -37,9 +37,9 @@ When a relying party needs property data, they do not make a traditional REST AP
 A mortgage lender needs the property pack to issue a mortgage offer.
 
 1. **The Request:** The lender sends an OID4VP request to the Estate Agent's platform.
-2. **The Capability Token:** Alongside their request, the lender presents a `DelegatedConsent` credential they received from the buyer.
-3. **Graph Traversal (Validation):** The Estate Agent's platform verifies the `DelegatedConsent`. It checks the graph:
-   - Does this `DelegatedConsent` belong to the buyer?
+2. **The Capability Token:** Alongside their request, the lender presents the `TransactionRole` credential that names it as lender on this transaction.
+3. **Graph Traversal (Validation):** The Estate Agent's platform verifies the `TransactionRole`. It checks the graph:
+   - Does this `TransactionRole` reference this `Transaction`?
    - Does the buyer hold an accepted `Offer` on this `Transaction`?
 4. **Fulfillment:** Since the graph proves the lender's right to access, the agent's platform packages the `Property` and `Title` credentials into a Verifiable Presentation and returns them to the lender.
 

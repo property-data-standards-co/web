@@ -1,14 +1,13 @@
-// PDTF entity graph — worked example, nested "two intents" radial layout.
+// PDTF entity graph — worked example, radial layout.
 // Render:  twopi -Tsvg entity-graph-example-intents.dot -o entity-graph-example-intents.svg
 //          twopi -Tpng -Gdpi=192 entity-graph-example-intents.dot -o entity-graph-example-intents.png
 //
-// Nesting model (architecture/entities.md §"The Two Intents"):
-//   Transaction = intent to SELL. Holds seller-side relationships:
-//       ownership{} (SellerCapacity), representation{} (sellerConveyancer, estateAgent)
-//   Offer = intent to BUY. SELF-CONTAINED — nests its own buyer-side relationships:
-//       representation{} (buyerConveyancer), delegatedConsent{} (lender access)
-//   Lender access chain is then explicit by containment:
-//       DelegatedConsent  ⊂  Offer  ⊂  Transaction
+// Model (architecture/entities.md §"Roles live on the credentials"):
+//   The Transaction keeps a roster of parties (DID, local id, firm) but no roles.
+//   Every relationship credential references the Transaction and embodies a role:
+//     SellerCapacity ⇒ Seller, Offer ⇒ Buyer, Gift ⇒ Giftor,
+//     Representation (role: which kind), TransactionRole (role: which role).
+//   Revoking a credential removes the role with it.
 
 digraph pdtf {
   layout   = twopi;
@@ -24,51 +23,61 @@ digraph pdtf {
   edge [fontname="Helvetica", fontsize=10, color="#95a5a6",
         fontcolor="#566573", arrowsize=0.7, penwidth=1.4];
 
-  // ── The two intents ─────────────────────────────────
-  transaction [label="Transaction\n14 Elm Road sale\n(intent to sell)", fillcolor="#1a5276", fontcolor="white", fontsize=15];
-  offer       [label="Offer\n£450,000 · Accepted\n(intent to buy)",     fillcolor="#7d3c98", fontcolor="white", fontsize=14];
+  // ── The sale ────────────────────────────────────────
+  transaction [label="Transaction\n14 Elm Road sale\nroster: 7 parties, no roles", fillcolor="#1a5276", fontcolor="white", fontsize=15];
 
-  // ── Core entities (blue) ────────────────────────────
+  // ── Data entities (blue) ────────────────────────────
   property [label="Property\n14 Elm Road, Bristol", fillcolor="#2e86c1", fontcolor="white"];
   title    [label="Title BL54321\nFreehold",        fillcolor="#2e86c1", fontcolor="white"];
 
   // ── Relationship credentials (gold) ─────────────────
-  capacity  [label="SellerCapacity\nverified vs HMLR",  fillcolor="#f1c40f", fontcolor="#1a1a1a"];
-  repSeller [label="Representation\nsellerConveyancer", fillcolor="#f1c40f", fontcolor="#1a1a1a"];
-  repAgent  [label="Representation\nestateAgent",       fillcolor="#f1c40f", fontcolor="#1a1a1a"];
-  repBuyer  [label="Representation\nbuyerConveyancer",  fillcolor="#f1c40f", fontcolor="#1a1a1a"];
-  consent   [label="DelegatedConsent\nmortgage valuation", fillcolor="#f1c40f", fontcolor="#1a1a1a"];
+  capacity  [label="SellerCapacity\nLegal Owner  ⇒ Seller",      fillcolor="#f1c40f", fontcolor="#1a1a1a"];
+  offer     [label="Offer\n£450,000 · Accepted  ⇒ Buyer",       fillcolor="#f1c40f", fontcolor="#1a1a1a"];
+  gift      [label="Gift\n£50,000 towards offer  ⇒ Giftor",     fillcolor="#f1c40f", fontcolor="#1a1a1a"];
+  repSeller [label="Representation\nSeller's Conveyancer",      fillcolor="#f1c40f", fontcolor="#1a1a1a"];
+  repAgent  [label="Representation\nEstate Agent",              fillcolor="#f1c40f", fontcolor="#1a1a1a"];
+  repBuyer  [label="Representation\nBuyer's Conveyancer",       fillcolor="#f1c40f", fontcolor="#1a1a1a"];
+  roleLender [label="TransactionRole\nLender",                  fillcolor="#f1c40f", fontcolor="#1a1a1a"];
 
   // ── People (green) & Organisations (teal) ───────────
-  john         [label="John Smith\n(seller)",             fillcolor="#1a8a5c", fontcolor="white"];
-  sarah        [label="Sarah Patel\n(buyer)",             fillcolor="#1a8a5c", fontcolor="white"];
-  smithco      [label="Smith & Co Law\n(seller's conv.)", fillcolor="#148f77", fontcolor="white"];
-  bristolhomes [label="Bristol Homes\n(estate agent)",    fillcolor="#148f77", fontcolor="white"];
-  joneslegal   [label="Jones Legal\n(buyer's conv.)",     fillcolor="#148f77", fontcolor="white"];
-  bigbank      [label="Big Bank plc\n(lender)",           fillcolor="#148f77", fontcolor="white"];
+  john         [label="John Smith",                       fillcolor="#1a8a5c", fontcolor="white"];
+  sarah        [label="Sarah Patel",                      fillcolor="#1a8a5c", fontcolor="white"];
+  priya        [label="Priya Patel",                      fillcolor="#1a8a5c", fontcolor="white"];
+  smithco      [label="Smith & Co Law",                   fillcolor="#148f77", fontcolor="white"];
+  bristolhomes [label="Bristol Homes",                    fillcolor="#148f77", fontcolor="white"];
+  joneslegal   [label="Jones Legal",                      fillcolor="#148f77", fontcolor="white"];
+  bigbank      [label="Big Bank plc",                     fillcolor="#148f77", fontcolor="white"];
 
   // ── Digital identity (slate) ────────────────────────
   johnId  [label="Digital ID\nGOV.UK One Login",       fillcolor="#34495e", fontcolor="white"];
   sarahId [label="Digital ID\nreused from prior sale", fillcolor="#34495e", fontcolor="white"];
 
-  // ══ TRANSACTION (intent to sell) — seller-side, nested ══
-  transaction -> property  [label="references", color="#2e86c1"];
-  transaction -> title     [label="references", color="#2e86c1"];
-  transaction -> capacity  [label="ownership{}",     color="#d4ac0d"];
-  transaction -> repSeller [label="representation{}", color="#d4ac0d"];
-  transaction -> repAgent  [label="representation{}", color="#d4ac0d"];
-  capacity  -> john         [label="owner",  color="#1a8a5c"];
-  capacity  -> title        [label="owns",   color="#2e86c1", constraint=false];
-  repSeller -> smithco      [label="holder", color="#148f77"];
-  repAgent  -> bristolhomes [label="holder", color="#148f77"];
-  john -> johnId [label="identityBinding", color="#34495e"];
+  // ══ Data entities ══
+  transaction -> property  [label="property",        color="#2e86c1"];
+  transaction -> title     [label="titlesToBeSold[]", color="#2e86c1"];
 
-  // ══ OFFER (intent to buy) — self-contained, nests buyer-side ══
-  transaction -> offer [label="offers{}", color="#7d3c98", penwidth=2.2];
-  offer -> sarah    [label="buyerIds[]",       color="#1a8a5c", penwidth=2];
-  offer -> repBuyer [label="representation{}",  color="#8e44ad", penwidth=2];
-  offer -> consent  [label="delegatedConsent{}", color="#8e44ad", penwidth=2];
-  repBuyer -> joneslegal [label="holder",     color="#148f77"];
-  consent  -> bigbank    [label="authorises", color="#148f77"];
+  // ══ Relationship credentials, each referencing the Transaction ══
+  transaction -> capacity   [color="#d4ac0d", dir=back];
+  transaction -> offer      [color="#d4ac0d", dir=back, penwidth=2.2];
+  transaction -> gift       [color="#d4ac0d", dir=back];
+  transaction -> repSeller  [color="#d4ac0d", dir=back];
+  transaction -> repAgent   [color="#d4ac0d", dir=back];
+  transaction -> repBuyer   [color="#d4ac0d", dir=back];
+  transaction -> roleLender [color="#d4ac0d", dir=back];
+
+  // ══ Who each credential names ══
+  capacity  -> john         [label="seller",            color="#1a8a5c"];
+  offer     -> sarah        [label="buyer",             color="#1a8a5c", penwidth=2];
+  gift      -> priya        [label="donor",             color="#1a8a5c"];
+  gift      -> offer        [label="offerId",           color="#d4ac0d", constraint=false, style=dashed];
+  repSeller -> smithco      [label="representative",    color="#148f77"];
+  repSeller -> john         [label="representedParty",  color="#1a8a5c", constraint=false, style=dashed];
+  repAgent  -> bristolhomes [label="representative",    color="#148f77"];
+  repAgent  -> john         [label="representedParty",  color="#1a8a5c", constraint=false, style=dashed];
+  repBuyer  -> joneslegal   [label="representative",    color="#148f77"];
+  repBuyer  -> sarah        [label="representedParty",  color="#1a8a5c", constraint=false, style=dashed];
+  roleLender -> bigbank     [label="participant",       color="#148f77"];
+
+  john  -> johnId  [label="identityBinding", color="#34495e"];
   sarah -> sarahId [label="identityBinding", color="#34495e"];
 }

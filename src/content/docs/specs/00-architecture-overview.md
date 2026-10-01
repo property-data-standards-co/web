@@ -16,7 +16,7 @@ PDTF 2.0 is the property-specific domain profile for the emerging UK digital ide
 
 Where PDTF v1 bound property data to a single platform's verified claims model, PDTF 2.0 makes property data portable, independently verifiable, and interoperable — by adopting the same standards that UK Smart Data, GOV.UK Wallet, and the EU Digital Identity Architecture are converging on: **OpenID Federation** for trust, **OID4VCI** for credential issuance, **OID4VP** for credential presentation, and **FAPI 2.0** for high-assurance API security.
 
-PDTF's unique contribution is the **domain layer**: an entity graph that decomposes a property transaction into its constituent parts (Transaction, Property, Title, Person, Organisation, SellerCapacity, Representation, DelegatedConsent, Offer), a schema system that defines what property credentials contain, and composition rules that assemble individual credentials into coherent transaction state.
+PDTF's unique contribution is the **domain layer**: an entity graph that decomposes a property transaction into its constituent parts (Transaction, Property, Title, Person, Organisation, and the relationship credentials SellerCapacity, Offer, Gift, Representation, TransactionRole), a schema system that defines what property credentials contain, and composition rules that assemble individual credentials into coherent transaction state.
 
 This document is the master reference for the PDTF 2.0 implementation. It links to sub-specs for each workstream and captures architectural decisions as they're made.
 
@@ -26,7 +26,7 @@ This document is the master reference for the PDTF 2.0 implementation. It links 
 
 | Aspect | PDTF v1 (Current) | PDTF 2.0 |
 |--------|-------------------|-----------|
-| **Data model** | Monolithic `pdtf-transaction.json` (~4,000 paths) | Entity graph: Transaction, Property, Title, Person, Organisation, SellerCapacity, Representation, DelegatedConsent, Offer |
+| **Data model** | Monolithic `pdtf-transaction.json` (~4,000 paths) | Entity graph: Transaction, Property, Title, Person, Organisation, plus role-embodying relationship credentials SellerCapacity, Offer, Gift, Representation, TransactionRole |
 | **Claims** | OpenID Connect verified claims with pathKey:value REPLACE semantics | W3C Verifiable Credentials with sparse objects, issued via OID4VCI |
 | **Identity** | Firebase Auth UIDs, no universal identifiers | DIDs (`did:key` for persons, `did:web` for organisations) within a governed OpenID Federation |
 | **Entity identifiers** | Internal Firestore document IDs | URNs: `urn:pdtf:titleNumber:{value}`, `urn:pdtf:uprn:{value}` |
@@ -52,41 +52,39 @@ The key shift is not "OIDC → DIDs" but **"platform-bound claims → portable c
 | **Property** | `urn:pdtf:uprn:{uprn}` | `v4/Property.json` | The physical land and buildings. Physical facts, construction, energy, environmental. Governed by the "logbook test" — only facts that survive the transaction belong here. |
 | **Title** | `urn:pdtf:titleNumber:{number}` | `v4/Title.json` | The legal right. Legal boundary, registered owner, tenure, charges. |
 | **Person** | `did:key` | `v4/Person.json` | A natural person (seller, buyer). |
-| **Organisation** | `did:key` or `did:web` | `v4/Organisation.json` | A company (conveyancer, estate agent, lender). Includes regulatory IDs (SRA, Companies House). |
+| **Organisation** | `did:web` | `v4/Organisation.json` | A company (conveyancer, estate agent, lender). Includes regulatory IDs (SRA, Companies House). Outside the v3 round trip: a participant's firm is on the Transaction roster, and the DID resolves to the Organisation. |
 
-### 3.2 Relationship Entities (Thin Assertions)
+### 3.2 Relationship Credentials (Thin Assertions)
 
-These are signed assertions expressing authority, intent, and process state. They contain minimal data beyond the relationship they describe.
+These are signed assertions linking a party to the transaction. They contain minimal data beyond the relationship they describe — and they are the **only** place a party's role is recorded.
 
-| Entity | Identifier | Schema | Description |
-|--------|-----------|--------|-------------|
-| **SellerCapacity** | URN (generated) | `v4/SellerCapacity.json` | A self-asserted claim linking a Person/Organisation to a Title ("this person is acting as registered owner/executor"). Starts as the owner's own assertion; verified against Title.registerExtract.proprietorship. Establishes right to sell. Revocable. |
-| **Representation** | URN (generated) | `v4/Representation.json` | Signed assertion linking a representative (Organisation) to a represented party (Person). Records the role (Conveyancer, Estate Agent, Mortgage Broker). Revocable. |
-| **DelegatedConsent** | URN (generated) | `v4/DelegatedConsent.json` | Signed permission granting read access to specific credentials. Typically issued by a buyer/seller to a third party (like a lender). |
-| **Offer** | URN (generated) | `v4/Offer.json` | The intent to buy. Links buyer(s) to a Transaction. Contains offer details, status, conditions. |
-| **Mortgage** | URN (generated) | Future | Tied to Offer/buyer. Flagged for growth — not in initial implementation. |
+| Entity | Identifier | Schema | Asserts | Role |
+|--------|-----------|--------|---------|------|
+| **SellerCapacity** | `urn:pdtf:capacity:{id}` | `v4/SellerCapacity.json` | This person/organisation sells, in this capacity (legal owner, executor, attorney…). Verified against `Title.registerExtract.proprietorship`. Issued for every seller. Revocable. | **implied**: Seller |
+| **Offer** | `urn:pdtf:offer:{id}` | `v4/Offer.json` | This person made this offer: amount, status, conditions, buyer circumstances. | **implied**: Buyer |
+| **Gift** | `urn:pdtf:gift:{id}` | `v4/Gift.json` | This person gifts funds towards an offer, on these terms. | **implied**: Giftor |
+| **Representation** | `urn:pdtf:representation:{id}` | `v4/Representation.json` | This party is instructed by that party. One per (representative, represented party) pair. Revocable. | explicit: which kind (Conveyancer, Estate Agent, Mortgage Broker…) |
+| **TransactionRole** | `urn:pdtf:role:{id}` | `v4/TransactionRole.json` | This party takes this role, where no more specific relationship applies (Lender, Landlord, Tenant, Surveyor, Platform Support). | explicit: which role |
+| **Mortgage** | URN (generated) | Future | Tied to Offer/buyer. Flagged for growth — not in initial implementation. | — |
 
-### 3.3 The Two Intents: Selling and Buying
+### 3.3 Roles live on the credentials
 
-A clear way of thinking about the graph architecture is through the lens of intent:
+The Transaction keeps an ordered **roster** of parties (`participants[]`), but the roster carries only what stays true of a party regardless of any relationship: their DID, a transaction-local id, and the firm they work for. Role is stored nowhere else than on the relationship credential that embodies it (01 §3.2, D32).
 
-1. **Transaction = Intent to Sell.** The `Transaction` entity represents the seller's active intent to sell the referenced `Property` and `Title`(s). 
-2. **Offer = Intent to Buy.** The `Offer` entity represents a buyer's intent to purchase them.
+Why: a second copy would not be revoked. Firing a conveyancer means revoking their `Representation`. If the Transaction also recorded "Seller's Conveyancer" against that participant, revocation would remove the relationship and leave the role assertion standing. So dropping a credential from the graph gives back a transaction in which that party has no role and no relationship — which is exactly what revocation should mean.
 
-**Relationship credentials orbit these intents:**
-- The Estate Agent and Seller's Conveyancer hold `Representation` credentials orbiting the **Transaction** (they are representing the intent to sell).
-- The Buyer's Conveyancer and Mortgage Broker hold `Representation` credentials orbiting the **Offer** (they are supporting the intent to buy).
-
-This cleanly partitions the entities. Buyers participate *only* through Offers until exchange of contracts.
+**The two intents.** The Transaction is the seller's intent to sell, embodied by `SellerCapacity`. An Offer is a buyer's intent to buy; buyers participate *only* through Offers. Everyone else is linked to the party they act for — a buyer's conveyancer holds a `Representation` whose represented party is the buyer — and every credential references the Transaction directly. Nothing nests.
 
 ### 3.4 Access Control and Traversal
 
-Because relationships orbit the intent, the graph itself becomes the access control model. No central ACL is required.
+Because every relationship is a credential that references the Transaction, the graph itself is the access control model. No central ACL is required.
 
 Consider a mortgage lender who needs to view the property data to issue a formal mortgage offer:
 1. **Decision in Principle:** The buyer holds a `MortgagePromise` VC issued by the lender. The buyer presents this to the agent as part of their `Offer`.
-2. **Traversal Authorisation:** If the offer is accepted, the lender needs to see the property data. They don't have a direct `Representation` credential (they aren't acting *for* the buyer, they are funding them). Instead, the buyer issues a `DelegatedConsent` credential to the lender.
-3. **Graph Resolution:** The `DelegatedConsent` acts as a capability token. The lender presents it to the agent's MCP server/adapter. The server validates the chain: "This lender holds consent from the buyer, who holds an accepted `Offer` on this `Transaction`." Therefore, the lender is authorised to traverse the transaction graph and read the `Property` and `Title` VCs.
+2. **Participation:** If the offer is accepted, the lender is added to the roster and issued a `TransactionRole` credential (`role: "Lender"`). They don't have a `Representation` (they aren't acting *for* the buyer, they are funding them).
+3. **Graph Resolution:** The `TransactionRole` acts as the capability token. The lender presents it to the agent's MCP server/adapter. The server validates the chain: "This lender holds a TransactionRole on this `Transaction`, whose buyer holds an accepted `Offer`." Therefore, the lender is authorised to traverse the transaction graph and read the `Property` and `Title` VCs, subject to `termsOfUse`.
+
+How a scoped, time-limited consent should sit on top of this for finer-grained access is an open consultation question (01 §9.2).
 
 ### 3.5 Entity Relationship Diagram
 
@@ -96,58 +94,57 @@ Consider a mortgage lender who needs to view the property data to issue a formal
 
 The relationship is **Transaction-centric**, not Property → Title → Transaction. This matters because:
 - **Unregistered titles** exist — no title number, so no `urn:pdtf:titleNumber:*`. We need an identifier method for titles which are currently unregistered but for which title evidence is being gathered.
-- A transaction may involve **multiple properties and multiple titles** (e.g. a house and its garage on separate titles).
+- A transaction may involve **multiple titles** (e.g. a house and its garage on separate titles).
 - The DID-based relationship model handles this naturally — a Transaction DID document references its associated Property and Title identifiers.
 
 ```
 Transaction (did:web:platform.example.com:transactions:*)
-    ├── Property[] (urn:pdtf:uprn:*)
-    │     └── (may have no title — new build, unregistered)
-    ├── Title[] (urn:pdtf:titleNumber:* OR urn:pdtf:unregisteredTitle:*)
-    │     └── (may span multiple properties)
+    ├── property       → Property (urn:pdtf:uprn:*)
+    │                     (may have no title — new build, unregistered)
+    ├── titlesToBeSold → Title[] (urn:pdtf:titleNumber:* OR urn:pdtf:unregisteredTitle:*)
+    │                     (ordered; may span multiple properties)
     │
-    ├── Person[] (did:key:*)
-    │     └── Individual people
-    ├── Organisation[] (did:key:* or did:web:*)
-    │     └── Firms and companies
+    ├── participants[] → Person (did:key:*) / Organisation (did:web:*)
+    │     └── ROSTER: DID, local id, firm. No roles.
     │
-    ├── SellerCapacity[] ──→ Person/Organisation ──→ Title
-    │     └── Self-asserted claim of legal ownership, linking
-    │         a Person/Organisation DID to a Title URN.
-    │         Verified against Title.registerExtract.proprietorship.
-    │         The ownership claim is what gives the holder the
-    │         right to sell — the Transaction's Titles are "for sale"
-    │         because someone with a SellerCapacity credential says so.
+    │   relationship credentials, each referencing the Transaction:
     │
-    ├── Representation[] ──→ Person/Organisation
-    │     ├── role: "sellerConveyancer" (issued by seller/owner)
-    │     ├── role: "estateAgent" (issued by seller/owner)
-    │     └── role: "buyerConveyancer" (issued by buyer)
-    │     (typically issued to firms, but the credential model
-    │      supports both Person and Organisation holders)
+    ├── SellerCapacity  seller → Person/Organisation           ⇒ Seller
+    │     └── The capacity in which they sell. Verified against
+    │         Title.registerExtract.proprietorship. The Transaction's
+    │         Titles are "for sale" because someone with a
+    │         SellerCapacity credential says so.
     │
-    ├── DelegatedConsent[] ──→ Person/Organisation
-    │     └── Authorised entities (e.g. lenders) with specific
-    │         data access rights under terms of use
+    ├── Offer           buyer → Person/Organisation, offerId   ⇒ Buyer
+    │     └── amount, status, conditions, buyer circumstances
     │
-    └── Offer[] ──→ Person/Organisation
-          ├── role: "buyer" (implicit)
-          ├── status, amount, conditions
-          └── Mortgage (future)
+    ├── Gift            donor → Person/Organisation, offerId   ⇒ Giftor
+    │     └── gift terms the conveyancer must resolve
+    │
+    ├── Representation  representative → representedParty, role
+    │     ├── role: "Seller's Conveyancer" / "Estate Agent"     (instructed by the seller)
+    │     └── role: "Buyer's Conveyancer" / "Mortgage Broker"   (instructed by the buyer)
+    │     (one per pair; the representative's firm is on the roster)
+    │
+    └── TransactionRole participant, role
+          └── role: "Lender" / "Landlord" / "Tenant" / "Surveyor" / "Platform Support"
 ```
 
-**Participation decomposed:** The old "Participation" entity is replaced by three precise relationship types:
-- **SellerCapacity** — self-asserted claim of legal ownership, linking a Person or Organisation DID to a Title URN. The owner starts by asserting their own ownership; the platform then seeks to verify this against Title.registerExtract.proprietorship (claim-vs-evidence separation). The ownership claim is what establishes the right to sell: a Transaction's referenced Titles are "for sale" because the legal owner — who holds the SellerCapacity credential — is offering them for sale.
-- **Representation** — delegated authority to act on someone's behalf. Typically issued to an Organisation (the conveyancer firm, not the individual solicitor), because the professional duty and insurance liability sits with the firm. But the credential model supports both Person and Organisation holders — companies can also represent other companies.
-- **DelegatedConsent** — authorised access for entities like lenders, as part of terms of use (Q4.2 resolved via DelegatedConsentCredential). General consent mechanism for entities that aren't direct participants but have legitimate data access needs.
+**Participation decomposed:** The old "Participation" entity is replaced by five precise relationship credentials:
+- **SellerCapacity** — the capacity in which a party sells, linking a Person or Organisation DID to the Transaction (and optionally to a Title). The owner starts by asserting it; the platform then verifies against Title.registerExtract.proprietorship (claim-vs-evidence separation). This is what establishes the right to sell.
+- **Offer** — a buyer's offer. Always identifies exactly one buyer; joint purchasers each hold one with the same `offerId`.
+- **Gift** — a giftor's contribution towards an offer. Carries the giftor's `offerId` so that `Offer ⇒ Buyer` stays exact.
+- **Representation** — one party instructed by another. The retainer is with the client, so a conveyancer is instructed by a person, not by an offer; a prospective buyer with no offer yet can still be represented. The credential model supports both Person and Organisation on either side.
+- **TransactionRole** — a role with no instructing party: the lender, a landlord or tenant, platform support. Also the fallback until a more specific relationship is established, so that every party with a role holds exactly one role-bearing credential.
 
-**Person vs Organisation:** Both can own, sell, buy, represent, and consent. The difference is structural, not role-based: an Organisation has a Companies House identity, SRA registration, and PI insurance — attributes that don't belong on a Person entity. Both get relationship credentials; both can be on either side of a transaction.
+**Person vs Organisation:** Both can sell, buy, gift, represent, and hold a role. The difference is structural, not role-based: an Organisation has a Companies House identity, SRA registration, and PI insurance — attributes that don't belong on a Person entity. Both get relationship credentials; both can be on either side of a transaction.
 
 ### 3.3 Key Design Decisions
 
 - **Buyers participate only through Offers** — no Participation entity for buyers. This models the real-world relationship: a buyer doesn't "participate" in the seller's transaction until they make an offer, and multiple offers can exist simultaneously. Buyers can be Persons or Organisations (companies buy property too).
-- **SellerCapacity establishes the right to sell** — the legal owner self-asserts ownership by issuing a SellerCapacity credential linking their DID to a Title URN. This is what puts a title "for sale" in a transaction. The platform then verifies the claim against the proprietorship register. No separate "listing" entity is needed — the SellerCapacity credential IS the assertion of the right to dispose of the title.
-- **ID-keyed collections** — v4 moves from arrays (participants[], searches[]) to ID-keyed maps (like current offers). Breaking change to schema structure but not to the underlying data — path handling code updates required.
+- **SellerCapacity establishes the right to sell** — the legal owner self-asserts by issuing a SellerCapacity credential linking their DID to the Transaction. This is what puts a title "for sale". The platform then verifies the claim against the proprietorship register. No separate "listing" entity is needed.
+- **Role lives only on the relationship credential (D32)** — the roster has no `role` field. Revoking the credential removes the role with it.
+- **ID-keyed collections** — v4 moves from arrays (participants[], searches[]) to ID-keyed maps (like current offers). Where order carried meaning it lives on the Transaction's reference lists. Breaking change to schema structure but not to the underlying data — path handling code updates required.
 - **Property-level VCs** — EPC, flood risk, searches etc. are Property VCs with paths like `/energyEfficiency/certificate`, not first-class entity VCs. Primary issuers will use the same paths when they adopt the standard.
 
 ### 3.4 Entity Separation Principle — The Logbook Test
@@ -157,7 +154,7 @@ The governing question for field assignment: **"Does this fact travel with the p
 - **Property** = enduring facts (the "logbook"): EPC, flood risk, build info, legal questions, fixtures & fittings, environmental data. If a new buyer inherits it, it's a Property fact.
 - **Title** = legal title facts: title number, extents (geoJSON), register extract (including proprietorship as evidence), ownership type (freehold/leasehold), leasehold terms and restrictions, isFirstRegistration, mortgage/charge information. The existing branch 263 work already merges `ownershipsToBeTransferred` into the Title entity.
 - **Transaction** = this-sale facts: numberOfSellers, numberOfNonUkResidentSellers, outstandingMortgage, existingLender, hasHelpToBuyEquityLoan, isLimitedCompanySale. None of these pass the logbook test — they describe this specific transaction, not the property itself.
-- **SellerCapacity** = self-asserted claim of legal ownership linking a Person or Organisation DID to a Title URN, with status and verification level. The owner starts by asserting this themselves — their ownership claim is what establishes the right to sell. The evidence (proprietorship register) lives on the Title entity — SellerCapacity is the claim, Title holds the evidence.
+- **SellerCapacity** = the capacity in which a Person or Organisation sells (`sellersCapacity.capacity`, `dateBecameOwnerOrAuthority`). The owner starts by asserting this themselves — their claim is what establishes the right to sell. The evidence (proprietorship register) lives on the Title entity — SellerCapacity is the claim, Title holds the evidence.
 
 ### 3.5 Existing Work
 
@@ -325,7 +322,7 @@ PDTF 2.0 uses OpenID standards for credential exchange:
           "filter": {
             "type": "array",
             "contains": {
-              "enum": ["SellerCapacityCredential", "RepresentationCredential", "DelegatedConsentCredential"]
+              "enum": ["SellerCapacityCredential", "OfferCredential", "RepresentationCredential", "TransactionRoleCredential"]
             }
           }
         }]
@@ -355,10 +352,11 @@ DIDs serve as identifiers for organisations, persons, and transactions within th
 ```
 urn:pdtf:uprn:{uprn}           → Property identifier
 urn:pdtf:titleNumber:{number}  → Title identifier
-urn:pdtf:capacity:{uuid}      → SellerCapacity claim
-urn:pdtf:representation:{uuid} → Representation mandate (Organisation)
-urn:pdtf:consent:{uuid}        → Delegated consent
-urn:pdtf:offer:{uuid}          → Offer relationship
+urn:pdtf:capacity:{uuid}       → SellerCapacity (⇒ Seller)
+urn:pdtf:offer:{uuid}          → Offer (⇒ Buyer)
+urn:pdtf:gift:{uuid}           → Gift (⇒ Giftor)
+urn:pdtf:representation:{uuid} → Representation (representative ↔ represented party, role)
+urn:pdtf:role:{uuid}           → TransactionRole (participant, role)
 ```
 
 ### 5.3 Discovery Model
@@ -383,7 +381,7 @@ Transaction DID (did:web:platform.example.com:transactions:abc123)
 
 To access restricted or confidential VCs (or the pre-composed state derived from them), a requester must:
 
-1. **Present a valid credential via OID4VP** — a SellerCapacity, Representation, or DelegatedConsent credential proving their relationship to the transaction
+1. **Present a valid credential via OID4VP** — a SellerCapacity, Offer, Representation, or TransactionRole credential proving their relationship to the transaction
 2. **Prove control of their DID** — implicit in the OID4VP flow (the VP is signed by the holder's key)
 3. **Revocation check** — the presented credential must not be revoked (Bitstring Status List check)
 4. **termsOfUse filtering** — the system returns only VCs whose `termsOfUse` policy permits access for the requester's role
@@ -753,7 +751,7 @@ The pre-authorised code flow is typical for adapter-initiated issuance: the plat
 
 ### 9.4 Access Control for Adapter API
 
-1. Requester presents an **SellerCapacity, Representation, or DelegatedConsent credential** via OID4VP
+1. Requester presents a **SellerCapacity, Offer, Representation, or TransactionRole credential** via OID4VP
 2. Adapter verifies the VP signature and the contained credential(s)
 3. Adapter checks credential is **not revoked** (Bitstring Status List)
 4. Adapter verifies its own **trust chain** is valid (federation metadata)
@@ -859,7 +857,7 @@ Both bindings share the same service layer, authentication model (FAPI 2.0), and
 | `verifyCredential(vc)` | Verify a single VC: signature check, federation trust chain resolution, revocation status |
 | `issueCredential(type, subject, data)` | Issue a new VC via OID4VCI (adapter/platform only) |
 | `revokeCredential(id)` | Revoke a VC by flipping its status bit (issuer only) |
-| `listParticipants(transactionDid)` | List ownership, representation, and consent credentials for a transaction |
+| `listParticipants(transactionDid)` | List the roster and the relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole) for a transaction |
 | `submitOffer(transactionDid, offer)` | Submit a buyer offer |
 | `presentCredentials(presentationDefinition)` | OID4VP credential presentation |
 
@@ -1060,7 +1058,7 @@ All architectural decisions made through v0.3 of this document are baked into th
 | Q2.2 | Trust-level conflict visibility | Conflict surfacing is a verifier/UI concern, not a spec requirement. All trust levels and sources are carried in the credentials themselves, so consumers can render them however they wish. | Apr 2026 |
 | Q3.3 | Credential `id` required | Yes — every credential MUST include an `id` for deduplication during state assembly. Privacy implications of credential correlation are secondary to assembly determinism. Format: `urn:pdtf:vc:{uuid}`. | Apr 2026 |
 | Q4.1 | Organisation DID hosting for small firms | Both self-hosted `did:web` and orchestrator-hosted DIDs are supported. In Phase 1 and beyond, small firms are expected to use orchestrator-hosted identities — orchestrators provide the account and auth UX firms already rely on, and manage DIDs on their behalf. | Apr 2026 |
-| Q4.2 | Lender access pattern | Lenders access transaction data via DelegatedConsentCredential (see sub-spec 02 §3.6). The buyer explicitly grants consent to a specific lender's Organisation DID per application. This composes with `termsOfUse.confidentiality: "restricted"` — restricted data requires either direct participation (SellerCapacity / Representation / Offer) or an explicit DelegatedConsentCredential. No role-based lender pooling. | Apr 2026 |
+| Q4.2 | Lender access pattern | **Revised Oct 2026 (D32).** Lenders are parties to the transaction: added to the roster and issued a TransactionRoleCredential (`role: "Lender"`) per application (see sub-spec 02 §3.7). Restricted data requires a relationship credential on the transaction (SellerCapacity / Offer / Representation / TransactionRole), composed with `termsOfUse.roleRestrictions`. The earlier DelegatedConsentCredential, which carried an access `scope` and expiry, is withdrawn as an entity; whether a scoped consent credential should be layered on top for finer-grained access is an open consultation question. No role-based lender pooling. | Oct 2026 |
 | Q5.2 | Multiple issuers per path | Permitted and expected. Multiple commercial search providers, valuation services, and similar will legitimately issue credentials against the same entity:path combinations. Trust marks do not enforce exclusivity. | Apr 2026 |
 | Q6.1–Q6.3 | Migration strategy | Migration proceeds by running PDTF v1 and v2 operations in parallel. New transactions start on v2; in-flight transactions continue on v1 until they close. When all active transactions support v2 output, v1 is retired. State assembly supports both formats throughout the overlap. | Apr 2026 |
 

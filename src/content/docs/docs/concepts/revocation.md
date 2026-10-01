@@ -58,8 +58,9 @@ In practice, revocation matters especially for relationship credentials:
 
 - **SellerCapacityCredential**
 - **RepresentationCredential**
-- **DelegatedConsentCredential**
 - **OfferCredential**
+- **GiftCredential**
+- **TransactionRoleCredential**
 
 These can become unsafe quickly if they outlive the real-world relationship they represent.
 

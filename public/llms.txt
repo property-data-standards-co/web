@@ -8,7 +8,7 @@
 - Author: Ed Molyneux / Moverly
 
 ## Key Concepts
-- Entity Graph: Transaction, Property, Title, Person, Organisation, Ownership, Representation, DelegatedConsent, Offer
+- Entity Graph: Transaction, Property, Title, Person, Organisation, plus role-embodying relationship credentials SellerCapacity, Offer, Gift, Representation, TransactionRole
 - Credentials: W3C Verifiable Credentials v2.0 with DataIntegrityProof (eddsa-jcs-2022, Ed25519)
 - Identity: did:key (persons), did:web (organisations, transactions), urn:pdtf:* (properties, titles, relationships)
 - Trust: OpenID Federation (TIR) — git-hosted, entity:path authorisation

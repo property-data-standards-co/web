@@ -81,7 +81,7 @@ Each Property Trust Mark contains:
 |---|---|
 | `title-data-provider` | Authorised to issue Title credentials (register extracts, ownership, title extents) |
 | `property-data-provider` | Authorised to issue Property credentials (EPC, flood risk, council tax, etc.) |
-| `regulated-conveyancer` | Authorised to act as a conveyancer in transactions (representation, delegated consent) |
+| `regulated-conveyancer` | Authorised to act as a conveyancer in transactions (representation, transaction roles) |
 | `account-provider` | Authorised to issue user and organisation DIDs |
 
 Trust marks are **scoped** — holding `title-data-provider` doesn't grant authority over Property data, and vice versa. The `authorised_paths` field narrows trust even further:

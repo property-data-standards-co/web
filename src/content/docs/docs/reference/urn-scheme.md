@@ -16,10 +16,11 @@ These URNs identify graph subjects, not issuers or authenticating parties.
 | `urn:pdtf:uprn:{uprn}` | Property | Ordnance Survey UPRN |
 | `urn:pdtf:titleNumber:{number}` | Registered title | HMLR title number |
 | `urn:pdtf:unregisteredTitle:{id}` | Unregistered title | platform-generated identifier |
-| `urn:pdtf:capacity:{id}` | SellerCapacity relationship entity | generated |
-| `urn:pdtf:representation:{id}` | Representation relationship entity | generated |
-| `urn:pdtf:consent:{id}` | Delegated consent relationship entity | generated |
-| `urn:pdtf:offer:{id}` | Offer relationship entity | generated |
+| `urn:pdtf:capacity:{id}` | SellerCapacity relationship credential | generated |
+| `urn:pdtf:offer:{id}` | Offer relationship credential | generated |
+| `urn:pdtf:gift:{id}` | Gift relationship credential | generated |
+| `urn:pdtf:representation:{id}` | Representation relationship credential | generated |
+| `urn:pdtf:role:{id}` | TransactionRole relationship credential | generated |
 | `urn:pdtf:vc:{id}` | Credential identifier when used | generated |
 | `urn:pdtf:status:{id}` | status-oriented resource identifier when used | generated or host-mapped namespace |
 
@@ -59,7 +60,7 @@ urn:pdtf:unregisteredTitle:f47ac10b-58cc-4372-a567-0e02b2c3d479
 urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7
 ```
 
-- identifies a thin ownership assertion entity
+- identifies the capacity in which a party sells
 - subject of `SellerCapacityCredential`
 
 ### Representation
@@ -68,17 +69,26 @@ urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7
 urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
 ```
 
-- identifies delegated authority from person to organisation
+- identifies one (representative, represented party) pair
 - subject of `RepresentationCredential`
 
-### Consent
+### Gift
 
 ```text
-urn:pdtf:consent:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
+urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
 ```
 
-- identifies delegated consent scope and purpose
-- subject of `DelegatedConsentCredential`
+- identifies a gift of funds towards an offer
+- subject of `GiftCredential`
+
+### TransactionRole
+
+```text
+urn:pdtf:role:d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a
+```
+
+- identifies a party's role on a transaction where no more specific relationship applies
+- subject of `TransactionRoleCredential`
 
 ### Offer
 
@@ -119,10 +129,11 @@ pdtf-urn          = "urn:pdtf:" pdtf-nss
 pdtf-nss          = property-urn
                   / title-urn
                   / unregistered-title-urn
-                  / ownership-urn
-                  / representation-urn
-                  / consent-urn
+                  / capacity-urn
                   / offer-urn
+                  / gift-urn
+                  / representation-urn
+                  / role-urn
                   / vc-urn
                   / status-urn
 
@@ -134,10 +145,11 @@ title-number      = district-prefix 1*8DIGIT
 district-prefix   = 1*4ALPHA
 
 unregistered-title-urn = "unregisteredTitle:" uuid-v4
-ownership-urn     = "ownership:" uuid-v4
-representation-urn = "representation:" uuid-v4
-consent-urn       = "consent:" uuid-v4
+capacity-urn      = "capacity:" uuid-v4
 offer-urn         = "offer:" uuid-v4
+gift-urn          = "gift:" uuid-v4
+representation-urn = "representation:" uuid-v4
+role-urn          = "role:" uuid-v4
 vc-urn            = "vc:" 1*(ALPHA / DIGIT / "-")
 status-urn        = "status:" 1*(ALPHA / DIGIT / "-")
 
@@ -155,10 +167,11 @@ hexdig            = DIGIT / "a" / "b" / "c" / "d" / "e" / "f"
 | `uprn` | real-world property identifier |
 | `titleNumber` | real-world registered legal title identifier |
 | `unregisteredTitle` | provisional PDTF title identifier |
-| `ownership` | graph relationship node |
-| `representation` | graph relationship node |
-| `consent` | graph relationship node |
-| `offer` | graph relationship node |
+| `capacity` | relationship credential |
+| `offer` | relationship credential |
+| `gift` | relationship credential |
+| `representation` | relationship credential |
+| `role` | relationship credential |
 | `vc` | optional credential-level identifier |
 | `status` | internal status resource namespace if needed |
 
@@ -168,7 +181,7 @@ hexdig            = DIGIT / "a" / "b" / "c" / "d" / "e" / "f"
 - Use `urn:pdtf:*` for graph subjects that do not sign.
 - `Property` always uses `uprn`.
 - `Title` uses `titleNumber` where registered, `unregisteredTitle` otherwise.
-- Relationship entities use generated identifiers and are stable for the life of the relationship assertion.
+- Relationship credentials use generated identifiers and are stable for the life of the relationship assertion.
 
 ## Migration notes
 
@@ -188,9 +201,9 @@ hexdig            = DIGIT / "a" / "b" / "c" / "d" / "e" / "f"
   "titles": {
     "urn:pdtf:titleNumber:AB12345": {}
   },
-  "ownership": {
+  "sellerCapacities": {
     "urn:pdtf:capacity:own-a1b2c3": {
-      "titleId": "urn:pdtf:titleNumber:AB12345"
+      "seller": "did:key:z6Mkh..."
     }
   },
   "offers": {

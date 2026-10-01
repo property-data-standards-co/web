@@ -13,11 +13,11 @@ cd "$(dirname "$0")"
 PUB="$(git rev-parse --show-toplevel)/public/diagrams"
 mkdir -p "$PUB"
 
-# ── Schema-level entity graph (D2, top-down, Offer nests buyer-side credentials) ──
+# ── Schema-level entity graph (D2, top-down; every relationship credential references the Transaction) ──
 d2 --theme 0 entity-graph.d2 entity-graph.svg
 rsvg-convert -z 2 entity-graph.svg -o entity-graph.png
 
-# ── Worked example (Graphviz twopi, radial, nested two-intents) ──
+# ── Worked example (Graphviz twopi, radial) ──
 twopi -Tsvg               entity-graph-example-intents.dot -o entity-graph-example-intents.svg
 twopi -Tpng -Gdpi=192     entity-graph-example-intents.dot -o entity-graph-example-intents.png
 
