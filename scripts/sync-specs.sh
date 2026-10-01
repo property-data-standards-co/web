@@ -3,12 +3,22 @@
 # Called by CI or manually before build.
 set -euo pipefail
 
+# The spec repo is private. Set SPEC_REPO_TOKEN (a token with read access to
+# it) to sync; without one, or if the clone fails, the committed copies under
+# src/content/docs/specs are used as-is.
 SPEC_REPO="https://github.com/property-data-standards-co/spec.git"
+if [ -n "${SPEC_REPO_TOKEN:-}" ]; then
+  SPEC_REPO="https://x-access-token:${SPEC_REPO_TOKEN}@github.com/property-data-standards-co/spec.git"
+fi
 SPEC_DIR="$(mktemp -d)"
 CONTENT_DIR="$(dirname "$0")/../src/content/docs/specs"
 
 echo "📥 Cloning spec repo..."
-git clone --depth 1 "$SPEC_REPO" "$SPEC_DIR"
+if ! GIT_TERMINAL_PROMPT=0 git clone --quiet --depth 1 "$SPEC_REPO" "$SPEC_DIR" 2>/dev/null; then
+  echo "⚠️  Could not clone spec repo (private, no SPEC_REPO_TOKEN?). Using committed spec copies."
+  rm -rf "$SPEC_DIR"
+  exit 0
+fi
 
 # Function to add frontmatter to a spec file
 add_frontmatter() {
