@@ -27,8 +27,9 @@ PDTF keeps the set of credential types small and aligned to the entity graph:
 - `TitleCredential`
 - `SellerCapacityCredential`
 - `RepresentationCredential`
-- `DelegatedConsentCredential`
 - `OfferCredential`
+- `GiftCredential`
+- `TransactionRoleCredential`
 - `TransactionCredential`
 
 A key design choice is that domain-specific datasets like EPCs or flood data are not separate credential types. They are `PropertyCredential`s asserting specific paths on the Property entity.

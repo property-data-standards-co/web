@@ -71,7 +71,7 @@ Two pieces of policy frame the work. MHCLG's [Home Buying and Selling Reform Roa
 
 ## The entity graph
 
-Instead of one large property data pack, PDTF 2.0 works with nine entities: Transaction, Property, Title, Person, Organisation, SellerCapacity, Representation, DelegatedConsent and Offer. Each is verifiable on its own and composes with the others.
+Instead of one large property data pack, PDTF 2.0 works with ten entities. Five carry data: Transaction, Property, Title, Person and Organisation. Five are thin relationship credentials that embody a party's role: SellerCapacity, Offer, Gift, Representation and TransactionRole. Each is verifiable on its own and composes with the others.
 
 So a title credential from HM Land Registry can be checked without the transaction it was issued for. An EPC travels with the property rather than with one sale. A change of seller can be revoked without invalidating everything else in the pack.
 
@@ -87,7 +87,7 @@ Ten documents, numbered as they are in the [spec repository](https://github.com/
 
 <ol class="home-specs">
   <li><a href="/specs/00-architecture-overview/"><span>00</span>Architecture overview</a><p>The design as a whole and how trust is expected to evolve.</p></li>
-  <li><a href="/specs/01-entity-graph/"><span>01</span>Entity graph and schema</a><p>The nine entities, their schemas, and how they compose.</p></li>
+  <li><a href="/specs/01-entity-graph/"><span>01</span>Entity graph and schema</a><p>The ten entities, their schemas, and how they compose.</p></li>
   <li><a href="/specs/02-vc-data-model/"><span>02</span>Verifiable credentials data model</a><p>How property data maps onto W3C Verifiable Credentials.</p></li>
   <li><a href="/specs/03-did-methods/"><span>03</span>DID methods and identifiers</a><p>Identifiers for people, organisations, transactions and properties.</p></li>
   <li><a href="/specs/04-openid-federation/"><span>04</span>OpenID Federation trust architecture</a><p>Who may issue what, and how a verifier finds out.</p></li>

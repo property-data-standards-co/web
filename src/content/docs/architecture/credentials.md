@@ -22,12 +22,12 @@ State assembly combines many sparse credentials into a composed view, applying p
 Credential types align with the entity graph:
 
 - `PropertyCredential` and `TitleCredential` for facts about those entities.
-- Relationship credentials (`SellerCapacityCredential`, `RepresentationCredential`, `DelegatedConsentCredential`, `OfferCredential`) to express authority, access, and process.
+- Relationship credentials (`SellerCapacityCredential`, `OfferCredential`, `GiftCredential`, `RepresentationCredential`, `TransactionRoleCredential`) to express each party's role and authority.
 - `TransactionCredential` for sale-specific lifecycle state.
 
 ## Access control
 
-VCs can include `termsOfUse` to express confidentiality and role restrictions. Separately, `DelegatedConsentCredential` grants a third party, such as a lender, access to a defined scope.
+VCs can include `termsOfUse` to express confidentiality and role restrictions. A third party such as a lender is tied to the transaction by its `TransactionRoleCredential`; how a scoped consent should sit on top of that is an open consultation question.
 
 ## Revocation
 

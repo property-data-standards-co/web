@@ -49,13 +49,13 @@ Typical `authorised_paths` (varies per adapter):
 
 **URI:** `https://propdata.org.uk/trust-marks/regulated-conveyancer`
 
-Authorises the holder to act as a **conveyancer** in property transactions — issuing representation credentials, managing delegated consent, and acting on behalf of buyers or sellers.
+Authorises the holder to act as a **conveyancer** in property transactions — issuing representation credentials, and acting on behalf of buyers or sellers.
 
 This trust mark is only issued to organisations regulated by the **SRA** (Solicitors Regulation Authority) or **CLC** (Council of Licensed Conveyancers).
 
 Typical `authorised_paths`:
 - `Representation:/*`
-- `DelegatedConsent:/*`
+- `TransactionRole:/*`
 
 ---
 

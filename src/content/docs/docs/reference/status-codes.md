@@ -210,7 +210,8 @@ Access-Control-Allow-Origin: *
 | `SellerCapacityCredential` | title transfers on sale completion |
 | `RepresentationCredential` | mandate withdrawn, conveyancer replaced, transaction completed or cancelled |
 | `PropertyCredential` | underlying data superseded by new issue (e.g. new EPC) |
-| `DelegatedConsentCredential` | consent withdrawn, access period expired, transaction completed |
+| `TransactionRoleCredential` | party no longer holds the role, transaction completed |
+| `GiftCredential` | gift withdrawn or terms changed |
 | `OfferCredential` | offer withdrawn or rejected |
 | user identity credential | account disabled, suspended, or deleted |
 

@@ -13,7 +13,7 @@ The result: property data that is independently verifiable, portable between sys
 
 | Aspect | PDTF v1 (Current) | PDTF 2.0 |
 |--------|-------------------|-----------|
-| **Data model** | Monolithic `pdtf-transaction.json` (~4,000 paths) | Entity graph: 9 distinct entities |
+| **Data model** | Monolithic `pdtf-transaction.json` (~4,000 paths) | Entity graph: 10 distinct entities |
 | **Claims** | OpenID Connect verified claims with pathKey:value REPLACE semantics | W3C Verifiable Credentials with sparse objects |
 | **Identity** | Firebase Auth UIDs, no universal identifiers | DIDs: `did:key` (users), `did:web` (transactions, adapters) |
 | **Entity identifiers** | Internal Firestore document IDs | URNs: `urn:pdtf:titleNumber:{value}`, `urn:pdtf:uprn:{value}` |
@@ -25,7 +25,7 @@ The result: property data that is independently verifiable, portable between sys
 
 ## The entity graph
 
-PDTF 2.0 decomposes the monolithic property data pack into nine distinct entities:
+PDTF 2.0 decomposes the monolithic property data pack into ten distinct entities:
 
 | Entity | Identifier | Purpose |
 |--------|-----------|---------|
@@ -34,10 +34,11 @@ PDTF 2.0 decomposes the monolithic property data pack into nine distinct entitie
 | **Title** | `urn:pdtf:titleNumber:{number}` | Legal title: register extract, ownership type, leasehold terms, encumbrances. |
 | **Person** | `did:key` | Natural person: name, contact details, verification status. Role-free. |
 | **Organisation** | `did:web` | Legal entity: law firm, estate agency, lender. |
-| **SellerCapacity** | URN (generated) | Signed assertion linking a Person to a Title. Revocable. |
-| **Representation** | URN (generated) | Delegated authority from seller/buyer to an Organisation. Revocable. |
-| **DelegatedConsent** | URN (generated) | Authorised data access for entities like lenders. |
-| **Offer** | URN (generated) | Links buyer Person(s) to Transaction with amount, status, conditions. |
+| **SellerCapacity** | URN (generated) | The capacity in which a Person or Organisation sells. Implies the Seller role. Revocable. |
+| **Offer** | URN (generated) | A buyer's offer: amount, status, conditions. Implies the Buyer role. |
+| **Gift** | URN (generated) | A gift of funds towards a purchase. Implies the Giftor role. |
+| **Representation** | URN (generated) | One party instructed by another, with the kind of representation as its role. Revocable. |
+| **TransactionRole** | URN (generated) | A role with no more specific relationship: lender, landlord, tenant, surveyor. |
 
 The graph is **transaction-centric**: the Transaction is the root, and it references associated Property, Title, Person, Organisation, and relationship entities.
 

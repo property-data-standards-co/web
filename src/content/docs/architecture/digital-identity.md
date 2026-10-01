@@ -61,7 +61,7 @@ When a consumer holds a verified identity in their GOV.UK Wallet, that identity 
 
 1. **Presentation:** The consumer presents their GOV.UK Wallet identity credential via OID4VP to their conveyancer's platform.
 2. **Binding:** The platform records the wallet's DID (or a verifiable hash of the identity VC) in the Person credential's `identityBinding` claim.
-3. **Linking:** From that point, all PDTF credentials associated with this person — `SellerCapacity`, `BuyerCapacity`, `DelegatedConsent` — are **cryptographically linked to a government-verified identity**.
+3. **Linking:** From that point, all PDTF credentials associated with this person — `SellerCapacity`, `Offer`, `Representation` — are **cryptographically linked to a government-verified identity**.
 4. **Reuse:** The identity proof is reusable across the entire transaction. When the lender needs to verify the buyer's identity, they request it via OID4VP. The wallet presents the same credential. No separate ID check required.
 
 This means a buyer who verifies their identity once with GOV.UK One Login carries that verification through every stage of the transaction — from instruction through to Land Registry registration.
@@ -116,7 +116,7 @@ This chain establishes not just *who* the person is, but *what authority they ha
 With the credential chain in place, the GOV.UK Wallet becomes the **authentication mechanism** itself:
 
 - **Challenge-response** using the wallet's DID proves the person's identity. The platform sends a nonce; the wallet signs it with its private key. No passwords.
-- Combined with **Representation** and **DelegatedConsent** credentials, this proves both **who they are** and **what they can access**.
+- Combined with **Representation** and **TransactionRole** credentials, this proves both **who they are** and **what they can access**.
 - No API keys. No passwords. No OAuth client credentials. Just **cryptographic proof**.
 
 A conveyancer opening a transaction file doesn't log in with a username and password. They present their wallet credentials, and the system verifies: this person is licensed, works for this firm, and this firm is instructed on this transaction. Access granted — with a full audit trail of verifiable credentials.

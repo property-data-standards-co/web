@@ -1,6 +1,6 @@
 ---
 title: Decomposing the Monolithic Schema
-description: Why PDTF 2.0 breaks the single transaction document into nine entity types — and the design principle behind the split.
+description: Why PDTF 2.0 breaks the single transaction document into ten entity types — and the design principle behind the split.
 ---
 
 *Published by the Property Data Standards Company*
@@ -39,7 +39,7 @@ Flattening these into a single `participants[]` array with a `role` field loses 
 
 ## The decomposition
 
-PDTF 2.0 decomposes the monolithic document into nine entity types. The governing principle is the **Logbook Test**:
+PDTF 2.0 decomposes the monolithic document into ten entity types. The governing principle is the **Logbook Test**:
 
 > Ask: *"Does this fact travel with the property, the title, or the sale?"*
 
@@ -48,7 +48,7 @@ PDTF 2.0 decomposes the monolithic document into nine entity types. The governin
 | Travels with the property | **Property** | EPC rating, flood risk, building materials, fixtures, TA6 responses |
 | Is intrinsic to the legal title | **Title** | Register extract, ownership type, leasehold terms, encumbrances |
 | Is specific to this sale | **Transaction** | Price, completion date, chain position, status |
-| Asserts a relationship | **SellerCapacity / Representation / Offer / DelegatedConsent** | "X owns Y", "X instructs Z", "X offers £N" |
+| Asserts a relationship | **SellerCapacity / Offer / Gift / Representation / TransactionRole** | "X sells as legal owner", "X offers £N", "X instructs Z" |
 
 ### Property: the logbook
 
@@ -70,12 +70,13 @@ The Transaction uses `did:web` as its identifier, which means it has a resolvabl
 
 ### Relationship entities: thin and revocable
 
-The four relationship entities — SellerCapacity, Representation, DelegatedConsent, and Offer — orbit these intents:
+The five relationship credentials each embody a party's role, and role is stored nowhere else:
 
-- **SellerCapacity**: "Person X asserts right to sell Title Y" (with verification level)
-- **Representation**: "Firm X represents Person Y on this intent"
-- **Offer**: "Person X intends to buy Transaction Y for £N" (with conditions)
-- **DelegatedConsent**: "Entity X may access data of type Y" (with constraints)
+- **SellerCapacity**: "Person X sells, as legal owner / executor / attorney" (implies Seller)
+- **Offer**: "Person X intends to buy Transaction Y for £N" (with conditions; implies Buyer)
+- **Gift**: "Person X gifts funds towards offer Y" (implies Giftor)
+- **Representation**: "Party X is instructed by party Y, as their conveyancer / agent / broker"
+- **TransactionRole**: "Party X is the lender / landlord / tenant / surveyor on this sale"
 
 Each is a separate Verifiable Credential, independently revocable. When a client changes solicitor, the old Representation credential is revoked and a new one issued. When property changes hands, the SellerCapacity credential is revoked. Clean, auditable, verifiable.
 
@@ -104,7 +105,7 @@ Existing systems consuming v3 data continue working without modification. They d
 
 ## The single development artifact
 
-One concern with entity decomposition is schema drift — maintaining nine separate schemas and keeping them consistent. PDTF 2.0 handles this by maintaining a single `combined.json` as the development artifact:
+One concern with entity decomposition is schema drift — maintaining ten separate schemas and keeping them consistent. PDTF 2.0 handles this by maintaining a single `combined.json` as the development artifact:
 
 ```
 v4/combined.json (single source of truth)
@@ -120,6 +121,6 @@ Entity schemas are **extracted** from the combined schema, not maintained indepe
 
 The entity graph isn't a theoretical exercise in data modelling. It solves concrete problems: data that dies with failed transactions, verification that's too coarse-grained, relationships that can't be independently managed.
 
-The Logbook Test provides a simple, repeatable principle for deciding where data belongs. The result is a graph of nine entities, each independently identifiable, independently verifiable, and independently revocable.
+The Logbook Test provides a simple, repeatable principle for deciding where data belongs. The result is a graph of ten entities, each independently identifiable, independently verifiable, and independently revocable.
 
 [Explore the entity graph in detail →](/architecture/entities/)

@@ -4,8 +4,8 @@ direction: down
 *.style.border-radius: 8
 *.style.font-size: 16
 
-# Core entities (blue)
-transaction: "Transaction\ndid:web:{platform}:transactions:{id}" {
+# Data entities (blue)
+transaction: "Transaction\ndid:web:{platform}:transactions:{id}\nroster: participants[] — DID, local id, firm. No roles." {
   style.fill: "#1a5276"
   style.font-color: "#ffffff"
 }
@@ -21,103 +21,115 @@ title: "Title\nurn:pdtf:titleNumber:{n}" {
 }
 
 # Identity (green) — Person and Organisation
-person: "Person\ndid:key" {
+person: "Person\ndid:key (stable across transactions)" {
   style.fill: "#1a8a5c"
   style.font-color: "#ffffff"
 }
 
-organisation: "Organisation\ndid:key or did:web" {
+organisation: "Organisation\ndid:web" {
   style.fill: "#148f77"
   style.font-color: "#ffffff"
 }
 
-# Seller-side relationship credentials (gold, rounded) — held on the Transaction
-sellerCapacity: "SellerCapacity\nurn:pdtf:capacity:{id}" {
+# Relationship credentials (gold, rounded). Each embodies a role and
+# references the Transaction. Role is stored nowhere else.
+sellerCapacity: "SellerCapacity\nurn:pdtf:capacity:{id}\n⇒ Seller" {
   style.fill: "#f1c40f"
   style.font-color: "#1a1a1a"
   style.border-radius: 16
 }
 
-representation: "Representation\nsellerConveyancer / estateAgent" {
+offer: "Offer\nurn:pdtf:offer:{id}\n⇒ Buyer" {
   style.fill: "#f1c40f"
   style.font-color: "#1a1a1a"
   style.border-radius: 16
 }
 
-# Offer (purple) — the intent to buy. Self-contained: it NESTS its own
-# buyer-side relationship credentials.
-offer: "Offer  ·  urn:pdtf:offer:{id}" {
-  style.fill: "#7d3c98"
-  style.font-color: "#ffffff"
-
-  buyerRep: "Representation\nbuyerConveyancer / buyerAgent" {
-    style.fill: "#f1c40f"
-    style.font-color: "#1a1a1a"
-    style.border-radius: 16
-  }
-  consent: "DelegatedConsent\nurn:pdtf:consent:{id}" {
-    style.fill: "#f1c40f"
-    style.font-color: "#1a1a1a"
-    style.border-radius: 16
-  }
+gift: "Gift\nurn:pdtf:gift:{id}\n⇒ Giftor" {
+  style.fill: "#f1c40f"
+  style.font-color: "#1a1a1a"
+  style.border-radius: 16
 }
 
-# Transaction → core entities
-transaction -> property: "properties{}" {
+representation: "Representation\nurn:pdtf:representation:{id}\nrole: conveyancer / agent / broker…" {
+  style.fill: "#f1c40f"
+  style.font-color: "#1a1a1a"
+  style.border-radius: 16
+}
+
+transactionRole: "TransactionRole\nurn:pdtf:role:{id}\nrole: lender / landlord / tenant…" {
+  style.fill: "#f1c40f"
+  style.font-color: "#1a1a1a"
+  style.border-radius: 16
+}
+
+# Transaction → data entities
+transaction -> property: "property" {
   style.stroke: "#2e86c1"
   style.stroke-width: 2
 }
-transaction -> title: "titles{}" {
+transaction -> title: "titlesToBeSold[]" {
   style.stroke: "#2e86c1"
   style.stroke-width: 2
 }
-
-# Transaction → seller-side relationship credentials
-transaction -> sellerCapacity: "ownership{}" {
-  style.stroke: "#d4ac0d"
-  style.stroke-width: 2
-}
-transaction -> representation: "representation{}" {
-  style.stroke: "#d4ac0d"
-  style.stroke-width: 2
-}
-
-# Transaction → offers (which nest the buyer-side credentials)
-transaction -> offer: "offers{}" {
-  style.stroke: "#7d3c98"
-  style.stroke-width: 2
-}
-
-# SellerCapacity links Person/Org to Title (the right to sell)
-sellerCapacity -> person: "owner (Person)" {
+transaction -> person: "participants[]" {
   style.stroke: "#1a8a5c"
   style.stroke-width: 2
 }
-sellerCapacity -> organisation: "owner (Org)" {
-  style.stroke: "#148f77"
-  style.stroke-width: 2
-}
-sellerCapacity -> title: "asserts ownership of" {
-  style.stroke: "#2e86c1"
-  style.stroke-width: 2
-}
-
-# Seller-side Representation → the instructed Organisation
-representation -> organisation: "holder" {
+transaction -> organisation: "participants[]" {
   style.stroke: "#148f77"
   style.stroke-width: 2
 }
 
-# Offer → buyer Person(s); nested credentials → their Organisations
-offer -> person: "buyerIds []" {
+# Relationship credentials → Transaction
+sellerCapacity -> transaction: "transaction" {
+  style.stroke: "#d4ac0d"
+  style.stroke-width: 2
+}
+offer -> transaction: "transaction + offerId" {
+  style.stroke: "#d4ac0d"
+  style.stroke-width: 2
+}
+gift -> transaction: "transaction + offerId" {
+  style.stroke: "#d4ac0d"
+  style.stroke-width: 2
+}
+representation -> transaction: "transaction" {
+  style.stroke: "#d4ac0d"
+  style.stroke-width: 2
+}
+transactionRole -> transaction: "transaction" {
+  style.stroke: "#d4ac0d"
+  style.stroke-width: 2
+}
+
+# Relationship credentials → the parties they name
+sellerCapacity -> person: "seller" {
   style.stroke: "#1a8a5c"
   style.stroke-width: 2
 }
-offer.buyerRep -> organisation: "holder" {
+sellerCapacity -> title: "title (optional)" {
+  style.stroke: "#2e86c1"
+  style.stroke-width: 1
+  style.stroke-dash: 5
+}
+offer -> person: "buyer" {
+  style.stroke: "#1a8a5c"
+  style.stroke-width: 2
+}
+gift -> person: "donor" {
+  style.stroke: "#1a8a5c"
+  style.stroke-width: 2
+}
+representation -> person: "representative / representedParty" {
+  style.stroke: "#1a8a5c"
+  style.stroke-width: 2
+}
+representation -> organisation: "representative (firm)" {
   style.stroke: "#148f77"
   style.stroke-width: 2
 }
-offer.consent -> organisation: "authorises" {
+transactionRole -> organisation: "participant" {
   style.stroke: "#148f77"
   style.stroke-width: 2
 }

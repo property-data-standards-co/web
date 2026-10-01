@@ -38,7 +38,7 @@ PDTF v1 represents a property transaction as a single JSON document (around 4,00
 
 **The Options:**
 - **Option A (Unified Document):** Retain a single, comprehensive transaction document covering all data paths. *Benefits:* Extremely simple to query, transmit, and store (one API call gets everything), avoids the complexity of graph traversal, and perfectly matches the mental model of a traditional assembled property "pack".
-- **Option B (Entity Graph):** Decompose the schema into nine distinct, independently credentialed entities: `Property` (physical facts), `Title` (legal facts), `Transaction` (this-sale facts), `Person`, `Organisation`, and relationship credentials (`SellerCapacity`, `Representation`, `DelegatedConsent`, `Offer`). *Benefits:* Enables genuine data reuse across aborted transactions (facts survive the transaction context), reduces payload sizes for targeted updates, and aligns cleanly with disparate authoritative sources.
+- **Option B (Entity Graph):** Decompose the schema into ten distinct, independently credentialed entities: `Property` (physical facts), `Title` (legal facts), `Transaction` (this-sale facts), `Person`, `Organisation`, and relationship credentials that embody each party's role (`SellerCapacity`, `Offer`, `Gift`, `Representation`, `TransactionRole`). *Benefits:* Enables genuine data reuse across aborted transactions (facts survive the transaction context), reduces payload sizes for targeted updates, and aligns cleanly with disparate authoritative sources.
 
 **Our Recommendation (Option B):** 
 The entity graph follows the "Logbook Test" — facts that belong to the property (EPCs, flood risks) stay with the property entity and survive the transaction. Facts that belong to the title stay with the title. This enables genuine data reuse across aborted transactions.
@@ -165,7 +165,7 @@ PDTF 2.0 introduces a `Person` entity represented as a Verifiable Credential. In
 
 **The Options:**
 - **Option A:** Platform-managed identity only. Each platform verifies identity independently and issues its own Person credentials with no cross-platform binding.
-- **Option B (Wallet Identity Binding):** When a consumer presents their GOV.UK Wallet identity via OID4VP, the platform records the wallet's DID or a verifiable hash of the identity VC in the Person credential's `identityBinding` claim. All subsequent PDTF credentials (SellerCapacity, DelegatedConsent) are cryptographically linked to this government-verified identity.
+- **Option B (Wallet Identity Binding):** When a consumer presents their GOV.UK Wallet identity via OID4VP, the platform records the wallet's DID or a verifiable hash of the identity VC in the Person credential's `identityBinding` claim. All subsequent PDTF credentials (SellerCapacity, Offer, Representation) are cryptographically linked to this government-verified identity.
 
 **Our Recommendation (Option B):**
 Wallet identity binding creates a single, reusable identity anchor across the transaction. The buyer or seller verifies their identity once and carries that verification to every party — conveyancer, lender, estate agent, Land Registry — without repeating KYC checks.
@@ -247,16 +247,16 @@ In v3, all parties are stored in a flat `participants[]` array with a `role` str
 **The Options:**
 - **Option A (Flat Participation):** Retain a single `Participation` entity with role strings.
 - **Option B (Intent-Based Relationship Credentials):** Decompose participation into typed relationship credentials that orbit the relevant intent:
-  - `Representation` credentials for the Estate Agent and Seller's Conveyancer orbit the **Transaction** (intent to sell).
-  - `Representation` credentials for the Buyer's Conveyancer and Mortgage Broker orbit the **Offer** (intent to buy).
+  - `Representation` credentials for the Estate Agent and Seller's Conveyancer are instructed by the **seller**, whose `Transaction` carries the intent to sell.
+  - `Representation` credentials for the Buyer's Conveyancer and Mortgage Broker are instructed by the **buyer**, whose `Offer` carries the intent to buy.
   - `SellerCapacity` credentials assert a person's right to sell a specific title.
-  - `DelegatedConsent` credentials grant third parties (like lenders) traversal access to the graph.
+  - Parties with a role but no instructing party, such as the lender, hold a `TransactionRole` credential. Role lives only on these credentials, so revoking one removes the role with it.
 
 **Our Recommendation (Option B):**
 Typed relationship credentials provide precise, revocable, auditable authority chains. They also enable the graph itself to function as the access control model — no central ACL required.
 
 **Consultation Question:**
-> *Does the decomposition of flat participation into typed relationship credentials (Representation, SellerCapacity, DelegatedConsent, Offer) accurately model the authority chains in a property transaction? Are there relationship types we have missed?*
+> *Does the decomposition of flat participation into typed relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole) accurately model the authority chains in a property transaction? Are there relationship types we have missed?*
 
 ---
 
@@ -320,10 +320,10 @@ Property data is highly sensitive. How do we ensure that only authorised parties
 
 **The Options:**
 - **Option A (Centralised Hub ACL):** A designated platform or "transaction hub" acts as the data custodian for a specific property transaction. The hub maintains a dynamic Access Control List (ACL) and enforces role-based access rules via secure API gateways. *Benefits:* Immediate certainty of access revocation (no waiting for credential status lists to sync), far simpler to implement for data consumers (standard API keys rather than complex OID4VP presentation logic), and provides a clear single point of accountability for data governance.
-- **Option B (Intent-based Graph Traversal):** The graph itself dictates access. A `Transaction` represents the intent to sell; an `Offer` represents the intent to buy. If a buyer grants a lender a `DelegatedConsent` credential referencing their accepted `Offer`, the lender is cryptographically authorised to traverse the graph and read the property data directly from the issuers. *Benefits:* Removes the need for central API gatekeepers and prevents vendor lock-in around access routing.
+- **Option B (Intent-based Graph Traversal):** The graph itself dictates access. A `Transaction` represents the intent to sell; an `Offer` represents the intent to buy. A lender holding a `TransactionRole` credential on a transaction whose buyer holds an accepted `Offer` is cryptographically authorised to traverse the graph and read the property data directly from the issuers; a scoped, time-limited consent credential could be layered on top of that for finer control. *Benefits:* Removes the need for central API gatekeepers and prevents vendor lock-in around access routing.
 
 **Our Recommendation (Option B):** 
-Using relationship credentials (`Representation`, `DelegatedConsent`) as capability tokens aligns with the distributed nature of Verifiable Credentials and removes central bottlenecks.
+Using relationship credentials (`Representation`, `TransactionRole`, `Offer`) as capability tokens aligns with the distributed nature of Verifiable Credentials and removes central bottlenecks.
 
 **Consultation Question:**
 > *Does the framing of Transaction (Intent to Sell) and Offer (Intent to Buy) provide a robust enough foundation for distributed access control, or are the practical simplicity and immediate revocation benefits of a Centralised Hub ACL more appropriate for the property industry?*
