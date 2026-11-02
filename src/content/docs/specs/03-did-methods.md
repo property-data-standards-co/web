@@ -208,6 +208,7 @@ Registrant: Property Data Standards Company
 | `urn:pdtf:gift:{uuid}` | Gift | Platform-generated UUID v4 |
 | `urn:pdtf:representation:{uuid}` | Representation | Platform-generated UUID v4 |
 | `urn:pdtf:role:{uuid}` | TransactionRole | Platform-generated UUID v4 |
+| `urn:pdtf:propertyTitleLink:{uuid}` | PropertyTitleLink | Issuer-generated UUID v4 (HMLR, or the seller's conveyancer for unregistered land — 01 D34) |
 
 ### 3.3 ABNF Grammar
 
@@ -225,6 +226,7 @@ pdtf-nss          = property-urn
                   / gift-urn
                   / representation-urn
                   / role-urn
+                  / property-title-link-urn
 
 ; Property — UPRN is a numeric identifier (up to 12 digits)
 property-urn      = "uprn:" uprn
@@ -253,6 +255,9 @@ representation-urn = "representation:" uuid-v4
 ; TransactionRole — UUID v4
 role-urn          = "role:" uuid-v4
 
+; PropertyTitleLink — UUID v4 (01 D34)
+property-title-link-urn = "propertyTitleLink:" uuid-v4
+
 ; UUID v4 (RFC 4122 format)
 uuid-v4           = 8hexdig "-" 4hexdig "-" "4" 3hexdig "-"
                     variant-char 3hexdig "-" 12hexdig
@@ -278,6 +283,7 @@ urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
 urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
 urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
 urn:pdtf:role:d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a
+urn:pdtf:propertyTitleLink:e5f6a7b8-c9d0-4e1f-8a3b-4c5d6e7f8a9b
 ```
 
 ### 3.5 URN vs DID: When to Use Which
@@ -1018,7 +1024,7 @@ Unregistered land (land not registered at HMLR) has no title number. PDTF needs 
 
 1. **UUID version:** Should we use UUID v4 (random) or UUID v5 (deterministic, based on a namespace + name like the property UPRN)? UUID v5 would mean the same unregistered title always gets the same identifier, but it creates a dependency on knowing the UPRN.
 
-2. **First registration transition:** When unregistered land is first registered at HMLR, it receives a title number. Should:
+2. **First registration transition** *(proposed — 01 §4.2.2: option (b), with HMLR's PropertyTitleLink superseding the conveyancer's)*: When unregistered land is first registered at HMLR, it receives a title number. Should:
    - (a) The `urn:pdtf:unregisteredTitle:{uuid}` be retired and replaced with `urn:pdtf:titleNumber:{number}`, with a succession credential linking them?
    - (b) The unregistered title URN remain as an alias (`alsoKnownAs`) alongside the new title number URN?
    - (c) Both — succession credential + alias?
@@ -1233,6 +1239,7 @@ This generates the key pair, constructs the DID document with regulatory metadat
 | Gift | URN | `urn:pdtf:gift:{uuid}` | `urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e` |
 | Representation | URN | `urn:pdtf:representation:{uuid}` | `urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d` |
 | TransactionRole | URN | `urn:pdtf:role:{uuid}` | `urn:pdtf:role:d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a` |
+| PropertyTitleLink | URN | `urn:pdtf:propertyTitleLink:{uuid}` | `urn:pdtf:propertyTitleLink:e5f6a7b8-c9d0-4e1f-8a3b-4c5d6e7f8a9b` |
 
 ## Appendix B: Decision Log
 

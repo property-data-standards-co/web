@@ -15,7 +15,7 @@ property: "Property\nurn:pdtf:uprn:{uprn}" {
   style.font-color: "#ffffff"
 }
 
-title: "Title\nurn:pdtf:titleNumber:{n}" {
+title: "Title\nurn:pdtf:titleNumber:{n}\nor urn:pdtf:unregisteredTitle:{id}" {
   style.fill: "#2e86c1"
   style.font-color: "#ffffff"
 }
@@ -63,12 +63,22 @@ transactionRole: "TransactionRole\nurn:pdtf:role:{id}\nrole: lender / landlord /
   style.border-radius: 16
 }
 
+# Standing link (orange, rounded). Relates a property to a title whether or
+# not either is being sold, so it references no Transaction (D34). HMLR issues
+# it for a registered title; the seller's conveyancer, on the epitome, for
+# unregistered land.
+propertyTitleLink: "PropertyTitleLink\nurn:pdtf:propertyTitleLink:{id}\nstanding — no Transaction" {
+  style.fill: "#e67e22"
+  style.font-color: "#ffffff"
+  style.border-radius: 16
+}
+
 # Transaction → data entities
 transaction -> property: "property" {
   style.stroke: "#2e86c1"
   style.stroke-width: 2
 }
-transaction -> title: "titlesToBeSold[]" {
+transaction -> title: "titlesToBeSold[] — selected from the linked titles" {
   style.stroke: "#2e86c1"
   style.stroke-width: 2
 }
@@ -134,9 +144,12 @@ transactionRole -> organisation: "participant" {
   style.stroke-width: 2
 }
 
-# Property ↔ Title (optional link)
-property -> title: "may have" {
-  style.stroke: "#2e86c1"
-  style.stroke-width: 1
-  style.stroke-dash: 5
+# Property ↔ Title: many-to-many, through the standing link
+propertyTitleLink -> property: "property" {
+  style.stroke: "#e67e22"
+  style.stroke-width: 2
+}
+propertyTitleLink -> title: "title" {
+  style.stroke: "#e67e22"
+  style.stroke-width: 2
 }

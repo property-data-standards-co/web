@@ -135,6 +135,7 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](/specs/01-e
 | `GiftCredential` | Gift | `urn:pdtf:gift:{id}` | Giftor or platform | Donor DID, offer, gift terms. Implies Giftor. |
 | `RepresentationCredential` | Representation | `urn:pdtf:representation:{id}` | Instructing party (Person/Org) | Representative DID, represented party DID, kind of representation |
 | `TransactionRoleCredential` | TransactionRole | `urn:pdtf:role:{id}` | Platform | Participant DID, role, where no more specific relationship applies |
+| `PropertyTitleLinkCredential` | PropertyTitleLink | `urn:pdtf:propertyTitleLink:{id}` | HMLR (registered title) / seller's conveyancer (unregistered land) | Standing UPRN↔title link with its basis (register dataset and as-of date, or epitome of title). References no Transaction; implies no role (01 D34, §4.2.1) |
 | `TransactionCredential` | Transaction | `did:web:...` | Platform | Transaction metadata, status, milestones, financial context |
 
 ### 3.2 PropertyCredential

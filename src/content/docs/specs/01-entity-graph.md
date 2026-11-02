@@ -4,11 +4,13 @@ description: "PDTF 2.0 specification document."
 ---
 
 
-**Version:** 0.3 (Draft)
-**Date:** 1 October 2026
+**Version:** 0.4 (Draft)
+**Date:** 2 November 2026
 **Author:** Ed Molyneux
 **Status:** Draft for review (LMS collaboration)
 **Parent:** [00 — Architecture Overview](/specs/00-architecture-overview/)
+
+**Changes in v0.4:** Adds a standing Property–Title link. New relationship credential **`PropertyTitleLink`** (`urn:pdtf:propertyTitleLink:{id}`, `v4/PropertyTitleLink.json`) relates a UPRN to a title, many-to-many. HM Land Registry issues it for registered titles, and the seller's conveyancer issues it, on the epitome of title, for unregistered land. It is the first relationship credential that references no Transaction (new decision **D34**). D32 is narrowed accordingly: only role-bearing credentials reference the Transaction. `titlesToBeSold` now selects the titles being sold from the linked titles, so a related title that is not being sold, such as the superior freehold in a leasehold flat sale, needs no new field. First registration is specified (§4.2.2). D26 is corrected to match the single-property working assumption, which is restated, not settled (§9.1 Q2; provisional, consultation Q11). Corrections to HMLR's link data and the minting of unregistered-title identifiers are recorded as open questions (§9.1 Q6, Q7). Diagrams redrawn.
 
 **Changes in v0.3:** Aligned with the generated v4 schemas in the schemas repository (`dev`, 3.6.0-dev.26). Ten entities: `DelegatedConsent` is withdrawn; `Gift` and `TransactionRole` are added. Role now lives only on the relationship credential that embodies it, and every relationship credential references the Transaction rather than nesting inside the Offer (new decision **D32**, which supersedes D31). The Transaction carries a roster of parties (`participants[]`) with no roles. Field names follow the schemas (`seller`, `buyer`, `donor`, `representative`, `representedParty`, `participant`, `transaction`). Representation is one credential per (representative, represented party) pair. Field mapping in §4 and §7 now follows the generated mapping manifest. Diagrams redrawn.
 
@@ -37,6 +39,8 @@ The governing principle for entity assignment:
 > **Transaction entity** = facts about this particular sale — who's involved, financing, milestones, status. Irrelevant to the next owner.
 >
 > **Relationship credentials** (SellerCapacity, Offer, Gift, Representation, TransactionRole) = who holds what role, in relation to whom. These are thin signed assertions linking persons/organisations to the transaction, and they are the *only* place a party's role is recorded.
+>
+> **Standing links** (PropertyTitleLink) = which titles a property sits on. True whether or not anything is being sold, so they link a Property to a Title and reference no transaction.
 
 ### 2.2 ID-Keyed Collections
 
@@ -72,7 +76,7 @@ v3/combined.json (single dev artifact)
 
 ### 3.1 Entity Summary
 
-Five entities carry data. Five are **relationship credentials**: thin, signed assertions that link a party to the transaction and, in doing so, embody that party's role.
+Five entities carry data. Six are **relationship credentials**, which are thin, signed assertions. Five of them link a party to the transaction and, in doing so, embody that party's role. The sixth, `PropertyTitleLink`, links a Property to a Title and stands outside any transaction (D34).
 
 | Entity | Kind | Identifier | Schema | Description |
 |--------|------|-----------|--------|-------------|
@@ -86,14 +90,31 @@ Five entities carry data. Five are **relationship credentials**: thin, signed as
 | **Gift** | credential | `urn:pdtf:gift:{id}` | `v4/Gift.json` | A gift of funds towards an offer, with the terms a conveyancer must resolve before reporting to a lender. **Implies the Giftor role.** |
 | **Representation** | credential | `urn:pdtf:representation:{id}` | `v4/Representation.json` | One party instructed by another: one credential per (representative, represented party) pair. Carries the kind of representation as its `role`. Revocable. |
 | **TransactionRole** | credential | `urn:pdtf:role:{id}` | `v4/TransactionRole.json` | A party's role where no more specific relationship credential applies (Lender, Landlord, Tenant, Surveyor, Platform Support), or where the specific relationship is not yet established. |
+| **PropertyTitleLink** | credential (standing) | `urn:pdtf:propertyTitleLink:{id}` | `v4/PropertyTitleLink.json` | A UPRN is related to a title, as at a date, on a stated basis. Many-to-many. Issued by HM Land Registry for a registered title, and by the seller's conveyancer, on the epitome of title, for unregistered land. **References no Transaction** and implies no role. |
 
 ### 3.2 Relationship Model
 
 ```
+Property (urn:pdtf:uprn:100023456789)          // Flat 3, Alder Court
+    │
+    │   standing links — no Transaction, issued once and reused by every sale (D34):
+    │
+    ├── PropertyTitleLink "urn:pdtf:propertyTitleLink:{id}"                  HMLR
+    │     { property: "urn:pdtf:uprn:100023456789",
+    │       title: "urn:pdtf:titleNumber:AB12345",                           // the flat's lease
+    │       basis: { type: "Register Dataset",
+    │                dataset: "HMLR Title Number and UPRN Look Up", asOf: "2026-10-01" } }
+    │
+    └── PropertyTitleLink "urn:pdtf:propertyTitleLink:{id}"                  HMLR
+          { property: "urn:pdtf:uprn:100023456789",
+            title: "urn:pdtf:titleNumber:AB10000",                           // the block freehold
+            basis: { type: "Register Dataset", … } }
+
 Transaction (did:web:platform.example.com:transactions:{id})
     │
     ├── property:       "urn:pdtf:uprn:100023456789"
-    ├── titlesToBeSold: ["urn:pdtf:titleNumber:AB12345"]        // ordered
+    ├── titlesToBeSold: ["urn:pdtf:titleNumber:AB12345"]        // ordered; selected from the linked titles
+    │                                                           // AB10000: linked, not selected → related, not sold
     │
     ├── participants: [                                        // ordered ROSTER — no roles
     │     { participant: "did:key:z6Mkh...abc", participantId: "s1" },
@@ -106,7 +127,7 @@ Transaction (did:web:platform.example.com:transactions:{id})
     ├── offers:   { "o1": { amount: 450000, status: "Accepted", … } }   // offer terms, keyed by offer id
     ├── enquiries, milestones, contracts, chain, saleContext, …
     │
-    │   relationship credentials — each references the Transaction and embodies a role:
+    │   role-bearing credentials — each references the Transaction and embodies a role (D32):
     │
     ├── SellerCapacity   "urn:pdtf:capacity:{id}"
     │     { seller: "did:key:z6Mkh...abc", transaction: <did>,
@@ -144,17 +165,21 @@ Every participant carrying a role receives exactly one role-bearing credential: 
 
 **The two intents.** The Transaction is the seller's intent to sell, embodied by `SellerCapacity`. An Offer is a buyer's intent to buy. Buyers participate only through Offers, and a transaction can carry several. Everyone else is linked to the party they act for: a buyer's conveyancer holds a `Representation` whose `representedParty` is the buyer, and the buyer's link to their offer is the `Offer` credential itself.
 
-**Figure 1 — Entity graph (schema level).** Entity types and identifiers, colour-coded by family. Every relationship credential references the Transaction:
+**Titles: HMLR asserts, the seller selects.** Property and title are many-to-many. One UPRN can sit on several titles, of which only some are sold: a lease and the freehold above it, or a house and a separately registered strip of garden. One title, such as a block freehold, can cover many UPRNs. `PropertyTitleLink` records each pairing on its own, so a relying party can establish every title linked to a property without any Transaction. The Transaction's `titlesToBeSold` says which of those linked titles are being conveyed. A linked title that is not selected is **related but not sold**, so the superior freehold in a leasehold flat sale needs no new field. A link is a fact about the UPRN and the title, not about any sale, and it implies no role.
+
+**One issuer per fact.** Registration status decides who may issue a link. For a registered title (`urn:pdtf:titleNumber:*`) the issuer is HM Land Registry, on its UPRN-to-title data. For unregistered land (`urn:pdtf:unregisteredTitle:*`), which HMLR holds nothing about, the issuer is the seller's conveyancer, on the epitome of title (§4.2.2). The two never overlap, so no fact has competing issuers and no conflict rules are needed. The schema ties `basis.type` to the title's URN scheme. Verifiers check the issuer through the trust framework ([04](/specs/04-openid-federation/)).
+
+**Figure 1 — Entity graph (schema level).** Entity types and identifiers, colour-coded by family. Every role-bearing credential references the Transaction. `PropertyTitleLink` relates Property to Title directly and references none:
 
 ![PDTF entity graph — entity types, identifiers, and the relationship credentials that embody each role](/diagrams/entity-graph.svg)
 
-**Figure 2 — Worked example.** The same model instantiated for a single sale ("14 Elm Road"): the seller's SellerCapacity, the buyer's Offer, a parent's Gift, three Representations and the lender's TransactionRole all reference the Transaction, and each can be presented or revoked on its own:
+**Figure 2 — Worked example.** The same model instantiated for a single sale ("14 Elm Road"). The seller's SellerCapacity, the buyer's Offer, a parent's Gift, three Representations and the lender's TransactionRole all reference the Transaction, and each can be presented or revoked on its own. HMLR's PropertyTitleLink relates 14 Elm Road to title BL54321 whether or not it is for sale, and `titlesToBeSold` selects that title:
 
 ![PDTF entity graph worked example — the 14 Elm Road sale, with every party linked to the Transaction by the credential that embodies their role](/diagrams/entity-graph-example-intents.svg)
 
 ### 3.3 Key Design Decisions
 
-**D26: Transaction-centric graph.** The Transaction is the root. Property and Title are referenced by the Transaction, not the other way around. This handles unregistered titles (no title number), multi-property transactions (house + garage on separate titles), and multi-title properties naturally.
+**D26: Transaction-centric graph** *(corrected in v0.4)*. The Transaction is the root of a sale. It references one Property and the Titles being sold; neither references the Transaction. This handles unregistered titles (no title number) and multi-title sales, such as a house and its garage on separate titles, naturally. The relationship between Property and Title that holds outside any sale is carried by `PropertyTitleLink` (D34), not by the Transaction. *Correction:* v0.3 said this also handled multi-property transactions. It does not: a Transaction references exactly one Property (§9.1 Q2; provisional, consultation Q11). A garage on its own title is a second Title of the same sale, whether or not the garage has its own UPRN.
 
 **D27: Organisation as first-class entity.** Estate agents, conveyancers, and lenders participate as Organisations with their own identity, regulatory IDs and PI insurance. A participant's firm is recorded on the Transaction roster (`organisation`, `organisationReference`) rather than on any credential, because where someone works does not stop being true when a representation ends. Resolving the participant's DID gives the Organisation.
 
@@ -166,9 +191,11 @@ Every participant carrying a role receives exactly one role-bearing credential: 
 
 **D31 (superseded by D32): Buyer-side relationships nest inside the Offer.** v0.2 nested the buyer's-conveyancer Representation and a lender DelegatedConsent inside the Offer. Withdrawn: nesting created a second home for role and relationship, and `DelegatedConsent` duplicated what the roster and `TransactionRole` already express.
 
-**D32: Role lives only on the relationship credential, and every relationship credential references the Transaction.** Firing a conveyancer means revoking their `Representation`. If the Transaction also recorded "Seller's Conveyancer" against that participant, revocation would remove the relationship and leave the role assertion standing — two sources of truth, disagreeing, with the stale one still readable. So the roster carries no role, and dropping a credential and recomposing gives back a v3 instance in which that party has no role and no relationship, which is exactly what revocation should mean. Each credential references the Transaction directly (`transaction`), with `Offer` and `Gift` additionally carrying the `offerId` they relate to; nothing nests. Lender access is expressed by the lender's `TransactionRole`; how a scoped, time-limited consent should sit on top of that is an open consultation question.
+**D32: Role lives only on the relationship credential, and every role-bearing credential references the Transaction** *(narrowed by D34)*. Firing a conveyancer means revoking their `Representation`. If the Transaction also recorded "Seller's Conveyancer" against that participant, revocation would remove the relationship and leave the role assertion standing — two sources of truth, disagreeing, with the stale one still readable. So the roster carries no role, and dropping a credential and recomposing gives back a v3 instance in which that party has no role and no relationship, which is exactly what revocation should mean. Each credential references the Transaction directly (`transaction`), with `Offer` and `Gift` additionally carrying the `offerId` they relate to; nothing nests. Lender access is expressed by the lender's `TransactionRole`; how a scoped, time-limited consent should sit on top of that is an open consultation question. *Narrowed in v0.4:* as first written, D32 required *every* relationship credential to reference the Transaction. It was written for the role-bearing credentials (`SellerCapacity`, `Offer`, `Gift`, `Representation`, `TransactionRole`), where a role exists only within a sale, and the rule still applies to all of them. `PropertyTitleLink` bears no role and is true outside any sale, so it references no Transaction (D34). Scoping it to a sale would force a fresh link for every sale of the same flat and leave a relationship like "this freehold covers these twelve flats" inexpressible.
 
 **D33: One Representation per (representative, represented party) pair.** A conveyancer instructed jointly by two sellers holds two Representations, each presentable or revocable on its own. A separated couple instructing their own conveyancers yields one each — the case the role-only model could not express. The retainer is with the client, so `representedParty` is a person or organisation, never an offer.
+
+**D34: A standing Property–Title link, asserted by the register and selected by the seller.** `PropertyTitleLink` asserts that a UPRN is related to a title, as at a date, on a stated basis. It is standing: it references no Transaction and is issued once, not once per sale. For a registered title, HM Land Registry issues it from its UPRN-to-title data, the dataset and its as-of date being the basis. That data is neither complete nor wholly accurate, but no other source has better standing. For unregistered land the seller's conveyancer issues it on the epitome of title (§4.2.2). The Transaction's `titlesToBeSold` selects the titles being conveyed from the linked titles. Linked titles that are not selected are related but not sold, with no new field. Errors are handled with what already exists. A missing link shows up as a title in `titlesToBeSold` with no link behind it; the conveyancer reports it to HMLR, which reissues. A wrong link is simply not selected. No seller- or conveyancer-issued correction link is defined, because it would put competing issuers on the same fact and need conflict rules (§9.1 Q6). *Why not on the Title or the Property?* A list of UPRNs on the Title, or of titles on the Property, would make one credential carry a many-to-many relation. Every change at either end would then mean reissuing a whole register extract or logbook, and the issuer of the relation would be tied to the issuer of the data. A link per pairing can be issued, revoked and superseded on its own.
 
 ---
 
@@ -247,7 +274,7 @@ The Property entity corresponds to `propertyPack` in v3, minus titles and minus 
 
 ### 4.2 Title Entity
 
-Each title in `propertyPack.titlesToBeSold[]` becomes a Title entity, keyed by `urn:pdtf:titleNumber:{number}`.
+Each title in `propertyPack.titlesToBeSold[]` becomes a Title entity, keyed by `urn:pdtf:titleNumber:{number}`. A Title is not only a title being sold. Any title linked to a property by a `PropertyTitleLink` is a Title entity, such as the block freehold above a flat, and a Transaction's `titlesToBeSold` lists the subset it conveys (§4.2.1).
 
 | Source | v4 Location | Notes |
 |--------|-------------|-------|
@@ -258,8 +285,9 @@ Each title in `propertyPack.titlesToBeSold[]` becomes a Title entity, keyed by `
 | `ownership.ownershipsToBeTransferred[].ownershipType` | `ownershipType` | Freehold/Leasehold/etc. — matched by titleNumber |
 | `ownership.ownershipsToBeTransferred[].{leasehold details}` | `{leasehold details}` | Lease terms, ground rent, etc. (via discriminator) |
 | `ownership.isFirstRegistration` | `isFirstRegistration` | Title registration status |
+| — | `alsoKnownAs` | Earlier identifiers of this title. On first registration, the `urn:pdtf:unregisteredTitle:{id}` it replaces (§4.2.2). Not in v3. |
 
-**Unregistered titles:** Use `urn:pdtf:unregisteredTitle:{generated-id}`. The title may gain a `titleNumber` after first registration, at which point the URN updates. The graph must handle this transition.
+**Unregistered titles:** Use `urn:pdtf:unregisteredTitle:{id}`. On first registration the title gains a title number. The Title credential issued then is keyed `urn:pdtf:titleNumber:{number}` and lists the unregistered URN in `alsoKnownAs` (§9.1 Q5). §4.2.2 sets out the transition.
 
 **ownershipToBeTransferred (moved to top level):**
 Because a `TitleCredential` fundamentally represents an ownership interest being conveyed, the fields previously inside `ownershipsToBeTransferred[]` move to the top level of the Title entity, and the register evidence moves into a `title` sub-object:
@@ -278,6 +306,49 @@ Title (credential subject):
 Note that this applies to both registered (`urn:pdtf:titleNumber:*`) and unregistered (`urn:pdtf:unregisteredTitle:*`) titles.
 
 *These fields represent the decomposition of the v1 monolithic `ownership` schema object per Q7.1 (architecture overview §14.2.1). Unregistered title identifier resolution is tracked as Q7.2 — the schema is stable for both cases but the identifier format is pending.*
+
+#### 4.2.1 PropertyTitleLink
+
+A standing assertion that a property is related to a title (D34). Not projected from v3: v3 has one `propertyPack` and the titles being sold, and records nothing about which titles a UPRN sits on. `decompose` therefore emits no link and `recompose` needs none.
+
+| Field | Description |
+|-------|-------------|
+| `id` | `urn:pdtf:propertyTitleLink:{id}` |
+| `property` | Property URN, `urn:pdtf:uprn:{uprn}` |
+| `title` | Title URN, `urn:pdtf:titleNumber:{number}` or `urn:pdtf:unregisteredTitle:{id}` |
+| `basis.type` | `Register Dataset` for a registered title, `Epitome of Title` for unregistered land. The schema enforces the pairing with the URN scheme. |
+| `basis.asOf` | The date the link speaks as at: the dataset's effective date, or the date the epitome was examined |
+| `basis.dataset`, `basis.datasetRelease` | Register Dataset: the dataset the link is taken from, e.g. HMLR's *Title Number and UPRN Look Up*, and its release |
+| `basis.rootOfTitle`, `basis.epitomeDigest` | Epitome of Title: the root of title the epitome starts from (description, date), and the SHA-256 digest of the epitome as examined |
+
+There is no `transaction` field. `basis` is part of what is asserted, because a link is only ever "related as at this date, according to this source". How the issuer obtained it goes in the credential's `evidence` as usual ([02 §6](/specs/02-vc-data-model/)): `ElectronicRecord` for HMLR's dataset, and `ProfessionalVerification` with a `DocumentExtraction` of the epitome for a conveyancer.
+
+**Issuers.** HM Land Registry for `urn:pdtf:titleNumber:*`, and only HMLR. The seller's conveyancer for `urn:pdtf:unregisteredTitle:*`. In Phase 1 HMLR's links may be issued by a trusted adapter under a Trust Mark delegated for this credential type, as for other HMLR data ([04](/specs/04-openid-federation/)). A verifier MUST reject a link to a registered title that is not issued by HMLR or its delegated adapter. It MUST reject a link to an unregistered title whose issuer does not hold a regulated-conveyancer Trust Mark.
+
+**Selecting the sold titles.** For a Transaction with `property` *P*:
+
+- **linked** = the titles of every valid link whose `property` is *P*, resolved through `alsoKnownAs` (§4.2.2)
+- **sold** = `titlesToBeSold` ∩ linked
+- **related but not sold** = linked − `titlesToBeSold`
+- **unlinked sold** = `titlesToBeSold` − linked. These are missing links. The seller's conveyancer reports each to HMLR (or, for unregistered land, issues the link). This is a prompt to act, not an error: the sale may proceed while HMLR corrects its data.
+
+The schemas repository implements this as `linkedTitles()` (`v4LinkedTitles` from the package entry point).
+
+**Does HMLR's data put a flat on the block freehold?** Yes in principle, but not reliably. The technical specification for HMLR's *Title Number and UPRN Look Up* dataset says: "Where a title number affects many properties, all affecting UPRNs may be associated." Where HMLR makes that association, the block freehold appears against each flat's UPRN as well as against the flat's own lease, and the superior title is present by construction. "May" is not "will". Where the association is missing, the freehold is simply absent from *linked*. The unlinked-sold check will not catch this, because the freehold is not being sold. The leasehold register normally names the landlord's title, which gives the conveyancer a cross-check. How often the association is missing is to be measured against HMLR's data during prototyping (§9.1 Q6).
+
+**What the dataset carries.** Two fields: `Title_No` and `UPRN`. It records no tenure and no date per row. Tenure comes from the Title (HMLR's Title Descriptor dataset). The as-of date is the release: full files are published monthly (`LR_UPRN_FULL_<Mon>.csv`), and AddressBase change-only updates are matched every six weeks. So `basis.asOf` is the release date and `basis.datasetRelease` is the file it came from. HMLR's own data-quality notes predict the missing-link case D34 handles. A title and a UPRN can be linked only where HMLR can relate the title's address to an AddressBase address. A duplicate address can leave one record with a title number and no UPRN and another with a UPRN and no title number. An AddressBase address not yet transferred into HMLR's gazetteer means "no UPRN for that title even if one exists".
+
+#### 4.2.2 Unregistered land and first registration
+
+Unregistered land has no title number and no HMLR link. The sale proceeds on the epitome of title, and first registration follows completion.
+
+1. **Before the sale.** The seller's conveyancer examines the epitome and issues a `PropertyTitleLink` from the UPRN to `urn:pdtf:unregisteredTitle:{id}`, with `basis.type: "Epitome of Title"`. That title is listed in `titlesToBeSold` as usual. No transaction-specific step is needed: the link is standing, like an HMLR link.
+2. **On first registration.** HMLR's Title credential for the new title number lists the unregistered URN in `alsoKnownAs`. Links, `titlesToBeSold` entries and `SellerCapacity.title` references that name the old URN all resolve to the new title. HMLR can list the URN only if it knows it. The applicant for first registration, normally the buyer's conveyancer, has it from the sale and supplies it with the application. How that reaches HMLR, or HMLR's adapter in Phase 1, is part of §9.1 Q7.
+3. **HMLR's link supersedes the conveyancer's.** Once HMLR issues a link from the same UPRN to the new title number, the conveyancer's link is superseded. A verifier MUST treat a link to `urn:pdtf:unregisteredTitle:X` as superseded when both of these hold: (a) a valid Title credential for `urn:pdtf:titleNumber:N` lists *X* in `alsoKnownAs`; and (b) a valid HMLR link relates the same UPRN to *N*. Superseded links are excluded from *linked*. This holds whether or not the conveyancer has revoked the link yet.
+4. **Revocation stays with the issuer.** Only the issuer modifies its status list ([14 §14 Q2](/specs/14-credential-revocation/)). HMLR's link therefore does not revoke the conveyancer's credential. The conveyancer, or in Phase 1 the platform hosting its status list, SHOULD revoke the superseded link with reason `superseded_by_registration` once condition 3 holds ([14 §7.6](/specs/14-credential-revocation/)). Revocation is housekeeping. Correctness rests on the verifier rule in step 3, so a link the conveyancer never revokes, perhaps because the retainer ended at completion, causes no harm.
+5. **Until HMLR's link exists**, the conveyancer's link stands and resolves through `alsoKnownAs` to the new title. The issuer SHOULD NOT revoke it before then, or the property would briefly have no link to its own title. A registered title linked only on an epitome is the missing-link case of D34: it is reported to HMLR.
+
+This adds no competing issuers. Before registration only the conveyancer can link the land, and after it only HMLR can. The two links meet only through `alsoKnownAs`, and step 3 resolves that meeting. *This is a direction, not a settled design.* It builds on the `alsoKnownAs` working assumption (§9.1 Q5), which is itself still open for consultation ([Q15](/consultation/#q15-evolving-identifiers-unregistered-titles-and-missing-uprns)). Who mints the unregistered identifier, and how duplicates are avoided, is open (§9.1 Q7).
 
 
 ### 4.3 Transaction Entity
@@ -302,6 +373,8 @@ The Transaction is the root entity and container for sale-specific data.
 | `confirmationOfAccuracyByOwners` | `sellerConfirmations.accuracy` | Sale-specific seller sign-off |
 | `saleReadyDeclarations` | `sellerConfirmations.saleReady` | Sale-specific declarations |
 | `completionAndMoving` | `completion` | Completion date, arrangements |
+| — | `property` | URN of the one Property this sale is of (§9.1 Q2) |
+| order of `propertyPack.titlesToBeSold[]` | `titlesToBeSold[]` | Ordered Title URNs: the titles being conveyed, selected from the titles linked to `property` (§4.2.1) |
 
 ### `saleContext` details
 | Field | Type | Description |
@@ -445,7 +518,7 @@ The array order is the v3 participants order and is authoritative for recomposit
 | Transaction | `did:web` | `did:web:platform.example.com:transactions:abc123` | Platform-assigned; embeds the v3 `transactionId` |
 | Property | `urn:pdtf:uprn:{uprn}` | `urn:pdtf:uprn:100023456789` | Ordnance Survey UPRN |
 | Title | `urn:pdtf:titleNumber:{number}` | `urn:pdtf:titleNumber:AB12345` | HMLR title number |
-| Title (unregistered) | `urn:pdtf:unregisteredTitle:{id}` | `urn:pdtf:unregisteredTitle:ut-7f3a` | Generated, may transition to registered |
+| Title (unregistered) | `urn:pdtf:unregisteredTitle:{id}` | `urn:pdtf:unregisteredTitle:ut-7f3a` | Generated (minting open — §9.1 Q7); kept in `alsoKnownAs` after first registration (§4.2.2) |
 | Person | `did:key` | `did:key:z6Mkhabc123...` | The party's own DID, stable across transactions |
 | Organisation | `did:web` | `did:web:smithandco.law` | Self-hosted or orchestrator-hosted |
 | SellerCapacity | `urn:pdtf:capacity:{id}` | `urn:pdtf:capacity:own-1a2b` | Generated |
@@ -453,6 +526,7 @@ The array order is the v3 participants order and is authoritative for recomposit
 | Gift | `urn:pdtf:gift:{id}` | `urn:pdtf:gift:gf-9i0j` | Generated |
 | Representation | `urn:pdtf:representation:{id}` | `urn:pdtf:representation:rep-3c4d` | Generated |
 | TransactionRole | `urn:pdtf:role:{id}` | `urn:pdtf:role:tr-5e6f` | Generated |
+| PropertyTitleLink | `urn:pdtf:propertyTitleLink:{id}` | `urn:pdtf:propertyTitleLink:e5f6a7b8-c9d0-4e1f-8a3b-4c5d6e7f8a9b` | Generated by the issuer (HMLR, or the seller's conveyancer for unregistered land) |
 
 Entity ids come from the `idFactory` passed to `decompose`. The built-in default is deterministic and derived from `transactionId`, so repeated runs are stable and diffable, but it is a placeholder: supply your own to mint real identifiers. `Transaction.id` is synthetic — `decompose` mints it and `recompose` drops it — so the choice of DID method makes no difference to the v3 that comes back.
 
@@ -529,6 +603,13 @@ Composed v4 state keeps the Transaction's own fields at the top level, with ID-k
   "titles": {
     "urn:pdtf:titleNumber:AB12345": { /* Title — register, tenure, encumbrances */ }
   },
+  "propertyTitleLinks": {
+    "urn:pdtf:propertyTitleLink:ptl-1": {
+      "property": "urn:pdtf:uprn:100023456789",
+      "title": "urn:pdtf:titleNumber:AB12345",
+      "basis": { "type": "Register Dataset", "dataset": "HMLR Title Number and UPRN Look Up", "asOf": "2026-10-01" }
+    }
+  },
 
   "sellerCapacities": {
     "urn:pdtf:capacity:own-1": {
@@ -581,6 +662,7 @@ Composed v4 state keeps the Transaction's own fields at the top level, with ID-k
 | Offers | `offers{}` (ID-keyed) + `participants[].offerId` | `offers{}` unchanged; one `Offer` credential per buyer, `Gift` credential per giftor | Minor — additive |
 | Role | `participants[].role` | Only on the relationship credential that embodies it (D32) | Yes — moved |
 | Representation | underivable (role only) | `Representation` per (representative, represented party) pair, from new optional `participantId` / `actingFor` | Additive on v3 |
+| Property–Title relationship | implicit: one `propertyPack` and the titles being sold | Standing `PropertyTitleLink` per (UPRN, title), with `titlesToBeSold` selecting from it (D34) | Additive — outside the v3 round trip |
 | Enquiries | `enquiries{}` (ID-keyed) | `enquiries{}` (unchanged) | No |
 
 ---
@@ -589,7 +671,7 @@ Composed v4 state keeps the Transaction's own fields at the top level, with ID-k
 
 ### 7.1 Schema generation (v3 combined → entity schemas)
 
-`npm run generate:v4` reads `v3/combined.json` and emits the ten entity schemas, which define the `credentialSubject` shape for Verifiable Credentials, together with `v4/mapping.json`.
+`npm run generate:v4` reads `v3/combined.json` and emits the eleven entity schemas, which define the `credentialSubject` shape for Verifiable Credentials, together with `v4/mapping.json`.
 
 **Generation rules:**
 
@@ -599,6 +681,7 @@ Composed v4 state keeps the Transaction's own fields at the top level, with ID-k
 4. **Person** — the party fields of `participants[*]` (§4.4).
 5. **Organisation** — standalone; not generated from v3.
 6. **Relationship credentials** — projected from `participants[*]` per §4.6–4.10, with `SellerCapacity` derived from the Seller branch (`sellersCapacity`, `dateBecameOwnerOrAuthority`) and `Gift` from the Giftor branch (`giftDetails`).
+7. **PropertyTitleLink** — hand-authored in the generator (§4.2.1), since v3 has nothing to derive it from. The manifest lists it as `kind: "credential"`, `scope: "standing"`, outside `roundTrip.entities`. The five role-bearing credentials are listed as `scope: "transaction"`. Title gains an optional `alsoKnownAs` (§4.2.2).
 
 Rules are **prefix rewrites**, resolved by longest-prefix match (`{index}` matches an array index), so pointers far deeper than anything listed resolve correctly and the manifest does not churn when a v3 field is added. `verifyCoverage()` runs at generation time and fails the build if any v3 key is unclaimed, or if a rule claims a key absent from its target entity.
 
@@ -609,7 +692,7 @@ Rules are **prefix rewrites**, resolved by longest-prefix match (`{index}` match
 **Recomposition rules:**
 
 1. **Roster + credentials → `participants[]`.** Walk `Transaction.participants[]` in order. For each entry, take the party fields from the Person, the roster's `participantId`, `organisation` and `organisationReference`, and then the role and relationship fields from whichever credential names this participant: `SellerCapacity` → `role: "Seller"`, `sellersCapacity`, `dateBecameOwnerOrAuthority`; `Offer` → `role: "Buyer"` (or `"Prospective Buyer"`), `offerId`; `Gift` → `role: "Giftor"`, `offerId`, `giftDetails`; `Representation` → `role`, `actingFor` (the represented parties' `participantId`s); `TransactionRole` → `role`. A participant named by no credential has no role.
-2. **`titles{}` → `propertyPack.titlesToBeSold[]` and `propertyPack.ownership.ownershipsToBeTransferred[]`** — split each Title by the keys each source array owns, in `Transaction.titlesToBeSold[]` order. A Title carrying only shared keys goes to `titlesToBeSold` alone.
+2. **`titles{}` → `propertyPack.titlesToBeSold[]` and `propertyPack.ownership.ownershipsToBeTransferred[]`** — split each Title by the keys each source array owns, in `Transaction.titlesToBeSold[]` order. A Title carrying only shared keys goes to `titlesToBeSold` alone. Titles that are linked but not sold (§7.3) are not emitted, since v3 has nowhere to put them.
 3. **`properties{}` → `propertyPack`** — unwrap (single property).
 4. **`saleContext` → `propertyPack.ownership` and `propertyPack.legalOwners`.**
 5. **`offers{}` → `offers{}`** — unchanged; the buyer linkage is restored via `participants[].offerId` from the Offer and Gift credentials.
@@ -627,10 +710,11 @@ Assembles full transaction state from individual entity Verifiable Credentials. 
 
 1. Start with the Transaction VC as the root
 2. Resolve `property` and `titlesToBeSold[]` → merge Property and Title VC `credentialSubject` data
-3. Resolve roster DIDs → merge Person / Organisation data
-4. Collect every relationship credential whose `transaction` is this Transaction → populate `sellerCapacities{}`, `offerCredentials{}`, `gifts{}`, `representations{}`, `transactionRoles{}`. Nothing nests: a credential's position is determined by its type, and its parties by the DIDs it names.
-5. Verify credential signatures and revocation status during composition. A revoked relationship credential is dropped, and with it the role it embodied.
-6. Output: complete v4 state object (or further recompose to v3)
+3. Collect every valid `PropertyTitleLink` whose `property` is the Transaction's property → populate `propertyTitleLinks{}`, apply the supersession rule (§4.2.2), and merge the Title data of linked titles that are not being sold. Report any title in `titlesToBeSold` with no link behind it (§4.2.1). These links are selected by property, not by transaction
+4. Resolve roster DIDs → merge Person / Organisation data
+5. Collect every role-bearing credential whose `transaction` is this Transaction → populate `sellerCapacities{}`, `offerCredentials{}`, `gifts{}`, `representations{}`, `transactionRoles{}`. Nothing nests: a credential's position is determined by its type, and its parties by the DIDs it names.
+6. Verify credential signatures and revocation status during composition. A revoked relationship credential is dropped, and with it the role it embodied. A revoked or superseded `PropertyTitleLink` is dropped, and with it that title's place among the linked titles.
+7. Output: complete v4 state object (or further recompose to v3; links do not recompose, since v3 has nowhere to put them)
 
 **Dual output:**
 - `composeV4StateFromGraph(credentials[])` → v4 combined state
@@ -686,9 +770,9 @@ The following are *value lists*, not entity collections. They remain as arrays:
    *Question:* `providerReference` is available but may not be unique across providers. Should we generate synthetic IDs, or use a composite key (`providerName:providerReference`)?
    *Working Assumption:* Providers mint their own IDs with the strict requirement that they are globally unique (effectively a URN or UUID). If extracting from PDFs without native IDs, we synthesise a deterministic ID (e.g., hash of search type + provider + date).
 
-2. **Multi-property transactions**
+2. **Multi-property transactions** *(working assumption restated in v0.4)*
    *Question:* The v4 model supports `properties{}` with multiple UPRNs. How should overlays and form mappings work when there's more than one property?
-   *Working Assumption:* The schema is constrained to **single property, multi-title** only. A transaction models exactly one Property entity, but may link to multiple Title entities (e.g., freehold + leasehold, or house + separate garage). This makes form mapping trivial.
+   *Working assumption (provisional — consultation [Q11](/consultation/#q11-single-property-multiple-titles)):* **Single property, multi-title.** A Transaction references exactly one Property (`property`) and one or more Titles (`titlesToBeSold`). D26 is corrected to match, since it had claimed multi-property transactions were handled. Three reasons. First, every form PDTF maps is a questionnaire about *one* property: TA6, BASPI, the NTS and CON29R. A second Property would have no form to fill and no overlay path. Second, v3 has a single `propertyPack`, so a second Property could not round trip. Third, the case D26 cited does not need it. A house and a separately addressed garage are one sale of two titles. If the garage has a UPRN of its own, HMLR's `PropertyTitleLink` relates that UPRN to the garage title, so the relationship can be expressed without the garage becoming a second Property of the sale. Facts about the garage that matter to the buyer go on the main Property, as v3 already does. A genuine sale of two dwellings is two Transactions. `properties{}` stays an ID-keyed map for uniform addressing (§2.2), holding one entry. *What would reopen this:* a form or lender requirement that needs separate logbook data for a second UPRN within one sale.
 
 3. **Organisation discovery & identity**
    *Question:* How do Organisations identify themselves? Do we need a registry?
@@ -700,22 +784,35 @@ The following are *value lists*, not entity collections. They remain as arrays:
 
 5. **Evolving identifiers (Unregistered Titles / No UPRN)**
    *Question:* When an unregistered title gets registered, or a new build receives a UPRN, how does the URN transition?
-   *Working Assumption:* We use the standard W3C `alsoKnownAs` property on the Verifiable Credential. The new VC uses the permanent identifier as its `subject.id`, but lists the old synthetic/unregistered identifier in `alsoKnownAs`. Traversal logic will resolve both to the same entity.
+   *Working Assumption:* We use the standard W3C `alsoKnownAs` property on the Verifiable Credential. The new VC uses the permanent identifier as its `subject.id`, but lists the old synthetic/unregistered identifier in `alsoKnownAs`. Traversal logic will resolve both to the same entity. For titles, §4.2.2 specifies how links to the old identifier are superseded.
+
+6. **Correcting HMLR's Property–Title links**
+   *Question:* HMLR's UPRN-to-title data is neither complete nor wholly accurate. Should a seller or conveyancer be able to issue a correcting link: one that adds a missing UPRN–title pairing, or disputes a wrong one?
+   *Working Assumption:* **Not now.** A missing link shows up as a title in `titlesToBeSold` with no link behind it. The conveyancer reports it to HMLR, which reissues. A wrong link is simply not selected, and not being selected has no consequence. A correcting link would put a second issuer on a fact HMLR already asserts, and would need rules for which issuer wins and when a correction lapses. *What would change this:* prototyping against HMLR's data showing that missing or wrong links are common enough, or HMLR slow enough to correct, that sales are held up. The cases to measure are a sold title with no link (the conveyancer's report should fix it) and a superior freehold with no link (nothing in the sale prompts a report).
+
+7. **Minting unregistered-title identifiers (Q7.2)**
+   *Question:* Who mints `urn:pdtf:unregisteredTitle:{id}`, and how is the same unregistered land kept from receiving two identifiers? For example, two conveyancers instructed in turn on a sale that falls through, or two platforms.
+   *Options:*
+   - **(a) Issuing conveyancer mints a UUID v4** (03 D23 as written). Simple, with no coordination. Duplicates are likely across failed sales and platforms, and each duplicate is a second link for the same UPRN with an equally good basis. On first registration only the identifier named in `alsoKnownAs` is superseded; the others linger until revoked.
+   - **(b) Deterministic UUID v5 from the UPRN.** No coordination, and no duplicates for the same UPRN. But unregistered land is not always one UPRN to one title: a farm, a plot without a UPRN, or two unregistered titles under one house. It also ties a title identifier to a property identifier.
+   - **(c) Deterministic from the root of title,** e.g. a UUID v5 of the digest of the root document. Duplicates occur only where two people examine different roots, which signals a real dispute, not a coordination failure. But the same root may cover land later split, and the root document is not always available in a form that hashes identically.
+   - **(d) Look up before minting.** A conveyancer first queries for existing epitome links on the UPRN and reuses any identifier found, minting a UUID v4 only if none exists. This builds on (a) and needs a discovery service, which the framework does not yet have.
+   *Working Assumption:* Open. (d) on top of (a) is the likeliest direction. Any surviving duplicate is resolved at first registration: HMLR's Title can list every identifier it replaces in `alsoKnownAs`, and step 3 of §4.2.2 then supersedes all of them. Tracked as Q7.2 in the architecture overview.
 
 ### 9.2 Internal (Platform)
 
-6. **v4 combined.json creation** — First step is transforming current v3 combined.json to v4 format. This is the bootstrap for all subsequent extraction and tooling work.
+8. **v4 combined.json creation** — First step is transforming current v3 combined.json to v4 format. This is the bootstrap for all subsequent extraction and tooling work.
 
-7. **Overlay compatibility** — Current overlays (BASPI, NTS, TA, CON29R) reference v3 paths. Need overlay migration strategy or dual-path overlay resolution.
+9. **Overlay compatibility** — Current overlays (BASPI, NTS, TA, CON29R) reference v3 paths. Need overlay migration strategy or dual-path overlay resolution.
 
-8. **Scoped consent** — v0.2's `DelegatedConsent` carried an access `scope`, a `purpose` and an expiry. D32 withdraws it as an entity, because the lender's participation is already embodied by `TransactionRole` and a second role-bearing record was the problem D32 solves. Whether a separate, scoped, time-limited consent credential should sit on top of the relationship credentials for access control is an open consultation question.
+10. **Scoped consent** — v0.2's `DelegatedConsent` carried an access `scope`, a `purpose` and an expiry. D32 withdraws it as an entity, because the lender's participation is already embodied by `TransactionRole` and a second role-bearing record was the problem D32 solves. Whether a separate, scoped, time-limited consent credential should sit on top of the relationship credentials for access control is an open consultation question.
 
 ---
 
 ## 10. Implementation Plan
 
 ### Phase 1: Schema generation *(done — schemas repo `dev`)*
-1. `generate:v4` emits the ten entity schemas and `v4/mapping.json` from `v3/combined.json`
+1. `generate:v4` emits the eleven entity schemas and `v4/mapping.json` from `v3/combined.json`
 2. `verifyCoverage()` fails the build on any unclaimed v3 key
 3. v3 gains optional `participants[].participantId`, `actingFor` and `did`
 
@@ -728,6 +825,8 @@ The following are *value lists*, not entity collections. They remain as arrays:
 7. Implement `composeV4StateFromGraph()` over signed credentials (§7.3)
 8. Implement `composeV3StateFromGraph()` = composition + recomposition
 9. Fixture generation to exercise the ~88% of the v3 leaf-path surface the example transaction does not touch
+10. `PropertyTitleLink` schema and `linkedTitles()` *(done — schemas repo `dev`)*
+11. Prototype HMLR link issuance from the UPRN-to-title data; measure how often a sold title or a superior freehold has no link (§9.1 Q6)
 
 ### Phase 4: Overlay Migration
 12. Map v3 overlay paths to v4 entity paths
