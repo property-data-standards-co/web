@@ -37,6 +37,8 @@ did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK
 
 This is ideal for people because it is simple, portable, and requires no hosting.
 
+A person's `did:key` signs presentations, not the credentials that record their assertions. When a person answers BASPI or makes an offer through a platform, the platform issues and signs the credential under its own `did:web` as their account provider (provisional; see [02 §3.2.1](/specs/02-vc-data-model/#321-issuer-of-a-persons-assertion)).
+
 ### `did:web`
 
 Used for:
@@ -67,7 +69,7 @@ urn:pdtf:titleNumber:DN123456
 urn:pdtf:unregisteredTitle:f47ac10b-58cc-4372-a567-0e02b2c3d479
 ```
 
-Relationship entities such as SellerCapacity, Representation, Consent, and Offer also use URNs.
+Relationship entities (SellerCapacity, Offer, Gift, Representation and TransactionRole) also use URNs, with a generated UUID v4, for example `urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7`.
 
 ## DID documents
 
@@ -114,6 +116,6 @@ For `did:web`, the domain becomes part of the trust boundary. That is also how P
 
 ## Why this matters
 
-DIDs are how PDTF moves from platform trust to cryptographic trust. A verifier can inspect the issuer identifier, resolve the key, validate the proof, and then check the issuer against the Trusted Issuer Registry.
+DIDs are how PDTF moves from platform trust to cryptographic trust. A verifier can inspect the issuer identifier, resolve the key, validate the signature, and then check the issuer's authority through [OpenID Federation](/docs/concepts/openid-federation/).
 
 That means identity is no longer implicit in the API hostname or database row. It is explicit, portable, and verifiable, which is exactly what a federated property-data ecosystem needs.

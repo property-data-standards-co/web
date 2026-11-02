@@ -168,7 +168,7 @@ For each credentialStatus entry in the credential:
      - statusPurpose == "suspension" → credential is SUSPENDED
 
 If any entry is revoked → reject
-If any entry is suspended → reject (or warn, per policy)
+If any entry is suspended → reject (temporary: the credential may be reinstated, see [14 §8](/specs/14-credential-revocation/#8-suspension-vs-revocation))
 If all entries are 0 → credential status is active
 ```
 

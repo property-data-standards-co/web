@@ -74,11 +74,9 @@ Access is controlled with `termsOfUse`, typically through a `PdtfAccessPolicy` t
 - whether the data contains PII
 - role restrictions (`roleRestrictions`, using role names such as `Seller's Conveyancer`)
 
-The vocabulary is provisional and stated in [02 §7.2–7.4](/specs/02-vc-data-model/#73-confidentiality-levels).
+That means the same transaction can yield different views depending on whether the requester is a seller, buyer, conveyancer, or unauthenticated user. The vocabulary is provisional and stated in [02 §7.2–7.4](/specs/02-vc-data-model/#73-confidentiality-levels).
 
 When a person asserts something through a platform, such as a BASPI answer or an offer, the platform issues and signs the credential as their account provider. The person's `did:key` is recorded in a `UserAttestation` evidence item, and signs presentations rather than the credential (provisional; see [02 §3.2.1](/specs/02-vc-data-model/#321-issuer-of-a-persons-assertion)).
-
-That means the same transaction can yield different views depending on whether the requester is a seller, buyer, conveyancer, or unauthenticated user.
 
 ## Status and proof
 

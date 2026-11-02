@@ -15,7 +15,7 @@ PDTF 2.0 models transaction data as an entity graph. The development artifact is
 | `Property` | `urn:pdtf:uprn:{uprn}` | Logbook entity | Physical property facts that travel with the property across transactions |
 | `Title` | `urn:pdtf:titleNumber:{number}` or `urn:pdtf:unregisteredTitle:{uuid}` | Legal title entity | Register extract, title extents, ownership type, leasehold terms, encumbrances |
 | `Person` | `did:key:{...}` | Identity entity | Natural person, role-free, referenced by relationship entities |
-| `Organisation` | `did:web:{domain}` | Identity entity | Law firm, estate agent, lender, surveyor, etc. Outside the v3 round trip |
+| `Organisation` | `did:key` (provider-managed) or `did:web:{domain}` (self-hosted) | Identity entity | Law firm, estate agent, lender, surveyor, etc. Outside the v3 round trip |
 | `SellerCapacity` | `urn:pdtf:capacity:{uuid}` | Relationship credential | The capacity in which a party sells; implies Seller |
 | `Offer` | `urn:pdtf:offer:{uuid}` | Relationship credential | Buyer linkage to transaction, amount, status, conditions; implies Buyer |
 | `Gift` | `urn:pdtf:gift:{uuid}` | Relationship credential | Gift of funds towards an offer; implies Giftor |
