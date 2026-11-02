@@ -35,9 +35,9 @@ The proxy model works because:
 **What's in place:**
 - The PDTF 2.0 specification suite (9 sub-specifications)
 - Entity graph and Verifiable Credential data model
-- OpenID Federation (relying on Trust Anchors, Federation Entity Statements, and Property Trust Marks like `title-data-provider` and `regulated-conveyancer`) schema and initial entries
+- OpenID Federation (Trust Anchor, Entity Statements, and [Property Trust Marks](/trust-marks/) such as `pdtf-verified-issuer` and `regulated-conveyancer`) schema and initial entries
 - Reference implementations for credential issuance and verification
-- Credential revocation via Bitstring Status List
+- Credential revocation via Bitstring Status List in the reference libraries. The spec's provisional mechanism is the Token Status List ([Sub-spec 14 §1](/specs/14-credential-revocation/#1-purpose))
 
 **What's being built:**
 - npm packages for credential verification, DID resolution, and OpenID Federation checking

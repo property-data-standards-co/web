@@ -26,7 +26,7 @@ When a relying party needs property data, they do not make a traditional REST AP
 ### How it works
 
 1. **Presentation Definition:** The relying party creates a Presentation Definition (using the W3C Presentation Exchange spec) declaring exactly what they need.
-   *Example: "I need a `TitleCredential` and an `EnergyPerformanceCertificateCredential` for `urn:pdtf:title:ABC12345`."*
+   *Example: "I need the `TitleCredential` for `urn:pdtf:titleNumber:ABC12345` and the `PropertyCredential` carrying `energyEfficiency` for `urn:pdtf:uprn:100023456789`."*
 2. **Authorisation Request:** The relying party sends this request to the holder (e.g., the seller's conveyancer or a data hub like NPTN).
 3. **Presentation Evaluation:** The holder checks if they possess the requested credentials.
 4. **Access Control (The Graph):** The holder checks if the relying party is authorised to receive them. In PDTF 2.0, this is evaluated by traversing the entity graph. Does the relying party hold a `Representation`, `TransactionRole` or `Offer` credential that authorises this access?
@@ -74,7 +74,7 @@ The PDTF MCP server exposes tools that map directly to the entity graph:
 
 - `get_credentials(id)`: Returns the traversed bundle of raw Verifiable Credentials for a given URN/DID based on the caller's authorised scope.
 - `get_state(id)`: Recomposes the full v3-style property pack or v4 entity map by traversing the graph and assembling the retrieved credentials.
-- `issue_credential(payload, type)`: Issues a new VC (e.g., vouching for data, uploading a document) signed by the agent/user's DID.
+- `issue_credential(payload, type)`: Issues a new VC (e.g., vouching for data, uploading a document) recording the human operator's assertion. Under the current working assumption, the platform issues it as the operator's account provider and names the operator's DID in the evidence ([02 §3.2.1](/specs/02-vc-data-model/), consultation [Q4](/consultation/#q4-the-consumer-wallet-gap)).
 - `verify_credential(vc)`: Cryptographically verifies a VC against its signature and OpenID Federation Trust Marks.
 
 ### Agentic Access Control

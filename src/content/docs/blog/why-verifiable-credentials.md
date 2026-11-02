@@ -58,7 +58,7 @@ This is transformative for property transactions, where data flows through multi
 
 ### Federated trust
 
-Instead of a single trusted platform, PDTF 2.0 uses a OpenID Federation (relying on Trust Anchors, Federation Entity Statements, and Property Trust Marks like `title-data-provider` and `regulated-conveyancer`) — a public, version-controlled list of authorised issuers. Verifiers check two things:
+Instead of a single trusted platform, PDTF 2.0 uses a OpenID Federation (relying on Trust Anchors, Federation Entity Statements, and Property Trust Marks like `pdtf-verified-issuer` and `regulated-conveyancer`) — a public, version-controlled list of authorised issuers. Verifiers check two things:
 
 1. Does the cryptographic signature verify?
 2. Is the issuer registered in the OpenID Federation for this type of data?
