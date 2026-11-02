@@ -15,6 +15,10 @@ In practice, an adapter has five moving parts:
 4. a mapper from source response to PDTF JSON
 5. status list allocation and publishing
 
+:::note[Provisional]
+The code on this page uses the Data Integrity representation (`eddsa-jcs-2022` proofs, Bitstring `credentialStatus`) that the current libraries implement. The spec's provisional securing mechanism is SD-JWT-VC with Token Status List ([02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism), [14 §1](/specs/14-credential-revocation/#1-purpose), consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)).
+:::
+
 ## 1. Define the adapter identity
 
 A typical adapter DID looks like this:
@@ -259,6 +263,7 @@ The adapter should issue a complete subtree for the paths it is authoritative fo
       const credentialStatus = await allocateStatusEntry();
 
       return signer.sign({
+        id: `urn:pdtf:vc:${crypto.randomUUID()}`,
         type: 'PropertyCredential',
         credentialSubject: mapToCredentialSubject(source),
         credentialStatus,
@@ -284,6 +289,7 @@ The adapter should issue a complete subtree for the paths it is authoritative fo
 
         signer.sign(BuildVcOptions {
             vc_type: vec!["PropertyCredential".to_string()],
+            id: Some(format!("urn:pdtf:vc:{}", uuid::Uuid::new_v4())),
             credential_subject: CredentialSubject {
                 id: format!("urn:pdtf:uprn:{}", source.uprn),
                 claims: serde_json::from_value(subject)?,
@@ -308,6 +314,7 @@ The adapter should issue a complete subtree for the paths it is authoritative fo
   <TabItem label="Python">
     ```python
     import json
+    import uuid
     from datetime import datetime, timezone
 
     def issue_epc_vc(uprn: str) -> dict:
@@ -319,6 +326,7 @@ The adapter should issue a complete subtree for the paths it is authoritative fo
                 "https://www.w3.org/ns/credentials/v2",
                 "https://propdata.org.uk/credentials/v2",
             ],
+            "id": f"urn:pdtf:vc:{uuid.uuid4()}",
             "type": ["VerifiableCredential", "PropertyCredential"],
             "issuer": {"id": issuer_did},
             "validFrom": datetime.now(timezone.utc).isoformat(),
@@ -348,6 +356,7 @@ The adapter should issue a complete subtree for the paths it is authoritative fo
                 "https://www.w3.org/ns/credentials/v2",
                 "https://propdata.org.uk/credentials/v2",
             },
+            id = $"urn:pdtf:vc:{Guid.NewGuid()}",
             type = new[] { "VerifiableCredential", "PropertyCredential" },
             issuer = new { id = keypair.Did },
             validFrom = DateTime.UtcNow.ToString("o"),
@@ -367,6 +376,8 @@ The adapter should issue a complete subtree for the paths it is authoritative fo
   </TabItem>
 </Tabs>
 
+Every credential needs a fresh `urn:pdtf:vc:{uuid-v4}` `id`; never omit or reuse it. Relationship credentials should also carry a `suspension` status entry, while property data such as an EPC may ([14 §8](/specs/14-credential-revocation/#8-suspension-vs-revocation)). Sign every status list you publish with the adapter key.
+
 ## 6. Validate before returning
 
 Adapters should self-validate what they issue.
@@ -374,7 +385,7 @@ Adapters should self-validate what they issue.
 <Tabs syncKey="language">
   <TabItem label="TypeScript">
     ```ts
-    import { DidResolver, TirClient, VcValidator } from '@pdtf/core';
+    import { DidResolver, FederationRegistryResolver, VcValidator } from '@pdtf/core';
 
     const validator = new VcValidator();
 
@@ -383,7 +394,9 @@ Adapters should self-validate what they issue.
 
       const result = await validator.validate(vc, {
         didResolver: new DidResolver(),
-        tirClient: new TirClient(),
+        federationResolver: new FederationRegistryResolver({
+          trustAnchors: ['https://propdata.org.uk'],
+        }),
         credentialPaths: ['Property:/energyEfficiency/*'],
       });
 
@@ -398,6 +411,8 @@ Adapters should self-validate what they issue.
   <TabItem label="Rust">
     ```rust
     use pdtf_core::validator::verify::{verify_vc, VerifyVcOptions};
+    use pdtf_core::federation::client::FederationRegistryResolver;
+    use std::sync::Arc;
 
     async fn issue_and_verify(uprn: &str) -> Result<VerifiableCredential> {
         let vc = issue_epc_vc(uprn).await?;
@@ -405,7 +420,9 @@ Adapters should self-validate what they issue.
         let result = verify_vc(VerifyVcOptions {
             vc: &vc,
             resolver: &DidResolver::new()?,
-            trust_resolver: None,
+            trust_resolver: Some(Arc::new(FederationRegistryResolver::new(vec![
+                "https://propdata.org.uk".into(),
+            ])?)),
             claimed_paths: vec!["Property:/energyEfficiency/*".into()],
             status_list_bitstring: None,
         }).await;
@@ -420,13 +437,17 @@ Adapters should self-validate what they issue.
   </TabItem>
   <TabItem label="Python">
     ```python
-    from pdtf_core import verify_vc
+    from pdtf_core import verify_vc, DidResolver, FederationRegistryResolver
 
     def issue_and_verify(uprn: str) -> dict:
         vc = issue_epc_vc(uprn)
 
         result = verify_vc(
             vc_json=json.dumps(vc),
+            resolver=DidResolver(),
+            federation_resolver=FederationRegistryResolver(
+                trust_anchors=["https://propdata.org.uk"]
+            ),
             credential_paths=["Property:/energyEfficiency/*"],
         )
 
@@ -442,8 +463,14 @@ Adapters should self-validate what they issue.
     {
         var vcJson = await IssueEpcVc(uprn);
 
-        var result = await PdtfCore.VerifyVc(vcJson, new VerifyOptions
+        var validator = new VcValidator();
+        var result = await validator.Validate(vcJson, new ValidateOptions
         {
+            DidResolver = new DidResolver(),
+            FederationResolver = new FederationRegistryResolver(new FederationOptions
+            {
+                TrustAnchors = new[] { "https://propdata.org.uk" },
+            }),
             CredentialPaths = new[] { "Property:/energyEfficiency/*" },
         });
 
@@ -461,10 +488,11 @@ Adapters should self-validate what they issue.
 A good adapter is mostly disciplined plumbing:
 
 - keep the source fetch, mapping, signing, and publishing steps separate
-- issue for the exact paths your TIR entry authorises, no more
+- issue for the exact paths your `pdtf-verified-issuer` Trust Mark authorises in `delegation.authorised_paths`, no more
+- set `termsOfUse.confidentiality` for each credential: `public` for EPC or flood risk, `transactionParticipants` for a title register extract ([02 §7.3](/specs/02-vc-data-model/#73-confidentiality-levels))
 - treat source metadata as evidence, not as issuer identity
 - revoke old credentials when source data changes
 - publish status lists at stable HTTPS URLs
 - keep signing keys out of code, ideally in KMS
 
-The trust model matters here. The credential is signed by the adapter DID, not by the underlying source authority. The reason verifiers can trust it is that the TIR explicitly authorises that adapter DID for the relevant `entity:path` combinations.
+The trust model matters here. The credential is signed by the adapter DID, not by the underlying source authority. The reason verifiers can trust it is that the adapter's OpenID Federation Trust Mark (`pdtf-verified-issuer`, with `delegation.trust_level: "trusted_proxy"` and `proxy_for` naming the source authority) authorises it for the relevant `entity:path` combinations ([04 §5](/specs/04-openid-federation/#5-trust-marks)). If that trust resolution fails, verifiers exclude the credential.

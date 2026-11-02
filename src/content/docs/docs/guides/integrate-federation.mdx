@@ -56,6 +56,8 @@ The `@pdtf/core` library handles trust chain resolution and trust mark verificat
 
 The resolver fetches entity statements from `.well-known/openid-federation` endpoints, builds trust chains, and caches the results. You only need one resolver instance per application.
 
+The PDTF Trust Anchor is `https://propdata.org.uk` (DID `did:web:propdata.org.uk`), with its Entity Configuration at `https://propdata.org.uk/.well-known/openid-federation`. In Phase 1 the platform operator runs it as an interim, project-led Trust Anchor; long-term governance is held open by consultation [Q6](/consultation/#q6-trust-anchor-governance) ([04 §10.1](/specs/04-openid-federation/#101-phase-1)).
+
 ### Configuration options
 
 | Option | Default | Description |
@@ -82,8 +84,8 @@ The primary operation is checking whether an issuer is authorised for specific c
       throw new Error(`Issuer not authorised: ${result.reason}`);
     }
 
-    console.log(result.trustLevel);      // 'trustedProxy'
-    console.log(result.trustMarkId);     // 'https://propdata.org.uk/trust-marks/property-data-provider'
+    console.log(result.trustLevel);      // 'trusted_proxy'
+    console.log(result.trustMarkId);     // 'https://propdata.org.uk/trust-marks/pdtf-verified-issuer'
     console.log(result.chainLength);     // 2
     ```
   </TabItem>
@@ -143,7 +145,15 @@ The primary operation is checking whether an issuer is authorised for specific c
 4. Finds a trust mark matching the requested credential paths
 5. Verifies the trust mark was issued by the Trust Anchor
 6. Confirms the trust mark hasn't expired
-7. Checks that `authorised_paths` in the trust mark cover all requested paths
+7. Checks that `delegation.authorised_paths` in the trust mark cover all requested paths
+
+If any step fails, the issuer is not trusted for those paths. Exclude the credential: there is no fallback trust level ([07 §3.3](/specs/07-state-assembly/#33-pre-assembly-filtering)).
+
+The trust level comes from the Trust Mark's `delegation.trust_level`: `root_issuer`, `trusted_proxy` or `account_provider`. Federation resolution never returns the fourth level, `assertion`, which applies to a credential whose `evidence` is a `UserAttestation` ([04 §8](/specs/04-openid-federation/#8-trust-levels)).
+
+:::note[Provisional]
+The trust mark catalogue is provisional, pending consultation [Q7](/consultation/#q7-trust-mark-granularity). It has three marks: `pdtf-verified-issuer`, `account-provider` and `regulated-conveyancer`. Data-category authority is expressed by `delegation.authorised_paths` inside `pdtf-verified-issuer`, not by a mark per category ([04 §5](/specs/04-openid-federation/#5-trust-marks)). Trust marks are short-lived (days, not years).
+:::
 
 ## 3. Resolve a trust chain directly
 
@@ -211,7 +221,7 @@ For debugging or audit purposes, you can resolve the full trust chain:
 
     for (const mark of marks) {
       console.log(mark.id);               // trust mark type URI
-      console.log(mark.trustLevel);       // 'rootIssuer' | 'trustedProxy'
+      console.log(mark.trustLevel);       // 'root_issuer' | 'trusted_proxy' | 'account_provider'
       console.log(mark.authorisedPaths);  // ['Title:/registerExtract/*', ...]
       console.log(mark.expiresAt);        // Date or null
     }
@@ -510,4 +520,4 @@ Key differences:
 - Use `issuerUrl` (the entity's base URL) instead of `issuerDid`
 - No need to specify a registry URL — discovery is automatic via `.well-known/openid-federation`
 - Trust information comes from signed trust marks instead of a static JSON file
-- The `TirClient` API remains available for backward compatibility but is deprecated
+- There is no Trusted Issuer Registry in PDTF 2.0: OpenID Federation replaced it ([04 §1.1](/specs/04-openid-federation/#11-why-openid-federation)). Any `TirClient` left in a library is deprecated and must not be used for trust decisions
