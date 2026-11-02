@@ -8,6 +8,9 @@
 //     SellerCapacity ⇒ Seller, Offer ⇒ Buyer, Gift ⇒ Giftor,
 //     Representation (role: which kind), TransactionRole (role: which role).
 //   Revoking a credential removes the role with it.
+//   The one exception is the standing PropertyTitleLink (D34): HMLR relates the
+//   property to its title whether or not it is for sale, so it references no
+//   Transaction, and the Transaction's titlesToBeSold selects from it.
 
 digraph pdtf {
   layout   = twopi;
@@ -29,6 +32,9 @@ digraph pdtf {
   // ── Data entities (blue) ────────────────────────────
   property [label="Property\n14 Elm Road, Bristol", fillcolor="#2e86c1", fontcolor="white"];
   title    [label="Title BL54321\nFreehold",        fillcolor="#2e86c1", fontcolor="white"];
+
+  // ── Standing link (orange) ──────────────────────────
+  link [label="PropertyTitleLink\nHMLR register data, as at 1 Oct 2026\nno Transaction", fillcolor="#e67e22", fontcolor="white"];
 
   // ── Relationship credentials (gold) ─────────────────
   capacity  [label="SellerCapacity\nLegal Owner  ⇒ Seller",      fillcolor="#f1c40f", fontcolor="#1a1a1a"];
@@ -55,6 +61,10 @@ digraph pdtf {
   // ══ Data entities ══
   transaction -> property  [label="property",        color="#2e86c1"];
   transaction -> title     [label="titlesToBeSold[]", color="#2e86c1"];
+
+  // ══ Standing link: HMLR relates the UPRN to the title ══
+  link -> property [label="property", color="#e67e22"];
+  link -> title    [label="title",    color="#e67e22"];
 
   // ══ Relationship credentials, each referencing the Transaction ══
   transaction -> capacity   [color="#d4ac0d", dir=back];
