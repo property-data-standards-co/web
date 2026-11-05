@@ -5,7 +5,11 @@ description: "Query Bitstring Status Lists to check credential validity"
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-Every PDTF credential must carry a `credentialStatus` entry pointing to a W3C Bitstring Status List. Revocation checking is how a verifier learns that a previously valid credential is now stale, withdrawn, or superseded.
+Every PDTF credential must carry a revocation reference that points to a status list signed by its issuer. Revocation checking is how a verifier learns that a previously valid credential is now stale, withdrawn, or superseded.
+
+:::note[Provisional]
+The status mechanism follows the securing mechanism. The spec's provisional mechanism is the IETF Token Status List (a `status.status_list` claim pointing to a signed Status List Token): see [14 §1](/specs/14-credential-revocation/#1-purpose) and [§1.1](/specs/14-credential-revocation/#11-revocation-mechanism-under-sd-jwt-vc-token-status-list) (consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)). The current libraries implement the W3C Bitstring Status List (`credentialStatus`, `BitstringStatusListEntry`) for the superseded Data Integrity representation, which is what this page shows. The concepts map across directly.
+:::
 
 In `@pdtf/core`, the low-level tools are `checkStatus`, `createStatusList`, `encodeStatusList`, `decodeStatusList`, and `getBit`.
 
@@ -80,9 +84,11 @@ If you already have the credential, the quickest path is `checkStatus`.
 
 `checkStatus` fetches the status list VC, reads `credentialSubject.encodedList`, decodes it, and checks the bit at the requested index. A bit value of `1` means revoked or suspended, depending on `statusPurpose`.
 
+Every credential carries a revocation entry. Relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole) should also carry a suspension entry, so a disputed relationship can be held without being permanently revoked. Property data credentials may carry one. Check both entries when present: a suspended credential is rejected until the issuer clears the bit. See [14 §8](/specs/14-credential-revocation/#8-suspension-vs-revocation).
+
 ## 2. Understand the status list shape
 
-A PDTF status list credential is itself a signed VC. The important part is the subject:
+A PDTF status list credential is itself a VC, always signed by the issuer. Never publish or accept an unsigned status list. The important part is the subject:
 
 ```json
 {

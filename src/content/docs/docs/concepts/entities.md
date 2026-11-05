@@ -16,7 +16,7 @@ This enables:
 - better provenance and trust decisions
 - backward-compatible state composition for legacy consumers
 
-The graph is **transaction-centric**. A transaction references the relevant property, titles, people and organisations, and every relationship credential references the transaction back.
+The graph is **transaction-centric**. A transaction references exactly one property, one or more titles, and the people and organisations involved, and every relationship credential references the transaction back. The single-property constraint is a provisional working assumption ([01 §9.1 Q2](/specs/01-entity-graph/#91-for-lms--implementer-discussion), consultation [Q11](/consultation/#q11-single-property-multiple-titles)).
 
 ## The ten entity types
 
@@ -26,7 +26,7 @@ The graph is **transaction-centric**. A transaction references the relevant prop
 - **Property**: enduring physical-property facts, identified by `urn:pdtf:uprn:{uprn}`
 - **Title**: legal title facts, identified by `urn:pdtf:titleNumber:{number}` or an unregistered-title URN
 - **Person**: a natural person, identified by a `did:key` that is stable across transactions
-- **Organisation**: a firm or company, identified by `did:web`
+- **Organisation**: a firm or company, identified by `did:key` (provider-managed) or `did:web` (self-hosted)
 
 ### Relationship credentials
 

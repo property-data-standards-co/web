@@ -21,7 +21,7 @@ The result: property data that is independently verifiable, portable between sys
 | **Provenance** | OIDC-derived evidence schema (deeply nested) | Simpler evidence model reflecting actual usage patterns |
 | **Access control** | Platform-enforced role checks | Per-credential `termsOfUse` + participation credential presentation |
 | **Interoperability** | REST API, platform-specific | DID documents with service endpoints, MCP-compliant API |
-| **Trust** | Single platform trust | Federated trust via OpenID Federation (relying on Trust Anchors, Federation Entity Statements, and Property Trust Marks like `title-data-provider` and `regulated-conveyancer`) |
+| **Trust** | Single platform trust | Federated trust via OpenID Federation (relying on Trust Anchors, Federation Entity Statements, and Property Trust Marks like `pdtf-verified-issuer` and `regulated-conveyancer`) |
 
 ## The entity graph
 
@@ -61,7 +61,7 @@ Every entity in the graph is wrapped in a W3C Verifiable Credential. A credentia
 - **Terms of use** — confidentiality and access restrictions
 - **Status** — a revocation endpoint for checking whether the credential is still valid
 
-The credential format follows the W3C Verifiable Credentials Data Model v2.0 specification, using the `eddsa-jcs-2022` cryptosuite for signatures.
+The credential model follows the W3C Verifiable Credentials Data Model v2.0. Credentials are secured as **SD-JWT-VC**. That choice is provisional and stated in [Sub-spec 02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism) (consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)). The current reference libraries implement the earlier Data Integrity representation (`eddsa-jcs-2022`).
 
 [Read the VC data model specification →](/specs/02-vc-data-model/)
 

@@ -1,6 +1,6 @@
 ---
 title: How PDTF 2.0 solves it
-description: Verifiable Credentials, cryptographic signatures, and a OpenID Federation (relying on Trust Anchors, Federation Entity Statements, and Property Trust Marks like `title-data-provider` and `regulated-conveyancer`) — making property data independently verifiable.
+description: Verifiable Credentials, cryptographic signatures, and a OpenID Federation (relying on Trust Anchors, Federation Entity Statements, and Property Trust Marks like `pdtf-verified-issuer` and `regulated-conveyancer`) — making property data independently verifiable.
 ---
 
 ## From photocopies to notarised originals

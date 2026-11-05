@@ -15,13 +15,13 @@ These URNs identify graph subjects, not issuers or authenticating parties.
 |---|---|---|
 | `urn:pdtf:uprn:{uprn}` | Property | Ordnance Survey UPRN |
 | `urn:pdtf:titleNumber:{number}` | Registered title | HMLR title number |
-| `urn:pdtf:unregisteredTitle:{id}` | Unregistered title | platform-generated identifier |
-| `urn:pdtf:capacity:{id}` | SellerCapacity relationship credential | generated |
-| `urn:pdtf:offer:{id}` | Offer relationship credential | generated |
-| `urn:pdtf:gift:{id}` | Gift relationship credential | generated |
-| `urn:pdtf:representation:{id}` | Representation relationship credential | generated |
-| `urn:pdtf:role:{id}` | TransactionRole relationship credential | generated |
-| `urn:pdtf:vc:{id}` | Credential identifier when used | generated |
+| `urn:pdtf:unregisteredTitle:{uuid}` | Unregistered title | platform-generated UUID v4 |
+| `urn:pdtf:capacity:{uuid}` | SellerCapacity relationship credential | generated UUID v4 |
+| `urn:pdtf:offer:{uuid}` | Offer relationship credential | generated UUID v4 |
+| `urn:pdtf:gift:{uuid}` | Gift relationship credential | generated UUID v4 |
+| `urn:pdtf:representation:{uuid}` | Representation relationship credential | generated UUID v4 |
+| `urn:pdtf:role:{uuid}` | TransactionRole relationship credential | generated UUID v4 |
+| `urn:pdtf:vc:{uuid}` | Credential identifier (the credential's `id` / `jti`, not an entity); required | issuer-generated UUID v4 |
 | `urn:pdtf:status:{id}` | status-oriented resource identifier when used | generated or host-mapped namespace |
 
 ## Canonical forms
@@ -84,7 +84,7 @@ urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
 ### TransactionRole
 
 ```text
-urn:pdtf:role:d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a
+urn:pdtf:role:d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a
 ```
 
 - identifies a party's role on a transaction where no more specific relationship applies
@@ -93,7 +93,7 @@ urn:pdtf:role:d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a
 ### Offer
 
 ```text
-urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f
 ```
 
 - identifies offer entity
@@ -101,7 +101,7 @@ urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
 
 ### Credential URN
 
-A credential `id` MAY be omitted, but when present PDTF uses:
+Every credential MUST carry an `id` ([02 §2.2](/specs/02-vc-data-model/#22-optional-properties-used)); under SD-JWT-VC it is carried as the `jti` claim. It may not be omitted for privacy. The correlation risk is handled by using a fresh random UUID v4 for every credential, never reusing an id, and `termsOfUse` filtering.
 
 ```text
 urn:pdtf:vc:{uuid}
@@ -110,7 +110,7 @@ urn:pdtf:vc:{uuid}
 Example:
 
 ```text
-urn:pdtf:vc:epc-7f3a2b1c-9d4e-5f6a-8b7c-0d1e2f3a4b5c
+urn:pdtf:vc:7f3a2b1c-9d4e-4f6a-8b7c-0d1e2f3a4b5c
 ```
 
 ### Status URN
@@ -150,7 +150,7 @@ offer-urn         = "offer:" uuid-v4
 gift-urn          = "gift:" uuid-v4
 representation-urn = "representation:" uuid-v4
 role-urn          = "role:" uuid-v4
-vc-urn            = "vc:" 1*(ALPHA / DIGIT / "-")
+vc-urn            = "vc:" uuid-v4
 status-urn        = "status:" 1*(ALPHA / DIGIT / "-")
 
 uuid-v4           = 8hexdig "-" 4hexdig "-" "4" 3hexdig "-"
@@ -172,7 +172,7 @@ hexdig            = DIGIT / "a" / "b" / "c" / "d" / "e" / "f"
 | `gift` | relationship credential |
 | `representation` | relationship credential |
 | `role` | relationship credential |
-| `vc` | optional credential-level identifier |
+| `vc` | required credential-level identifier (`id` / `jti`) |
 | `status` | internal status resource namespace if needed |
 
 ## Design rules
@@ -202,12 +202,12 @@ hexdig            = DIGIT / "a" / "b" / "c" / "d" / "e" / "f"
     "urn:pdtf:titleNumber:AB12345": {}
   },
   "sellerCapacities": {
-    "urn:pdtf:capacity:own-a1b2c3": {
+    "urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7": {
       "seller": "did:key:z6Mkh..."
     }
   },
   "offers": {
-    "urn:pdtf:offer:off-j1k2l3": {}
+    "urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f": {}
   }
 }
 ```

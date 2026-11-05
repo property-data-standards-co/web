@@ -9,7 +9,7 @@ PDTF 2.0 represents property data as **W3C Verifiable Credentials (VCs)**. Each 
 
 A credential carries its own cryptographic proof. A recipient can verify integrity and issuer identity without trusting the API or database that delivered the JSON.
 
-In PDTF, signatures are necessary but not sufficient. Verifiers also consult the **OpenID Federation (relying on Trust Anchors, Federation Entity Statements, and Property Trust Marks like `title-data-provider` and `regulated-conveyancer`)** to confirm the issuer is authorised for the specific **entity:path** combinations being asserted.
+In PDTF, signatures are necessary but not sufficient. Verifiers also consult the **OpenID Federation** (Trust Anchors, Entity Statements, and [Property Trust Marks](/trust-marks/) such as `pdtf-verified-issuer`) to confirm the issuer is authorised for the specific **entity:path** combinations being asserted.
 
 ## Sparse credentials
 
@@ -27,11 +27,11 @@ Credential types align with the entity graph:
 
 ## Access control
 
-VCs can include `termsOfUse` to express confidentiality and role restrictions. A third party such as a lender is tied to the transaction by its `TransactionRoleCredential`; how a scoped consent should sit on top of that is an open consultation question.
+VCs can include `termsOfUse` to express confidentiality and role restrictions. The vocabulary is `public`, `transactionParticipants`, `roleRestricted` and `partyOnly`, with `roleRestrictions`. It is provisional and stated in [02 §7.2–7.4](/specs/02-vc-data-model/#7-terms-of-use) (consultation [Q17](/consultation/#q17-intent-based-access-control)). A third party such as a lender is tied to the transaction by its `TransactionRoleCredential`; how a scoped consent should sit on top of that is an open consultation question.
 
 ## Revocation
 
-Every PDTF credential includes `credentialStatus` so verifiers can check whether it is still valid. PDTF uses **Bitstring Status Lists** for scalable revocation.
+Every PDTF credential carries a revocation reference so verifiers can check whether it is still valid. Under the provisional SD-JWT-VC securing mechanism, this is the IETF **Token Status List** `status` claim, stated in [Sub-spec 14 §1](/specs/14-credential-revocation/#1-purpose). The W3C Bitstring Status List (`credentialStatus`) is the equivalent in the earlier Data Integrity representation, which the current libraries implement. Either way the status list is signed by its issuer.
 
 ## Where to go next
 

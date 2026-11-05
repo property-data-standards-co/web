@@ -1,9 +1,13 @@
 ---
 title: "pdtf-core (Rust)"
-description: "Rust implementation of PDTF 2.0 core — keys, signing, verification, DIDs, status lists, TIR. With Python and C# bindings."
+description: "Rust implementation of PDTF 2.0 core — keys, signing, verification, DIDs, status lists, legacy TIR. With Python and C# bindings."
 ---
 
 Native Rust implementation of the PDTF 2.0 core library. Designed for performance-critical workloads and as the foundation for cross-language bindings.
+
+:::note[Implementation state]
+This library implements the Data Integrity representation (`DataIntegrityProof`, `eddsa-jcs-2022`) and the W3C Bitstring Status List only. That is the current implementation state, not the spec's answer: the provisional securing mechanism is SD-JWT-VC with Token Status List ([02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism), [14 §1](/specs/14-credential-revocation/#1-purpose), consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)).
+:::
 
 ```toml
 [dependencies]
@@ -25,7 +29,7 @@ core-rs/
 │   │   ├── validator/      # Proof verification
 │   │   ├── did/            # DID resolution (did:key, did:web, URN)
 │   │   ├── status/         # Bitstring Status List
-│   │   └── tir/            # Trusted Issuer Registry client
+│   │   └── tir/            # Trusted Issuer Registry client (legacy)
 │   └── tests/
 │       └── cross_language.rs   # Shared vector validation
 ├── bindings/
@@ -115,6 +119,10 @@ assert!(get_bit(&decoded, 42)?);
 ### tir
 
 Trusted Issuer Registry — load, validate issuer entries, path matching.
+
+:::caution[Legacy]
+PDTF 2.0 replaced the Trusted Issuer Registry with OpenID Federation ([04 §1.1](/specs/04-openid-federation/#11-why-openid-federation)). This module predates that change and is kept for backward compatibility and entity:path matching only; do not use it for trust decisions. Resolve trust with `FederationRegistryResolver` and the Trust Anchor `https://propdata.org.uk` (see [Verify Trust](/docs/guides/integrate-federation/)). Its trust-level strings may predate the canonical snake_case levels `root_issuer`, `trusted_proxy`, `account_provider` and `assertion` ([04 §8](/specs/04-openid-federation/#8-trust-levels)).
+:::
 
 ```rust
 use pdtf_core::tir::verify::verify_tir;

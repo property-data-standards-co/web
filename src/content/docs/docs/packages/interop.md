@@ -5,6 +5,10 @@ description: "How PDTF 2.0 libraries prove byte-level compatibility across TypeS
 
 PDTF 2.0 provides four language implementations that are proven to be interoperable through shared deterministic test vectors.
 
+:::note[Implementation state]
+These libraries implement the Data Integrity representation (`DataIntegrityProof`, `eddsa-jcs-2022`) and the W3C Bitstring Status List only. That is the current implementation state, not the spec's answer: the provisional securing mechanism is SD-JWT-VC with Token Status List ([02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism), [14 §1](/specs/14-credential-revocation/#1-purpose), consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)).
+:::
+
 ## The Interop Promise
 
 A credential signed in **any** language can be verified in **any** other language. This isn't aspirational — it's tested on every commit.
@@ -18,6 +22,8 @@ A credential signed in **any** language can be verified in **any** other languag
 | Status list create/check | ✅ | ✅ | ✅ | ✅ |
 | TIR path matching | ✅ | ✅ | ✅ | ✅ |
 | DID document resolution | ✅ | ✅ | ✅ | ✅ |
+
+The TIR path-matching vectors exercise the entity:path wildcard matching in the libraries' legacy Trusted Issuer Registry module. PDTF 2.0 replaced the TIR with OpenID Federation, where entity:path patterns are carried in the Trust Mark's `delegation.authorised_paths` ([04 §6](/specs/04-openid-federation/#6-entitypath-authorisation-delegation-claim)).
 
 ---
 

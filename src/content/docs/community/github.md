@@ -12,7 +12,7 @@ All PDTF 2.0 development happens in the open under the [property-data-standards-
 | Repository | Description |
 |---|---|
 | [spec](https://github.com/property-data-standards-co/spec) | PDTF 2.0 specification suite — protocol specs and implementation specs |
-| [core](https://github.com/property-data-standards-co/core) | `@pdtf/core` — signing, verification, DIDs, status lists, TIR client, CLI |
+| [core](https://github.com/property-data-standards-co/core) | `@pdtf/core` — signing, verification, DIDs, status lists, federation client, CLI |
 | [schemas](https://github.com/property-data-standards-co/schemas) | JSON Schemas for PDTF entities and credentials |
 | [federation-registry](https://github.com/property-data-standards-co/federation-registry) | OpenID Federation Registry — trust anchor configuration and entity statements |
 | [web](https://github.com/property-data-standards-co/web) | This website (Astro/Starlight) |

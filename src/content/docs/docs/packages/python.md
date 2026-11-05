@@ -1,9 +1,13 @@
 ---
 title: "pdtf-core (Python)"
-description: "Python bindings for PDTF 2.0 core via PyO3 — keys, signing, verification, DIDs, status lists, TIR."
+description: "Python bindings for PDTF 2.0 core via PyO3 — keys, signing, verification, DIDs, status lists, legacy TIR."
 ---
 
 Python bindings for the PDTF 2.0 core library, built via [PyO3](https://pyo3.rs/) from the Rust implementation. Provides native performance with a Pythonic API.
+
+:::note[Implementation state]
+This library implements the Data Integrity representation (`DataIntegrityProof`, `eddsa-jcs-2022`) and the W3C Bitstring Status List only. That is the current implementation state, not the spec's answer: the provisional securing mechanism is SD-JWT-VC with Token Status List ([02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism), [14 §1](/specs/14-credential-revocation/#1-purpose), consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)).
+:::
 
 ```bash
 pip install pdtf-core
@@ -115,6 +119,10 @@ Check if a bit is set in a status list.
 ### `check_tir(registry_json: str, issuer_did: str, paths: list[str]) → str`
 
 Check Trusted Issuer Registry authorisation.
+
+:::caution[Legacy]
+PDTF 2.0 replaced the Trusted Issuer Registry with OpenID Federation ([04 §1.1](/specs/04-openid-federation/#11-why-openid-federation)). This module predates that change and is kept for backward compatibility and entity:path matching only; do not use it for trust decisions. Resolve trust with `FederationRegistryResolver` and the Trust Anchor `https://propdata.org.uk` (see [Verify Trust](/docs/guides/integrate-federation/)). Its trust-level strings may predate the canonical snake_case levels `root_issuer`, `trusted_proxy`, `account_provider` and `assertion` ([04 §8](/specs/04-openid-federation/#8-trust-levels)).
+:::
 
 ```python
 result = json.loads(pdtf_core.check_tir(

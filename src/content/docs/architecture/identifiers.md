@@ -14,11 +14,11 @@ This split makes it clear which identifiers must resolve to keys and endpoints, 
 
 PDTF uses:
 
-- `did:key` for **persons** (simple, no hosting).
+- `did:key` for **persons** (simple, no hosting). A person's key binds them to credentials and signs their presentations. Under the current working assumption, credentials recording what a person asserts are issued by their account provider ([02 §3.2.1](/specs/02-vc-data-model/), consultation [Q4](/consultation/#q4-the-consumer-wallet-gap)).
 - `did:key` or `did:web` for **organisations** (provider-managed vs self-hosted).
 - `did:web` for **transactions** and most **public services**, because they need discoverable HTTPS endpoints.
 
-A DID’s DID document binds signatures to keys. In practice, verifiers check that the `proof.verificationMethod` is present under `assertionMethod`.
+A DID’s DID document binds signatures to keys. In practice, verifiers check that the signing key is listed under `assertionMethod`: the JWS `kid` under SD-JWT-VC, or `proof.verificationMethod` in the earlier Data Integrity representation.
 
 ## URNs (subjects)
 
@@ -28,7 +28,7 @@ PDTF uses `urn:pdtf:*` identifiers for the entity graph and credentials, for exa
 - `urn:pdtf:titleNumber:{number}` for registered titles
 - `urn:pdtf:unregisteredTitle:{id}` for unregistered titles
 - `urn:pdtf:capacity:{id}` / `urn:pdtf:offer:{id}` / `urn:pdtf:gift:{id}` / `urn:pdtf:representation:{id}` / `urn:pdtf:role:{id}` for relationship credentials
-- `urn:pdtf:vc:{uuid}` for credential IDs (when present)
+- `urn:pdtf:vc:{uuid}` for credential IDs, which every credential MUST carry ([00 §14.1 Q3.3](/specs/00-architecture-overview/), [02 §2.2](/specs/02-vc-data-model/))
 
 URNs identify the subject of a claim. They do not resolve to DID documents.
 

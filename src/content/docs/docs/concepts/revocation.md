@@ -1,6 +1,6 @@
 ---
 title: "Revocation"
-description: "How credentials are revoked using Bitstring Status List"
+description: "How PDTF credentials are revoked and suspended using status lists"
 ---
 
 PDTF 2.0 treats revocation as mandatory infrastructure, not an optional extra. Property transactions change constantly, so a verifier needs to know not just whether a credential was valid when issued, but whether it is **still** valid now.
@@ -17,11 +17,27 @@ Examples where revocation is essential:
 
 Without revocation, a stale but correctly signed credential could continue to look valid.
 
-## The mechanism: Bitstring Status List
+## The mechanism: status lists
 
-PDTF 2.0 uses the W3C **Bitstring Status List** model. Every credential includes a `credentialStatus` entry pointing to a status list credential and a bit position inside it.
+Every PDTF credential carries a revocation reference pointing to a position in a status list that its issuer publishes and signs.
 
-Example:
+Under SD-JWT-VC, the spec's working mechanism is the IETF **Token Status List**. The credential carries a `status` claim pointing to a signed Status List Token (a JWT):
+
+```json
+{
+  "status": {
+    "status_list": { "idx": 18293, "uri": "https://adapters.propdata.org.uk/status/epc/1" }
+  }
+}
+```
+
+Status values are `0` = valid, `1` = invalid (revoked) and `2` = suspended.
+
+:::note[Provisional]
+The status mechanism follows the securing mechanism, and is stated in [14 §1.1](/specs/14-credential-revocation/#11-revocation-mechanism-under-sd-jwt-vc-token-status-list) (consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)).
+:::
+
+The W3C **Bitstring Status List** is the equivalent for the superseded Data Integrity representation, and it is what the current libraries implement. There the credential includes a `credentialStatus` entry pointing to a status list credential and a bit position inside it:
 
 ```json
 {
@@ -35,7 +51,7 @@ Example:
 }
 ```
 
-The status list itself is a Verifiable Credential containing a compressed bitstring.
+The status list itself is a signed Verifiable Credential containing a compressed bitstring.
 
 - bit = `0` means **not revoked**
 - bit = `1` means **revoked**
@@ -44,11 +60,11 @@ The status list itself is a Verifiable Credential containing a compressed bitstr
 
 When verifying a credential:
 
-1. fetch the referenced status list credential
+1. fetch the referenced status list (the Status List Token, or the status list credential)
 2. verify the status list's own signature
 3. decode the bitstring
-4. inspect the bit at `statusListIndex`
-5. reject the credential if that bit is set
+4. inspect the entry at the credential's index (`idx` or `statusListIndex`)
+5. reject the credential if it is revoked or suspended
 
 This allows large numbers of credentials to be checked efficiently without one separate revocation object per credential.
 
@@ -66,6 +82,8 @@ These can become unsafe quickly if they outlive the real-world relationship they
 
 It also applies to property and title data when newer authoritative data supersedes older data.
 
+Every credential carries a revocation entry. Relationship credentials SHOULD also support **suspension**, a reversible hold for a disputed or under-investigation relationship, and property data credentials MAY ([14 §8](/specs/14-credential-revocation/#8-suspension-vs-revocation), provisional).
+
 ## Issuer responsibilities
 
 Each issuer hosts its own status list endpoints. For example:
@@ -76,7 +94,7 @@ Each issuer hosts its own status list endpoints. For example:
 When revoking, the issuer:
 
 1. flips the relevant bit
-2. re-signs the status list credential
+2. re-signs the status list
 3. republishes it at the same URL
 
 That means revocation can be checked using stable references.
@@ -89,7 +107,7 @@ This balances performance with the need to reflect changes quickly.
 
 ## Why PDTF chose this model
 
-Bitstring Status Lists are a good fit because they are:
+Status lists (Token Status List and Bitstring Status List alike) are a good fit because they are:
 
 - standardised
 - compact

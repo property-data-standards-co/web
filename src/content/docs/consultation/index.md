@@ -9,6 +9,8 @@ PDTF 2.0 represents a significant architectural shift from the first iteration o
 
 This consultation is structured to present the problem, the viable options, our current recommendation, and the specific question we are seeking feedback on.
 
+None of these questions is settled. Where the specification needs an answer in order to proceed, it states a **working assumption** once, in the sub-spec that owns the question, and marks it provisional. Every other document defers to that statement. Each question below links to it.
+
 ---
 
 ## Section 1: The Data Foundation
@@ -81,6 +83,8 @@ Consumers (buyers and sellers) do not currently possess digital wallets capable 
 **Our Recommendation (Option C):** 
 Property is too high-friction an environment to act as the wedge for consumer wallet adoption. We should abstract the cryptography away from the consumer entirely in Phase 1.
 
+**Working assumption in the spec:** [Sub-spec 02 §3.2.1](/specs/02-vc-data-model/). The platform, acting as the person's account provider, issues credentials that record a person's assertions. The person's `did:key` is named in the evidence and bound as holder, and it signs their presentations. (02 §13.3 Q10 raises the same question internally.)
+
 **Consultation Question:**
 > *Is delaying direct consumer wallet integration in favour of provider-managed identity the most viable strategy for Phase 1 adoption?*
 
@@ -114,10 +118,12 @@ OpenID Federation relies on a root "Trust Anchor" — a cryptographic key that i
 **The Options:**
 - **Option A:** A government regulator (authoritative, but likely years away from implementation).
 - **Option B:** A new joint-venture consortium of major industry players (neutral, but slow to establish).
-- **Option C (Interim Project Governance):** This project operates an interim, proof-of-concept Trust Anchor (`trust.pdtf.org`) to bootstrap the ecosystem, with a roadmap to transition to a formal industry consortium or regulator once proven.
+- **Option C (Interim Project Governance):** This project operates an interim, proof-of-concept Trust Anchor (`https://propdata.org.uk`) to bootstrap the ecosystem, with a roadmap to transition to a formal industry consortium or regulator once proven.
 
 **Our Recommendation (Option C):** 
 To maintain momentum and prove the architecture works in practice, an interim Trust Anchor is required. Governance can be formalised as the network scales.
+
+**Working assumption in the spec:** [Sub-spec 04 §3](/specs/04-openid-federation/#3-trust-anchor) and [§10.1](/specs/04-openid-federation/#10-governance). In Phase 1, the platform operator runs the interim Trust Anchor at `https://propdata.org.uk`.
 
 **Consultation Question:**
 > *Is an interim, project-led Trust Anchor acceptable for bootstrapping the ecosystem, provided there is a clear transition path to formal industry or regulatory governance?*
@@ -136,6 +142,8 @@ Trust is rarely binary. A provider authorised to issue an EPC credential is not 
 **Our Recommendation (Option B):** 
 Granular, path-based delegation is essential for a diverse ecosystem containing specialist data providers.
 
+**Working assumption in the spec:** [Sub-spec 04 §5](/specs/04-openid-federation/#5-trust-marks) is the single trust mark catalogue: `pdtf-verified-issuer`, `account-provider` and `regulated-conveyancer`. Data-category authority is carried by `delegation.authorised_paths` inside `pdtf-verified-issuer`. See [Property Trust Marks](/trust-marks/).
+
 **Consultation Question:**
 > *Do you agree that Trust Marks must explicitly declare the data paths an issuer is authorised to populate?*
 
@@ -148,7 +156,7 @@ The Department for Business and Trade (DBT) has outlined a vision for a "Federat
 
 **The Options:**
 - **Option A:** Ignore cross-sector alignment and build a property-only governance model.
-- **Option B (Federated Alignment):** Design PDTF 2.0 specifically to act as the prototype "Sector-Specific Implementation Entity" for property. Our Trust Anchor (`trust.pdtf.org`) is built on standard OpenID Federation so it can seamlessly subordinate to a future government-run SDCE.
+- **Option B (Federated Alignment):** Design PDTF 2.0 specifically to act as the prototype "Sector-Specific Implementation Entity" for property. Our Trust Anchor (`https://propdata.org.uk`) is built on standard OpenID Federation so it can seamlessly subordinate to a future government-run SDCE.
 
 **Our Recommendation (Option B):**
 Aligning with the DBT's Smart Data framework ensures PDTF 2.0 is future-proofed against incoming legislation and interoperable with other sectors (like finance and energy). HM Land Registry is identified as the likely lead regulator for property in this model.
@@ -216,6 +224,8 @@ A single property can be held under multiple legal titles — a freehold house w
 
 **Our Recommendation (Option B):**
 Single property, multiple titles. This keeps form mapping straightforward and aligns with how conveyancing actually works. Multi-property transactions (e.g., land assembly) are a future extension, not a Phase 1 requirement.
+
+**Working assumption in the spec:** [Sub-spec 01 §9.1 Q2](/specs/01-entity-graph/#9-open-questions). A Transaction references exactly one Property and one or more Titles.
 
 **Consultation Question:**
 > *Is the constraint of one Property per Transaction (with multiple Titles) appropriate for Phase 1, or are there common transaction types that require multiple Properties?*
@@ -325,6 +335,8 @@ Property data is highly sensitive. How do we ensure that only authorised parties
 **Our Recommendation (Option B):** 
 Using relationship credentials (`Representation`, `TransactionRole`, `Offer`) as capability tokens aligns with the distributed nature of Verifiable Credentials and removes central bottlenecks.
 
+**Working assumption in the spec:** [Sub-spec 02 §7.2–7.5](/specs/02-vc-data-model/#7-terms-of-use) covers the `termsOfUse` classification (`public`, `transactionParticipants`, `roleRestricted`, `partyOnly`), the role identifiers and query-time filtering.
+
 **Consultation Question:**
 > *Does the framing of Transaction (Intent to Sell) and Offer (Intent to Buy) provide a robust enough foundation for distributed access control, or are the practical simplicity and immediate revocation benefits of a Centralised Hub ACL more appropriate for the property industry?*
 
@@ -359,6 +371,8 @@ Conveyancers rely heavily on source documents (e.g., title register PDFs, search
 **Our Recommendation (Option B):** 
 An explicit routing hint embedded in the credential makes integrations substantially more developer-friendly, which is critical for early ecosystem adoption.
 
+**Working assumption in the spec:** [Sub-spec 02 §6.6](/specs/02-vc-data-model/#66-source-documents). Source documents use the same classification and `roleRestrictions` as credentials (§7.2), retrieved through the Transaction DID's `PdtfDocumentEndpoint`.
+
 **Consultation Question:**
 > *Should access mechanisms for protected files be explicitly encoded into the Verifiable Credential, or should we rely on standard HTTP negotiation (401 Challenges) to keep the credential transport-agnostic?*
 
@@ -377,7 +391,9 @@ A verifiable credential can be serialised and secured in several ways, and the c
 **Our Recommendation (Option B):**
 SD-JWT-VC gives the best fit across interoperability (aligned with eIDAS/HAIP), privacy (native selective disclosure), and developer/agent legibility (clean JSON), while `mdoc` is confined to the GOV.UK identity boundary it is actually required for. AI-agent legibility, notably, is *not* a strong discriminator — agents read PDTF's composed entity graph and provenance over the API, not raw credentials — so it does not argue for JSON-LD. PDTF may retain an optional JSON-LD `@context` as a semantic overlay without making it the securing mechanism.
 
+**Working assumption in the spec:** [Sub-spec 02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism) for the securing mechanism, and [Sub-spec 14 §1](/specs/14-credential-revocation/#1-purpose) for the status mechanism that follows from it (Token Status List). The current reference libraries still implement the earlier Data Integrity representation.
+
 **Consultation Questions:**
-> *Should PDTF adopt SD-JWT-VC as the primary format for property credentials (with mdoc supported at the GOV.UK identity boundary), in preference to the JSON-LD Data Integrity approach in the current draft?*
+> *Should PDTF adopt SD-JWT-VC as the primary format for property credentials (with mdoc supported at the GOV.UK identity boundary), in preference to the JSON-LD Data Integrity approach of the previous draft?*
 
 > *Is a dual-format (SD-JWT-VC + mdoc) posture the right long-term bet, or should PDTF align fully to mdoc to maximise GOV.UK Wallet compatibility?*

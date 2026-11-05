@@ -23,7 +23,7 @@ The signing happens automatically, as part of the organisation's systems. They d
 
 A valid signature tells you *who* issued the data. But how do you know they're *authorised* to issue it?
 
-That's the job of the OpenID Federation (relying on Trust Anchors, Federation Entity Statements, and Property Trust Marks like `title-data-provider` and `regulated-conveyancer`). It's a public list that records which organisations are authorised to issue which types of property data.
+That's the job of the OpenID Federation (relying on Trust Anchors, Federation Entity Statements, and Property Trust Marks like `pdtf-verified-issuer` and `regulated-conveyancer`). It's a public list that records which organisations are authorised to issue which types of property data.
 
 Think of it like the SRA roll for solicitors or the FCA register for financial firms. You can check whether someone is on it, and what they're authorised to do.
 
@@ -72,14 +72,16 @@ Here's how it works for a real example — a local authority search:
 
 ## Trust levels
 
-Not all issuers are equal. PDTF 2.0 recognises four trust levels:
+Not all issuers are equal. PDTF 2.0 recognises four trust levels, defined in [Sub-spec 04 §8](/specs/04-openid-federation/#8-trust-levels):
 
-| Level | Description | Example |
-|-------|-------------|---------|
-| **Root issuer** | The original source of the data | HM Land Registry, the EPC Register |
-| **Accredited issuer** | An organisation independently authorised to issue data | A CLC-regulated conveyancer issuing property information |
-| **Trusted proxy** | An intermediary that issues on behalf of a root source | An adapter that re-signs data sourced from a root issuer |
-| **Assertion** | A human stating something as true, bound to their verified identity | A seller answering the Law Society TA6 property information form |
+| Level | Identifier | Description | Example |
+|-------|------------|-------------|---------|
+| **Root issuer** | `root_issuer` | The original source of the data | HM Land Registry, the EPC Register |
+| **Trusted proxy** | `trusted_proxy` | An intermediary that issues on behalf of a root source | An adapter that re-signs data sourced from a root issuer |
+| **Account provider** | `account_provider` | A platform accredited to verify people's identity and issue their DIDs | The reference platform, LMS |
+| **Assertion** | `assertion` | A human stating something as true, bound to their verified identity | A seller answering the Law Society TA6 property information form |
+
+What a regulated conveyancing firm is authorised to do comes from its `regulated-conveyancer` trust mark ([Property Trust Marks](/trust-marks/)), not from a separate trust level.
 
 During the early adoption phase, most credentials will come from trusted proxies — organisations that source data from existing systems and wrap it in Verifiable Credentials. Over time, the goal is for root issuers (like HMLR) to issue credentials directly, removing the need for proxies.
 
@@ -87,11 +89,13 @@ During the early adoption phase, most credentials will come from trusted proxies
 
 Much of what a conveyancing transaction runs on is not a fact held by any registry. Whether the boiler has been serviced, whether there has been a dispute with a neighbour, whether the loft conversion had building regulations approval: the only source is the person who lives there. The legal process already relies on these statements. The TA6 is completed and signed by the seller, and the seller carries liability for what it says.
 
-An assertion is potentially less reliable than data from a root issuer, because it rests on one person's knowledge and honesty. What makes it powerful is the binding. In PDTF 2.0 the statement is signed against the person's verified digital identity, so the assertion is traceable to a real, identified individual and the liability that attaches to them. That is as good as can be achieved for this class of fact, and it is better than today's practice: a physically signed form cannot be traced to a specific individual with any certainty, and a scanned signature can be anyone's.
+An assertion is potentially less reliable than data from a root issuer, because it rests on one person's knowledge and honesty. What makes it powerful is the binding. In PDTF 2.0 the statement is recorded against the person's verified digital identity, so the assertion is traceable to a real, identified individual and the liability that attaches to them. That is as good as can be achieved for this class of fact, and it is better than today's practice: a physically signed form cannot be traced to a specific individual with any certainty, and a scanned signature can be anyone's.
 
 Verifiers treat an assertion as exactly that. It is a signed, attributable statement, not independent confirmation, and the credential's evidence marks it as a user attestation so that nothing downstream mistakes it for registry data.
 
-The OpenID Federation records the trust level of each issuer, so verifiers always know the provenance chain.
+The current working assumption is that the person's account provider issues the credential and names the person in its evidence. The person's own key is bound to the credential and proves their control when it is presented. That assumption is stated in [Sub-spec 02 §3.2.1](/specs/02-vc-data-model/) and is open for consultation ([Q4](/consultation/#q4-the-consumer-wallet-gap)).
+
+The OpenID Federation records the trust level of each **issuer**: root issuer, trusted proxy or account provider, held in the issuer's trust mark. **Assertion** is not recorded there. It is read from each credential's evidence. Together they tell verifiers the provenance chain of every credential.
 
 ## What makes this different from today
 
