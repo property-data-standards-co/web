@@ -94,7 +94,8 @@ How a scoped, time-limited consent should sit on top of this for finer-grained a
 
 The relationship is **Transaction-centric**, not Property → Title → Transaction. This matters because:
 - **Unregistered titles** exist — no title number, so no `urn:pdtf:titleNumber:*`. We need an identifier method for titles which are currently unregistered but for which title evidence is being gathered.
-- A transaction may involve **multiple titles** (e.g. a house and its garage on separate titles).
+- A transaction may involve **multiple titles** (e.g. a house and its garage on separate titles), but always one property (01 §9.1 Q2; provisional, consultation Q11).
+- Property and Title are related **many-to-many** outside any sale. A flat's UPRN sits on its lease and on the block freehold, and the block freehold covers every flat. The standing **PropertyTitleLink** credential carries each pairing; HMLR issues it for registered titles, and the seller's conveyancer issues it for unregistered land (01 D34). It references no Transaction. `titlesToBeSold` selects the titles being sold from the linked titles.
 - The DID-based relationship model handles this naturally — a Transaction DID document references its associated Property and Title identifiers.
 
 ```
@@ -102,7 +103,7 @@ Transaction (did:web:platform.example.com:transactions:*)
     ├── property       → Property (urn:pdtf:uprn:*)
     │                     (may have no title — new build, unregistered)
     ├── titlesToBeSold → Title[] (urn:pdtf:titleNumber:* OR urn:pdtf:unregisteredTitle:*)
-    │                     (ordered; may span multiple properties)
+    │                     (ordered; selected from the titles linked to the property)
     │
     ├── participants[] → Person (did:key:*) / Organisation (did:web:*)
     │     └── ROSTER: DID, local id, firm. No roles.
@@ -1076,7 +1077,7 @@ Decomposing the v1 monolithic property pack schema into entity-scoped schemas ra
 | # | Question | Preferred direction | Status |
 |---|----------|---------------------|--------|
 | Q7.1 | Where does the schema-level `ownership` object decompose to? | Top-level properties of v1 `ownership` (numberOfSellers, outstandingMortgage, existingLender, helpToBuyEquityLoan, limitedCompanySale, etc.) move to `Transaction.saleContext.*`. The legal interest being transferred (formerly `ownershipsToBeTransferred[]`) moves to the top level of the `Title` entity, because a `TitleCredential` fundamentally represents an ownership interest being conveyed. Supporting register evidence (register extract, charges) moves under a `title` sub-object on the `Title` entity. Note: this is the schema decomposition question — distinct from the entity-graph-level SellerCapacity credential (the thin Person↔Title assertion, see sub-spec 02 §3.4), which is unchanged. | Preferred |
-| Q7.2 | Identifier for unregistered titles | `urn:pdtf:unregisteredTitle:{uuid}` per sub-spec 03 §10.1, but UUID derivation method (v4 random vs v5 deterministic from UPRN) and first-registration transition mechanism still open. This is a hard dependency for Q7.1 — `Title.ownershipToBeTransferred` applies to registered and unregistered titles equally, so the identifier question blocks finalisation. | Open |
+| Q7.2 | Identifier for unregistered titles | `urn:pdtf:unregisteredTitle:{id}` per sub-spec 03 §10.1. **First-registration transition proposed (Nov 2026, 01 §4.2.2):** the new Title lists the unregistered URN in `alsoKnownAs`, and HMLR's PropertyTitleLink to the new title number supersedes the seller's conveyancer's epitome link. **Still open:** who mints the identifier and how duplicates are avoided. The options are conveyancer-minted UUID v4, UUID v5 from the UPRN, UUID v5 from the root of title, or look-up-before-mint (01 §9.1 Q7). This is a hard dependency for Q7.1 — `Title.ownershipToBeTransferred` applies to registered and unregistered titles equally, so the identifier question blocks finalisation. | Open |
 | Q7.3 | Field-level seams between Property and Title | The boundary between physical property facts (EPC, flood, construction) and legal title facts (charges, proprietorship, lease terms) is clear in principle, but edge cases exist (e.g., boundary disputes, rights of way). Validate on a field-by-field basis during schema review. | Open |
 
 ---

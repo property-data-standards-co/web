@@ -733,6 +733,25 @@ TransactionRole credentials embody a party's role where no more specific relatio
 
 **Important:** Revocation of a role-bearing credential does not retroactively invalidate data already shared. It prevents future access only. The party may retain data already received, subject to their own data retention policies and GDPR obligations.
 
+### 7.6 PropertyTitleLink Revocation and Supersession
+
+PropertyTitleLink credentials relate a UPRN to a title, outside any transaction ([01 D34](/specs/01-entity-graph/)). HMLR issues them for registered titles, and the seller's conveyancer issues them, on the epitome of title, for unregistered land. Completion of a sale does not affect them, because they reference no Transaction and imply no role.
+
+**Triggers and initiators:**
+
+| Trigger | Issuer | Action | Reason |
+|---|---|---|---|
+| HMLR's UPRN-to-title data no longer relates the UPRN to the title | HMLR (or its adapter) | Revoke | `source_data_changed` |
+| A missing link is reported and HMLR's data is corrected | HMLR (or its adapter) | Issue a new link; nothing to revoke | — |
+| First registration: HMLR has issued a link from the same UPRN to the new title number, and the Title for that number lists the unregistered URN in `alsoKnownAs` | Seller's conveyancer (in Phase 1, the platform hosting its status list) | Revoke the epitome link | `superseded_by_registration` |
+| The epitome is found defective | Seller's conveyancer | Revoke | `epitome_withdrawn` |
+
+**Supersession does not depend on revocation.** Consistent with §14 Q2, HMLR does not revoke a credential it did not issue. A verifier instead applies the rule in [01 §4.2.2](/specs/01-entity-graph/): an epitome link to `urn:pdtf:unregisteredTitle:X` is superseded once a valid Title for `urn:pdtf:titleNumber:N` lists *X* in `alsoKnownAs` and a valid HMLR link relates the same UPRN to *N*. The conveyancer's revocation then removes a credential that verifiers already disregard. If the conveyancer never revokes it, perhaps because its retainer ended at completion, nothing breaks.
+
+**Ordering.** The conveyancer MUST NOT revoke for `superseded_by_registration` before HMLR's link exists. Revoking earlier would leave the property with no link to its own title. This is the reverse of §7.1: there, two valid ownership credentials must never coexist. Here a short overlap is harmless, because the two links assert the same fact and the verifier rule resolves it.
+
+Fail-closed applies as for the relationship credentials (D18.2). A PropertyTitleLink whose status cannot be checked is excluded from the linked titles. It is not treated as valid.
+
 ---
 
 ## 8. Suspension vs Revocation
@@ -1263,7 +1282,7 @@ PDTF v1/v3 does not have credential revocation (claims are asserted through OIDC
 |----|----------|-----------|------|
 | D18 | Bitstring Status List mandatory for all issuers | W3C standard, privacy-preserving, cacheable, simple infrastructure requirement | 2026-03-24 |
 | D18.1 | Minimum 16KB (131,072 bit) status lists | W3C recommendation for herd privacy; storage cost negligible | 2026-03-24 |
-| D18.2 | Fail-closed for relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole) | Risk of accepting revoked credentials in property transactions too high | 2026-03-24 |
+| D18.2 | Fail-closed for relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole, PropertyTitleLink) | Risk of accepting revoked credentials in property transactions too high | 2026-03-24 |
 | D18.3 | Indices never reused | Prevents confusion and replay attacks | 2026-03-24 |
 | D18.4 | 5-minute cache TTL recommended | Balance between freshness and efficiency | 2026-03-24 |
 
