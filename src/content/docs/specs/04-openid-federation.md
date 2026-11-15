@@ -97,13 +97,15 @@ The PDTF Trust Anchor is operated at:
 
 | Property | Value |
 |----------|-------|
-| Entity identifier | `https://trust.pdtf.org` |
-| DID | `did:web:trust.pdtf.org` |
-| Entity Configuration | `https://trust.pdtf.org/.well-known/openid-federation` |
-| Fetch endpoint | `https://trust.pdtf.org/federation/fetch` |
-| List endpoint | `https://trust.pdtf.org/federation/list` |
-| Trust Mark issuance | `https://trust.pdtf.org/federation/trust_mark` |
-| Trust Mark status | `https://trust.pdtf.org/federation/trust_mark_status` |
+| Entity identifier | `https://propdata.org.uk` |
+| DID | `did:web:propdata.org.uk` |
+| Entity Configuration | `https://propdata.org.uk/.well-known/openid-federation` |
+| Fetch endpoint | `https://propdata.org.uk/federation/fetch` |
+| List endpoint | `https://propdata.org.uk/federation/list` |
+| Trust Mark issuance | `https://propdata.org.uk/federation/trust_mark` |
+| Trust Mark status | `https://propdata.org.uk/federation/trust_mark_status` |
+
+**Operator and hostname.** In Phase 1 the Trust Anchor is operated by the platform operator as an interim, project-led Trust Anchor (§10.1). Who operates it in the long term is held open by consultation [Q6](/consultation/#q6-trust-anchor-governance). `https://propdata.org.uk` is the single hostname used throughout the specification and documentation for the Trust Anchor and for trust mark identifiers. If operation passes to a consortium or regulator, the entity identifier changes with it, and verifiers re-pin the new Trust Anchor key (§12.1). Earlier drafts also used `trust.pdtf.org`. That name is retired.
 
 ### 3.1 Entity Configuration
 
@@ -111,8 +113,8 @@ The Trust Anchor's self-signed Entity Configuration is a JWT published at `.well
 
 ```json
 {
-  "iss": "https://trust.pdtf.org",
-  "sub": "https://trust.pdtf.org",
+  "iss": "https://propdata.org.uk",
+  "sub": "https://propdata.org.uk",
   "iat": 1776038400,
   "exp": 1776124800,
   "jwks": {
@@ -128,21 +130,21 @@ The Trust Anchor's self-signed Entity Configuration is a JWT published at `.well
   "metadata": {
     "federation_entity": {
       "organization_name": "PDTF Trust Anchor",
-      "federation_fetch_endpoint": "https://trust.pdtf.org/federation/fetch",
-      "federation_list_endpoint": "https://trust.pdtf.org/federation/list",
-      "federation_trust_mark_endpoint": "https://trust.pdtf.org/federation/trust_mark",
-      "federation_trust_mark_status_endpoint": "https://trust.pdtf.org/federation/trust_mark_status"
+      "federation_fetch_endpoint": "https://propdata.org.uk/federation/fetch",
+      "federation_list_endpoint": "https://propdata.org.uk/federation/list",
+      "federation_trust_mark_endpoint": "https://propdata.org.uk/federation/trust_mark",
+      "federation_trust_mark_status_endpoint": "https://propdata.org.uk/federation/trust_mark_status"
     }
   },
   "trust_mark_issuers": {
     "https://propdata.org.uk/trust-marks/pdtf-verified-issuer": [
-      "https://trust.pdtf.org"
+      "https://propdata.org.uk"
     ],
     "https://propdata.org.uk/trust-marks/account-provider": [
-      "https://trust.pdtf.org"
+      "https://propdata.org.uk"
     ],
     "https://propdata.org.uk/trust-marks/regulated-conveyancer": [
-      "https://trust.pdtf.org",
+      "https://propdata.org.uk",
       "https://sra.org.uk",
       "https://clc-uk.org"
     ]
@@ -169,7 +171,7 @@ A subordinate entity (e.g. an adapter) publishes its own self-signed **Entity Co
   "iat": 1776038400,
   "exp": 1776124800,
   "jwks": { "keys": [ { "kty": "OKP", "crv": "Ed25519", "kid": "hmlr-2026-01", "x": "..." } ] },
-  "authority_hints": ["https://trust.pdtf.org"],
+  "authority_hints": ["https://propdata.org.uk"],
   "metadata": {
     "federation_entity": {
       "organization_name": "PDTF HMLR Adapter",
@@ -180,8 +182,8 @@ A subordinate entity (e.g. an adapter) publishes its own self-signed **Entity Co
       "credential_endpoint": "https://adapters.propdata.org.uk/hmlr/credential",
       "credentials_supported": [
         {
-          "format": "ldp_vc",
-          "types": ["VerifiableCredential", "TitleCredential"],
+          "format": "dc+sd-jwt",
+          "vct": "urn:pdtf:vct:TitleCredential",
           "cryptographic_binding_methods_supported": ["did:web"]
         }
       ]
@@ -198,11 +200,11 @@ A subordinate entity (e.g. an adapter) publishes its own self-signed **Entity Co
 
 ### 4.2 Subordinate Entity Statement (issued by Trust Anchor)
 
-When a verifier fetches `https://trust.pdtf.org/federation/fetch?sub=https://adapters.propdata.org.uk/hmlr`, the Trust Anchor returns a signed JWT:
+When a verifier fetches `https://propdata.org.uk/federation/fetch?sub=https://adapters.propdata.org.uk/hmlr`, the Trust Anchor returns a signed JWT:
 
 ```json
 {
-  "iss": "https://trust.pdtf.org",
+  "iss": "https://propdata.org.uk",
   "sub": "https://adapters.propdata.org.uk/hmlr",
   "iat": 1776038400,
   "exp": 1776124800,
@@ -211,7 +213,7 @@ When a verifier fetches `https://trust.pdtf.org/federation/fetch?sub=https://ada
     "openid_credential_issuer": {
       "credentials_supported": {
         "subset_of": [
-          { "types": ["VerifiableCredential", "TitleCredential"] }
+          { "vct": "urn:pdtf:vct:TitleCredential" }
         ]
       }
     }
@@ -225,7 +227,13 @@ The `jwks` in the subordinate statement pins the keys the Trust Anchor has witne
 
 ## 5. Trust Marks
 
-A **Trust Mark** is a signed JWT asserting that a subject entity meets a named policy. PDTF defines the following trust marks:
+A **Trust Mark** is a signed JWT asserting that a subject entity meets a named policy.
+
+:::caution[Catalogue: provisional, consultation Q7]
+The table below is the single PDTF trust mark catalogue. 00 §6.2 and the documentation site defer to it. It is provisional pending consultation [Q7](/consultation/#q7-trust-mark-granularity), which asks how granular trust must be. The working assumption is that authority over data categories is expressed by `delegation.authorised_paths` (§6) inside one `pdtf-verified-issuer` mark, not by a mark per category. Earlier drafts listed per-category marks such as `title-data-provider`, `property-data-provider`, `search-provider`, `energy-data-provider` and `environmental-data-provider`. Those marks are withdrawn.
+:::
+
+PDTF defines the following trust marks:
 
 | Trust Mark ID | Meaning | Typical Subject |
 |---------------|---------|-----------------|
@@ -237,11 +245,11 @@ A **Trust Mark** is a signed JWT asserting that a subject entity meets a named p
 
 ```json
 {
-  "iss": "https://trust.pdtf.org",
+  "iss": "https://propdata.org.uk",
   "sub": "https://adapters.propdata.org.uk/hmlr",
   "id": "https://propdata.org.uk/trust-marks/pdtf-verified-issuer",
   "iat": 1776038400,
-  "exp": 1807574400,
+  "exp": 1776643200,
   "ref": "https://propdata.org.uk/trust-marks/pdtf-verified-issuer/policy",
   "delegation": {
     "trust_level": "trusted_proxy",
@@ -262,11 +270,11 @@ The `delegation` claim is the PDTF-specific extension. Everything else is vanill
 
 ```json
 {
-  "iss": "https://trust.pdtf.org",
+  "iss": "https://propdata.org.uk",
   "sub": "https://platform.example.com",
   "id": "https://propdata.org.uk/trust-marks/account-provider",
   "iat": 1776038400,
-  "exp": 1807574400,
+  "exp": 1776643200,
   "delegation": {
     "trust_level": "account_provider",
     "identity_verification": {
@@ -282,7 +290,7 @@ The `managed_organisations` URL points to a signed JSON document listing the `di
 
 ### 5.3 Trust Mark Revocation
 
-Each trust mark carries `iat`/`exp` and can be checked for live status against the `federation_trust_mark_status_endpoint`. The Trust Anchor SHOULD set short lifetimes (days, not years) for high-impact trust marks and rely on status endpoint polling for faster revocation than the cache TTL would allow.
+Each trust mark carries `iat`/`exp` and can be checked for live status against the `federation_trust_mark_status_endpoint`. The Trust Anchor SHOULD set short lifetimes (days, not years) for high-impact trust marks; the examples in §5.1–5.2 use seven days and are re-issued before expiry, and rely on status endpoint polling for faster revocation than the cache TTL would allow.
 
 ### 5.4 Managed Organisations Document
 
@@ -427,7 +435,9 @@ interface TrustResolutionResult {
   /** Trust chain: [leaf, ..., trust anchor] */
   trustChain: string[];
 
-  /** Trust level derived from the delegation claim */
+  /** Issuer trust level from the delegation claim (§8.1–8.3). Federation
+   *  resolution never returns "assertion": that level is assigned per
+   *  credential from its evidence (§8.4). */
   trustLevel: "root_issuer" | "trusted_proxy" | "account_provider" | null;
 
   /** Whether all entity:paths in the VC are covered by delegation.authorised_paths */
@@ -445,7 +455,12 @@ interface TrustResolutionResult {
 
 ## 8. Trust Levels
 
-The `delegation.trust_level` claim classifies the subject. The same three levels that appeared in the earlier TIR design are preserved.
+This section is the canonical PDTF trust-level taxonomy. Sub-spec 07 §7.2, 00 and the documentation site use these identifiers and defer to it. There are **four** trust levels:
+
+- **Three issuer levels**, recorded in the federation as `delegation.trust_level` on the issuer's Trust Mark: `root_issuer`, `trusted_proxy` and `account_provider`.
+- **One credential level**, `assertion`. The federation does not record it. It applies to a credential whose evidence is a person's own statement (§8.4).
+
+The federation therefore records the trust level of each **issuer**. A verifier reads the level of an individual **credential** from the issuer's level together with the credential's `evidence`.
 
 ### 8.1 `root_issuer`
 
@@ -457,17 +472,30 @@ An authorised intermediary that fetches data from a primary source's API and rep
 
 ### 8.3 `account_provider`
 
-A platform that issues user or organisation DIDs and is responsible for identity verification at onboarding. Uses the separate `account-provider` trust mark (not `pdtf-verified-issuer`). Carries `delegation.identity_verification` and optionally `delegation.managed_organisations`.
+A platform that issues user or organisation DIDs and is responsible for identity verification at onboarding. Uses the separate `account-provider` trust mark (not `pdtf-verified-issuer`). Carries `delegation.identity_verification` and optionally `delegation.managed_organisations`. Under the working assumption in [02 §3.2.1](/specs/02-vc-data-model/), an account provider is also the issuer of the credentials that record its users' assertions. Those credentials carry the `assertion` level (§8.4), not `account_provider`.
 
-### 8.4 Comparison
+### 8.4 `assertion`
 
-| Aspect | root_issuer | trusted_proxy | account_provider |
-|--------|-------------|---------------|------------------|
-| Data source | Own canonical dataset | Primary source API | User onboarding |
-| VC content | Authoritative assertion | Faithful reproduction | Identity binding |
-| `proxy_for` required | No | Yes | No |
-| Trust mark ID | `pdtf-verified-issuer` | `pdtf-verified-issuer` | `account-provider` |
-| Phase | Phase 3 (future) | Phase 1 (now) | Phase 1 (now) |
+A person stating something as true, recorded against their verified identity. The TA6 / BASPI answers are the canonical case: whether the boiler has been serviced, whether there has been a boundary dispute. No registry holds these facts. Only the person can state them, and they carry liability for what they say.
+
+- **How it is identified.** A credential is at the `assertion` level when its `evidence` is a `UserAttestation` ([02 §6.2](/specs/02-vc-data-model/)). The issuer is an account provider acting for the person (02 §3.2.1), or in future the person's own wallet.
+- **What it means.** It is a signed, attributable statement, not independent confirmation. Verifiers MUST NOT treat it as registry data.
+- **Why it is a level.** It is traceable to an identified individual and the liability that attaches to them. A physically signed form is not.
+- **Not a federation level.** It never appears as `delegation.trust_level`, and federation trust resolution never returns it (§7.1).
+
+### 8.5 Comparison
+
+| Aspect | root_issuer | trusted_proxy | account_provider | assertion |
+|--------|-------------|---------------|------------------|-----------|
+| Applies to | Issuer | Issuer | Issuer | Credential |
+| Recorded in | `delegation.trust_level` | `delegation.trust_level` | `delegation.trust_level` | `evidence` type `UserAttestation` |
+| Data source | Own canonical dataset | Primary source API | User onboarding / identity verification | The person's own statement |
+| VC content | Authoritative assertion | Faithful reproduction | Identity binding | Attributable statement |
+| `proxy_for` required | No | Yes | No | — |
+| Trust mark ID | `pdtf-verified-issuer` | `pdtf-verified-issuer` | `account-provider` | — (issuer holds `account-provider`) |
+| Phase | Phase 3 (future) | Phase 1 (now) | Phase 1 (now) | Phase 1 (now) |
+
+Conflict ordering for state assembly, highest first: `root_issuer` > `trusted_proxy` > `account_provider` > `assertion` ([07 §7.2](/specs/07-state-assembly/)).
 
 ---
 
@@ -506,7 +534,7 @@ Reference implementations SHOULD ship with a bundled snapshot of the Trust Ancho
 
 ### 10.1 Phase 1
 
-The Trust Anchor is operated by the PDTF steward:
+The Trust Anchor is operated by the PDTF steward. This is the interim, project-led arrangement. Long-term governance is held open by consultation [Q6](/consultation/#q6-trust-anchor-governance).
 
 | Role | Responsibility | Phase 1 Holder |
 |------|---------------|----------------|
@@ -553,7 +581,7 @@ As PDTF 2.0 adoption grows, a multi-stakeholder property-sector governance body 
 
 When a primary source (e.g. HMLR) begins issuing PDTF-compliant VCs directly:
 
-1. HMLR publishes its own Entity Configuration, optionally as a subordinate of the PDTF Trust Anchor, or as its own Trust Anchor that PDTF verifiers pin alongside `trust.pdtf.org`
+1. HMLR publishes its own Entity Configuration, optionally as a subordinate of the PDTF Trust Anchor, or as its own Trust Anchor that PDTF verifiers pin alongside `https://propdata.org.uk`
 2. The Trust Anchor issues a `pdtf-verified-issuer` Trust Mark to HMLR with `trust_level: root_issuer`
 3. The corresponding proxy's Trust Mark is allowed to expire / marked revoked
 4. Verifiers begin preferring the root issuer's credentials
@@ -592,7 +620,7 @@ Existing VCs issued by deprecated proxies remain cryptographically valid — sig
 **Mitigations:**
 - Short-lived Trust Marks (days, not years)
 - Active `trust_mark_status_endpoint` polling for high-impact marks
-- VC-level revocation (Bitstring Status List) operates on minutes, independent of federation caches
+- VC-level revocation (status lists, [14 §1](/specs/14-credential-revocation/)) operates on minutes, independent of federation caches
 
 ### 12.4 Enumeration and Privacy
 
@@ -637,7 +665,7 @@ property-data-standards-co/core
 import { verifyCredential } from '@pdtf/vc-validator';
 
 const result = await verifyCredential(credential, {
-  trustAnchor: 'https://trust.pdtf.org',
+  trustAnchor: 'https://propdata.org.uk',
   trustAnchorKeys: pinnedJwks,
   federationCache: cache,
   trustFailMode: 'closed',
@@ -653,7 +681,7 @@ const result = await verifyCredential(credential, {
 
 | Decision | Summary | Status |
 |----------|---------|--------|
-| **D8** | Trust infrastructure is OpenID Federation with PDTF Trust Anchor at `trust.pdtf.org` | ✅ Confirmed (supersedes earlier GitHub-TIR decision) |
+| **D8** | Trust infrastructure is OpenID Federation with the PDTF Trust Anchor at `https://propdata.org.uk` (interim operator; governance held open, consultation Q6) | ✅ Confirmed (supersedes earlier GitHub-TIR decision) |
 | **D20** | Authorisation expressed as entity:path combinations inside the Trust Mark `delegation` claim | ✅ Confirmed |
 | **D21** | Account providers carry an `account-provider` Trust Mark; user DIDs traced via `managed_organisations` | ✅ Confirmed |
 | **D24** | 3-phase evolution: platform proxies → independently hosted adapters → primary-source root issuers | ✅ Confirmed |
@@ -690,5 +718,6 @@ const result = await verifyCredential(credential, {
 | **Root issuer** | Primary authoritative data source (e.g. HMLR) |
 | **Trusted proxy** | Authorised intermediary that repackages source data as VCs |
 | **Account provider** | Platform that issues user/org DIDs with identity verification |
+| **Assertion** | Credential-level trust level for a person's own statement (`UserAttestation` evidence), §8.4 |
 
 ---

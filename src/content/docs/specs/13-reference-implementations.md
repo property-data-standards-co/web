@@ -30,7 +30,7 @@ description: "PDTF 2.0 specification document."
 
 ## 1. Purpose
 
-The PDTF 2.0 specification suite defines a trust architecture built on W3C Verifiable Credentials, Decentralised Identifiers, and a federated Trusted Issuer Registry. Specifications alone are insufficient — implementers need working code that demonstrates correct behaviour, provides ready-to-use libraries, and serves as the canonical interpretation of the spec when ambiguity arises.
+The PDTF 2.0 specification suite defines a trust architecture built on W3C Verifiable Credentials, Decentralised Identifiers, and OpenID Federation ([04](/specs/04-openid-federation/)), which replaced the earlier Trusted Issuer Registry. Specifications alone are insufficient — implementers need working code that demonstrates correct behaviour, provides ready-to-use libraries, and serves as the canonical interpretation of the spec when ambiguity arises.
 
 The reference implementations serve four goals:
 
@@ -105,6 +105,10 @@ The validator executes a sequential pipeline. Each stage can short-circuit on fa
 1. Structure Validation  →  2. Resolve Issuer DID  →  3. Verify Signature
         →  4. Federation Lookup  →  5. Expiry Check  →  6. Revocation Check  →  Result
 ```
+
+:::note[Current implementation state]
+The pipeline below describes what `@pdtf/vc-validator` implements today: Data Integrity (`eddsa-jcs-2022`) and Bitstring Status List. That is the superseded representation, and the one the current reference libraries implement. The securing mechanism is stated once, in [02 §2.4](/specs/02-vc-data-model/): SD-JWT-VC, provisional pending consultation [Q20](/consultation/#q20-credential-format--securing-mechanism). The revocation mechanism is stated in [14 §1](/specs/14-credential-revocation/).
+:::
 
 **Stage 1 — Structure Validation.** Validates the VC JSON against W3C VC Data Model 2.0 structure and PDTF-specific requirements: `@context` includes the PDTF context URL, `type` includes a recognised PDTF credential type, `credentialSubject` conforms to the entity schema, and `proof` is present with a supported cryptosuite.
 
@@ -207,7 +211,7 @@ type ValidationErrorCode =
 
 ```typescript
 interface ValidatorConfig {
-  /** URL of the Trusted Issuer Registry API. */
+  /** Entity identifier of the OpenID Federation Trust Anchor (04 §3), e.g. 'https://propdata.org.uk'. */
   trustAnchor: string;
   /** DID resolver instance. If not provided, a default resolver is created. */
   didResolver?: DIDResolver;
@@ -231,7 +235,7 @@ import { createValidator } from '@pdtf/vc-validator';
 import { createResolver } from '@pdtf/did-resolver';
 
 const validator = createValidator({
-  trustAnchor: 'https://trust.pdtf.org',
+  trustAnchor: 'https://propdata.org.uk',
   didResolver: createResolver({ cacheTtlMs: 600_000 }),
 });
 
@@ -487,7 +491,7 @@ const credential = await builder.buildCredential({
 
 ### 5.4 Signing Process
 
-The builder follows the `eddsa-jcs-2022` Data Integrity cryptosuite:
+The builder follows the `eddsa-jcs-2022` Data Integrity cryptosuite. That is the current implementation state, not the spec's answer ([02 §2.4](/specs/02-vc-data-model/)):
 
 1. **Assemble** the unsigned credential — populate all fields, generate UUID URN if no `id` provided.
 2. **Construct proof options** — `type: 'DataIntegrityProof'`, `cryptosuite: 'eddsa-jcs-2022'`, `created`, `verificationMethod`, `proofPurpose: 'assertionMethod'`.
@@ -876,8 +880,7 @@ All packages target modern browsers (last 2 versions of Chrome, Firefox, Safari,
 Anticipated but out of scope for initial release:
 
 - **`@pdtf/vc-presenter`** — Verifiable Presentation construction for selective disclosure
-- **`@pdtf/status-list`** — Bitstring Status List credential creation and management
-- **`@pdtf/tir-client`** — Typed client for the Trusted Issuer Registry API
+- **`@pdtf/status-list`** — Status list creation and management (Token Status List per 14 §1.1; Bitstring Status List for the superseded representation)
 - **`@pdtf/migration`** — Tools for migrating PDTF v1/v3 data to v4 credential format
 
 ---

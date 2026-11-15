@@ -133,7 +133,7 @@ The composer's input is a set of Verifiable Credentials associated with a transa
   },
   {
     "type": ["VerifiableCredential", "PropertyCredential"],
-    "issuer": "did:key:z6Mkh...seller",
+    "issuer": "did:web:platform.example.com",
     "validFrom": "2026-03-21T14:30:00Z",
     "credentialSubject": {
       "id": "urn:pdtf:uprn:100023456789",
@@ -177,15 +177,16 @@ The composer's input is a set of Verifiable Credentials associated with a transa
 | `issuer` | Determines trust level via OpenID Federation trust resolution (§7) |
 | `validFrom` | Temporal ordering — latest wins for conflicting paths |
 | `type` | Entity type classification (PropertyCredential, TitleCredential, etc.) |
-| `credentialStatus` | Revocation check — revoked credentials are excluded from assembly |
-| `proof` | Signature verification — invalid signatures are excluded |
+| `status` (`credentialStatus` in the superseded representation) | Revocation check: revoked credentials are excluded from assembly. Mechanism per [14 §1](/specs/14-credential-revocation/) |
+| Signature (JWS; `proof` in the superseded representation) | Signature verification: invalid signatures are excluded ([02 §2.4](/specs/02-vc-data-model/)) |
+| `evidence` | A `UserAttestation` marks the credential as `assertion` trust level ([04 §8.4](/specs/04-openid-federation/)) |
 
 ### 3.3 Pre-Assembly Filtering
 
 Before composition begins, credentials are filtered:
 
-1. **Signature verification** — invalid proofs are rejected
-2. **Revocation check** — revoked credentials (Bitstring Status List) are excluded
+1. **Signature verification** — invalid signatures are rejected
+2. **Revocation check** — revoked credentials are excluded (status list, [14 §1](/specs/14-credential-revocation/)). A credential whose status cannot be checked is handled as 14 §13 specifies: fail-closed for relationship credentials
 3. **Expiry check** — credentials past `validUntil` are excluded
 4. **OpenID Federation trust resolution** — issuer must hold a Trust Mark whose `delegation.authorised_paths` covers the entity:path combinations they claim
 
@@ -264,11 +265,12 @@ Consider a Property entity (`urn:pdtf:uprn:100023456789`) with three VCs arrivin
 }
 ```
 
-**VC 2 — Seller (account provider), issued 2026-03-20:**
+**VC 2 — Seller assertion, issued by the platform for the seller, 2026-03-20** (issuer per [02 §3.2.1](/specs/02-vc-data-model/); provisional, consultation Q4):
 ```json
 {
-  "issuer": "did:key:z6Mkh...seller",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-20T14:30:00Z",
+  "evidence": [{ "type": "UserAttestation", "source": "did:key:z6Mkh...seller", "method": "BASPI form completion" }],
   "credentialSubject": {
     "id": "urn:pdtf:uprn:100023456789",
     "heating": {
@@ -320,11 +322,11 @@ VC 1 (2026-03-18) → VC 2 (2026-03-20) → VC 3 (2026-03-22)
 
 **Step 2b — Resolve trust levels:**
 - VC 1: `adapters.propdata.org.uk:epc` → OpenID Federation trust resolution → `trusted_proxy` for `Property:/energyEfficiency/*`
-- VC 2: `did:key:z6Mkh...seller` → OpenID Federation trust resolution → `account_provider` (user attestation)
+- VC 2: `did:web:platform.example.com` → OpenID Federation trust resolution → `account_provider` issuer; `UserAttestation` evidence → credential level `assertion` ([04 §8.4](/specs/04-openid-federation/))
 - VC 3: `adapters.propdata.org.uk:epc` → OpenID Federation trust resolution → `trusted_proxy` for `Property:/energyEfficiency/*`
 
 **Step 2c — Conflict resolution:**
-VC 1 and VC 3 both claim `energyEfficiency.certificate.*`. Same trust level (trustedProxy), so latest validFrom wins. VC 3 supersedes VC 1 for all `energyEfficiency` paths.
+VC 1 and VC 3 both claim `energyEfficiency.certificate.*`. Same trust level (`trusted_proxy`), so latest validFrom wins. VC 3 supersedes VC 1 for all `energyEfficiency` paths.
 
 **Step 2d — Deep merge (applied in sorted order):**
 
@@ -416,19 +418,19 @@ Schema check: `heatingType` = "Central heating" → `centralHeatingDetails` is v
   "energyEfficiency.certificate": {
     "vcId": "vc-3-id",
     "issuer": "did:web:adapters.propdata.org.uk:epc",
-    "trustLevel": "trustedProxy",
+    "trustLevel": "trusted_proxy",
     "validFrom": "2026-03-22T09:00:00Z"
   },
   "heating": {
     "vcId": "vc-2-id",
-    "issuer": "did:key:z6Mkh...seller",
-    "trustLevel": "accountProvider",
+    "issuer": "did:web:platform.example.com",
+    "trustLevel": "assertion",
     "validFrom": "2026-03-20T14:30:00Z"
   },
   "address": {
     "vcId": "vc-2-id",
-    "issuer": "did:key:z6Mkh...seller",
-    "trustLevel": "accountProvider",
+    "issuer": "did:web:platform.example.com",
+    "trustLevel": "assertion",
     "validFrom": "2026-03-20T14:30:00Z"
   }
 }
@@ -471,7 +473,7 @@ function deepMerge(target: object, source: object): object {
 
 ### 4.4 V4 Output Shape
 
-The composed v4 state follows the structure defined in [Sub-spec 01 §6](/specs/01-entity-graph/):
+The composed v4 state follows the structure defined in [Sub-spec 01 §6](/specs/01-entity-graph/). Identifiers are abbreviated for readability (`own-1`, `rep-1`). Real generated identifiers are UUID v4 ([03 §3.3](/specs/03-did-methods/)):
 
 ```json
 {
@@ -598,7 +600,7 @@ The composed v4 state follows the structure defined in [Sub-spec 01 §6](/specs/
       "energyEfficiency.certificate": {
         "vcId": "vc-epc-003",
         "issuer": "did:web:adapters.propdata.org.uk:epc",
-        "trustLevel": "trustedProxy",
+        "trustLevel": "trusted_proxy",
         "validFrom": "2026-03-22T09:00:00Z"
       }
     }
@@ -1127,17 +1129,18 @@ The composer must decide which value wins.
 
 ### 7.2 Trust Level Ordering
 
-The primary resolution mechanism is trust level, defined by the Trusted Issuer Registry:
+The primary resolution mechanism is trust level. The taxonomy is defined in [04 §8](/specs/04-openid-federation/): three issuer levels resolved through OpenID Federation (`delegation.trust_level`), and the credential-level `assertion`, read from `UserAttestation` evidence:
 
 ```
-rootIssuer > trustedProxy > accountProvider
+root_issuer > trusted_proxy > account_provider > assertion
 ```
 
 | Trust Level | Description | Example Issuers |
 |------------|-------------|-----------------|
-| `rootIssuer` | Primary data source — the authority itself | HMLR, MHCLG (EPC), Environment Agency, VOA |
-| `trustedProxy` | Adapter that fetches from the primary source and signs | PDTF HMLR adapter, PDTF EPC adapter |
-| `accountProvider` | User-attested data via a platform account | The platform (on behalf of sellers/buyers) |
+| `root_issuer` | Primary data source — the authority itself | HMLR, MHCLG (EPC), Environment Agency, VOA |
+| `trusted_proxy` | Adapter that fetches from the primary source and signs | PDTF HMLR adapter, PDTF EPC adapter |
+| `account_provider` | Identity and onboarding data issued by an accredited account provider | The platform (identity binding) |
+| `assertion` | A person's own statement, recorded against their verified identity (`UserAttestation` evidence) | The platform, issuing for sellers and buyers ([02 §3.2.1](/specs/02-vc-data-model/)) |
 
 **Rule:** A credential from a higher trust level always wins, regardless of timestamp.
 
@@ -1147,8 +1150,8 @@ When two VCs have the same trust level, the later `validFrom` wins:
 
 ```typescript
 function resolveConflict(vc1: VC, vc2: VC, federation: FederationResolver): VC {
-  const trust1 = tir.getTrustLevel(vc1.issuer);
-  const trust2 = tir.getTrustLevel(vc2.issuer);
+  const trust1 = effectiveTrustLevel(vc1, federation);
+  const trust2 = effectiveTrustLevel(vc2, federation);
 
   // Higher trust level wins
   if (trustRank(trust1) > trustRank(trust2)) return vc1;
@@ -1162,11 +1165,19 @@ function resolveConflict(vc1: VC, vc2: VC, federation: FederationResolver): VC {
   return vc1.id < vc2.id ? vc1 : vc2;
 }
 
+// 04 §8: a UserAttestation makes the credential an assertion, whatever the
+// issuer's federation level; otherwise use the issuer's delegation.trust_level.
+function effectiveTrustLevel(vc: VC, federation: FederationResolver): string {
+  if (vc.evidence?.some(e => e.type === 'UserAttestation')) return 'assertion';
+  return federation.getTrustLevel(vc.issuer);
+}
+
 function trustRank(level: string): number {
   switch (level) {
-    case 'rootIssuer': return 3;
-    case 'trustedProxy': return 2;
-    case 'accountProvider': return 1;
+    case 'root_issuer': return 4;
+    case 'trusted_proxy': return 3;
+    case 'account_provider': return 2;
+    case 'assertion': return 1;
     default: return 0;
   }
 }
@@ -1177,11 +1188,11 @@ function trustRank(level: string): number {
 Conflict resolution operates at the **path level**, not the VC level. A single VC may contain data at multiple paths, and different paths from that VC may have different conflict outcomes:
 
 ```
-VC from EPC adapter (trustedProxy):
+VC from EPC adapter (trusted_proxy):
   energyEfficiency.certificate.currentEnergyRating = "C"   ← wins (higher trust)
   address.postcode = "EH45 8AB"                             ← loses (not authorised for address)
 
-VC from seller (accountProvider):
+VC from seller (assertion):
   energyEfficiency.certificate.currentEnergyRating = "D"    ← loses
   address.postcode = "EH45 8AB"                             ← wins (authorised for address paths)
 ```
@@ -1199,14 +1210,14 @@ Every path in the composed state is annotated with its provenance — which VC c
   "source": {
     "vcId": "urn:uuid:epc-vc-2026-03-22",
     "issuer": "did:web:adapters.propdata.org.uk:epc",
-    "trustLevel": "trustedProxy",
+    "trustLevel": "trusted_proxy",
     "validFrom": "2026-03-22T09:00:00Z"
   },
   "superseded": [
     {
       "vcId": "urn:uuid:epc-vc-2026-03-18",
       "issuer": "did:web:adapters.propdata.org.uk:epc",
-      "trustLevel": "trustedProxy",
+      "trustLevel": "trusted_proxy",
       "validFrom": "2026-03-18T10:00:00Z",
       "reason": "superseded_by_later_vc"
     }
@@ -1740,7 +1751,7 @@ For performance optimisation (future), the composer could support incremental up
 | VC with unknown entity type | Log warning, skip VC, continue composition |
 | VC with invalid `credentialSubject.id` | Log error, skip VC |
 | Schema not found for entity type | Log error, skip entity (cannot prune without schema) |
-| Federation trust resolution failure | Fall back to `account_provider` trust level |
+| Federation trust resolution failure | Exclude the credential: it fails the §3.3 trust check, and only credentials passing all four checks are composed. Log it as unauthorised. Never assign it a fallback trust level |
 | Merge produces invalid state (fails schema validation) | Log error, return last valid state, alert |
 | Collection conversion loses data | Fatal error — this should never happen in production |
 
@@ -1968,7 +1979,7 @@ A complete worked example showing composition of a realistic transaction from VC
 ```json
 {
   "type": ["VerifiableCredential", "PropertyCredential"],
-  "issuer": "did:key:z6Mkh...seller",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-16T14:00:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:uprn:100023456789",

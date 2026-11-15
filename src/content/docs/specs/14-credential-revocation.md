@@ -56,6 +56,8 @@ Credential revocation is the mechanism by which an issuer declares that a creden
 
 This is not optional. Credentials without revocation support MUST be rejected by conformant verifiers.
 
+**D18 and §1.1 are the single statement of PDTF's status mechanism.** 00 §7.3, 02 §2.1 and §8, 07 §3 and the documentation site defer to them. The mechanism follows the securing mechanism ([02 §2.4](/specs/02-vc-data-model/), consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)), so it is provisional for the same reason.
+
 ### 1.1 Revocation mechanism under SD-JWT-VC (Token Status List)
 
 :::caution[Provisional]
@@ -147,7 +149,11 @@ The Bitstring Status List strikes the right balance: it is a W3C standard with g
 
 ### Requirement
 
-Every Verifiable Credential issued within PDTF 2.0 MUST include a `credentialStatus` property. Credentials without this property MUST be rejected by conformant verifiers, regardless of whether the credential signature is valid.
+:::note[Superseded representation]
+This section specifies the `credentialStatus` field of the superseded Data Integrity representation. Under SD-JWT-VC the equivalent requirement applies to the `status` claim (§1.1).
+:::
+
+In that representation, every Verifiable Credential issued within PDTF 2.0 MUST include a `credentialStatus` property. Credentials without this property MUST be rejected by conformant verifiers, regardless of whether the credential signature is valid.
 
 ### Structure
 
@@ -756,6 +762,14 @@ Fail-closed applies as for the relationship credentials (D18.2). A PropertyTitle
 
 ## 8. Suspension vs Revocation
 
+**Working position (provisional, §14 Q1).** This is the single statement on suspension. 02 §8.2 and 00 §7.3 defer to it.
+
+- Every credential carries a **revocation** entry.
+- **Relationship credentials** (SellerCapacity, Offer, Gift, Representation, TransactionRole) SHOULD also carry a **suspension** entry, so that a disputed or under-investigation relationship can be held without being permanently revoked.
+- **Property data credentials** MAY carry one. If their data is wrong, revoke and reissue.
+
+Under Token Status List, one list with `bits: 2` expresses both states (§1.1). In the superseded representation, two `credentialStatus` entries are used (§3).
+
 ### Definitions
 
 | | Revocation | Suspension |
@@ -1152,7 +1166,7 @@ A status list is a point-in-time snapshot. An attacker who captures an older ver
 
 Should all credential types support suspension, or only specific types (ownership, representation)? Suspension adds operational complexity (the ability to un-set bits and re-sign). Property data VCs may not need suspension — if data is wrong, revoke and reissue.
 
-**Proposed resolution:** Suspension is OPTIONAL for property data VCs and RECOMMENDED for the relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole).
+**Proposed resolution (adopted as the working position in §8):** Suspension is OPTIONAL for property data VCs and RECOMMENDED for the relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole).
 
 ### Q2: Cross-Issuer Revocation
 
@@ -1280,7 +1294,7 @@ PDTF v1/v3 does not have credential revocation (claims are asserted through OIDC
 
 | ID | Decision | Rationale | Date |
 |----|----------|-----------|------|
-| D18 | Bitstring Status List mandatory for all issuers | W3C standard, privacy-preserving, cacheable, simple infrastructure requirement | 2026-03-24 |
+| D18 | Status list mandatory for all issuers: Token Status List under SD-JWT-VC (§1.1), Bitstring Status List in the superseded representation. Provisional, following consultation Q20 | Standards-based, privacy-preserving, cacheable, simple infrastructure requirement | 2026-03-24 (revised Nov 2026) |
 | D18.1 | Minimum 16KB (131,072 bit) status lists | W3C recommendation for herd privacy; storage cost negligible | 2026-03-24 |
 | D18.2 | Fail-closed for relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole, PropertyTitleLink) | Risk of accepting revoked credentials in property transactions too high | 2026-03-24 |
 | D18.3 | Indices never reused | Prevents confusion and replay attacks | 2026-03-24 |
