@@ -13,14 +13,14 @@ PDTF 2.0 models transaction data as an entity graph. The development artifact is
 |---|---|---|---|
 | `Transaction` | `did:web:{host}:transactions:{id}` | Root entity | Sale metadata, milestones, chain, sale context, completion, seller confirmations |
 | `Property` | `urn:pdtf:uprn:{uprn}` | Logbook entity | Physical property facts that travel with the property across transactions |
-| `Title` | `urn:pdtf:titleNumber:{number}` or `urn:pdtf:unregisteredTitle:{id}` | Legal title entity | Register extract, title extents, ownership type, leasehold terms, encumbrances |
+| `Title` | `urn:pdtf:titleNumber:{number}` or `urn:pdtf:unregisteredTitle:{uuid}` | Legal title entity | Register extract, title extents, ownership type, leasehold terms, encumbrances |
 | `Person` | `did:key:{...}` | Identity entity | Natural person, role-free, referenced by relationship entities |
-| `Organisation` | `did:web:{domain}` | Identity entity | Law firm, estate agent, lender, surveyor, etc. Outside the v3 round trip |
-| `SellerCapacity` | `urn:pdtf:capacity:{id}` | Relationship credential | The capacity in which a party sells; implies Seller |
-| `Offer` | `urn:pdtf:offer:{id}` | Relationship credential | Buyer linkage to transaction, amount, status, conditions; implies Buyer |
-| `Gift` | `urn:pdtf:gift:{id}` | Relationship credential | Gift of funds towards an offer; implies Giftor |
-| `Representation` | `urn:pdtf:representation:{id}` | Relationship credential | One party instructed by another, with the kind of representation |
-| `TransactionRole` | `urn:pdtf:role:{id}` | Relationship credential | A role with no more specific relationship |
+| `Organisation` | `did:key` (provider-managed) or `did:web:{domain}` (self-hosted) | Identity entity | Law firm, estate agent, lender, surveyor, etc. Outside the v3 round trip |
+| `SellerCapacity` | `urn:pdtf:capacity:{uuid}` | Relationship credential | The capacity in which a party sells; implies Seller |
+| `Offer` | `urn:pdtf:offer:{uuid}` | Relationship credential | Buyer linkage to transaction, amount, status, conditions; implies Buyer |
+| `Gift` | `urn:pdtf:gift:{uuid}` | Relationship credential | Gift of funds towards an offer; implies Giftor |
+| `Representation` | `urn:pdtf:representation:{uuid}` | Relationship credential | One party instructed by another, with the kind of representation |
+| `TransactionRole` | `urn:pdtf:role:{uuid}` | Relationship credential | A role with no more specific relationship |
 
 ## Top-level v4 combined structure
 
@@ -55,6 +55,14 @@ The v4 combined schema uses ID-keyed collections rather than arrays. The Transac
   "transactionRoles": { "urn:pdtf:role:tr-1": {} }
 }
 ```
+
+Relationship keys such as `own-1` and `off-1` are abbreviated for readability; real keys are UUID v4 URNs such as `urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7`.
+
+`properties{}` stays an ID-keyed map for uniform addressing, but it holds exactly one Property: a transaction references one Property and one or more Titles.
+
+:::note[Provisional]
+The single-property, multi-title constraint is the working assumption in [01 §9.1 Q2](/specs/01-entity-graph/#91-for-lms--implementer-discussion) (consultation [Q11](/consultation/#q11-single-property-multiple-titles)).
+:::
 
 The roster carries only what stays true of a party regardless of any relationship: DID, transaction-local id, and firm. Role and every relationship live on the credentials, so that revoking a credential removes what it asserts (see [01 — Entity Graph](/specs/01-entity-graph/)).
 
@@ -141,7 +149,7 @@ The roster carries only what stays true of a party regardless of any relationshi
 
 **Identifier:**
 - Registered: `urn:pdtf:titleNumber:{number}`
-- Unregistered: `urn:pdtf:unregisteredTitle:{id}`
+- Unregistered: `urn:pdtf:unregisteredTitle:{uuid}`
 
 **Contains:**
 - `titleExtents`
@@ -183,13 +191,13 @@ The roster carries only what stays true of a party regardless of any relationshi
 
 ### SellerCapacity
 
-**Identifier:** `urn:pdtf:capacity:{id}`
+**Identifier:** `urn:pdtf:capacity:{uuid}`
 
 **Shape:** thin relationship schema. Implies the Seller role; issued for every seller.
 
 ```json
 {
-  "id": "urn:pdtf:capacity:own-a1b2c3",
+  "id": "urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7",
   "seller": "did:key:z6Mkh...",
   "transaction": "did:web:platform.example.com:transactions:tx-789",
   "sellersCapacity": { "capacity": "Legal Owner" },
@@ -201,13 +209,13 @@ The roster carries only what stays true of a party regardless of any relationshi
 
 ### Offer
 
-**Identifier:** `urn:pdtf:offer:{id}`
+**Identifier:** `urn:pdtf:offer:{uuid}`
 
 Implies the Buyer role. Always identifies exactly one buyer.
 
 ```json
 {
-  "id": "urn:pdtf:offer:off-j1k2l3",
+  "id": "urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f",
   "buyer": "did:key:z6Mkh...",
   "transaction": "did:web:platform.example.com:transactions:tx-789",
   "offerId": "o1",
@@ -224,13 +232,13 @@ Implies the Buyer role. Always identifies exactly one buyer.
 
 ### Gift
 
-**Identifier:** `urn:pdtf:gift:{id}`
+**Identifier:** `urn:pdtf:gift:{uuid}`
 
 Implies the Giftor role. Carries the giftor's link to the offer, so that `Offer` always means buyer.
 
 ```json
 {
-  "id": "urn:pdtf:gift:gf-m4n5o6",
+  "id": "urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
   "donor": "did:key:z6Mkp...",
   "transaction": "did:web:platform.example.com:transactions:tx-789",
   "offerId": "o1",
@@ -248,13 +256,13 @@ Implies the Giftor role. Carries the giftor's link to the offer, so that `Offer`
 
 ### Representation
 
-**Identifier:** `urn:pdtf:representation:{id}`
+**Identifier:** `urn:pdtf:representation:{uuid}`
 
 One per (representative, represented party) pair. The represented party is a person or organisation, never an offer. The representative's firm is on the Transaction roster.
 
 ```json
 {
-  "id": "urn:pdtf:representation:rep-d4e5f6",
+  "id": "urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
   "representative": "did:key:z6Mkj...",
   "representedParty": "did:key:z6Mkh...",
   "role": "Seller's Conveyancer",
@@ -267,13 +275,13 @@ One per (representative, represented party) pair. The represented party is a per
 
 ### TransactionRole
 
-**Identifier:** `urn:pdtf:role:{id}`
+**Identifier:** `urn:pdtf:role:{uuid}`
 
 A party's role where no more specific relationship credential applies. Asserts participation in a role, not a relationship to another named party.
 
 ```json
 {
-  "id": "urn:pdtf:role:tr-g7h8i9",
+  "id": "urn:pdtf:role:d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a",
   "participant": "did:web:bigbank.co.uk",
   "role": "Lender",
   "transaction": "did:web:platform.example.com:transactions:tx-789"

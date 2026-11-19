@@ -21,11 +21,15 @@ Implementations can claim conformance at different levels depending on their sco
 The minimum implementation needed by a consumer (e.g. a lender portal or conveyancing CMS) to trust a single PDTF credential.
 
 To claim Level 1, an implementation MUST correctly process all Level 1 test vectors, which cover:
-- W3C VC v2 format validation
+- Credential format validation
 - DID resolution (`did:key` and `did:web`)
-- Data Integrity signature verification (`eddsa-jcs-2022`)
-- Bitstring Status List resolution and bit checking
+- Signature verification for the securing mechanism stated in [02 §2.4](/specs/02-vc-data-model/): SD-JWT-VC (issuer JWS, Disclosure digests, Key Binding JWT)
+- Status list resolution and entry checking for the mechanism stated in [14 §1](/specs/14-credential-revocation/): Token Status List
 - OpenID Federation trust resolution and Trust Mark `delegation` authorisation checks
+
+:::caution[Provisional: consultation Q20]
+The securing and status mechanisms are provisional ([02 §2.4](/specs/02-vc-data-model/), consultation Q20), so the Level 1 vectors follow them. The current reference libraries implement only Data Integrity (`eddsa-jcs-2022`) and Bitstring Status List. Until SD-JWT-VC vectors are published, the suite also carries Data Integrity vectors, tagged `representation: "data-integrity"`. An implementation MAY claim Level 1 against those, provided it states which representation it was tested with.
+:::
 
 ### Level 2: Entity State Assembly
 Required for systems that compose the entity graph and manage transaction state.
@@ -60,14 +64,16 @@ Each test category contains a `manifest.json` describing the test cases:
   "tests": [
     {
       "id": "vc-valid-epc",
-      "description": "A valid EPC credential signed with eddsa-jcs-2022",
-      "input": "fixtures/valid/epc-1.json",
+      "description": "A valid EPC credential secured as SD-JWT-VC (EdDSA)",
+      "input": "fixtures/valid/epc-1.sd-jwt",
+      "representation": "sd-jwt-vc",
       "expect": "pass"
     },
     {
       "id": "vc-invalid-signature",
       "description": "An EPC credential where the subject data has been tampered with after signing",
-      "input": "fixtures/invalid/tampered-epc-1.json",
+      "input": "fixtures/invalid/tampered-epc-1.sd-jwt",
+      "representation": "sd-jwt-vc",
       "expect": "fail",
       "failReason": "signature_mismatch"
     }
@@ -77,9 +83,9 @@ Each test category contains a `manifest.json` describing the test cases:
 
 ### 2.2 Test Categories
 
-1. **VC Verification:** Valid VCs, tampered subjects, invalid dates, missing required fields.
+1. **VC Verification:** Valid VCs, tampered subjects, tampered or missing Disclosures, invalid Key Binding JWTs, invalid dates, missing required fields.
 2. **DID Resolution:** Valid `did:key` derivations, valid `did:web` documents, incorrect `assertionMethod` arrays, key format errors.
-3. **Status Lists:** Active credentials, revoked credentials, suspended credentials, out-of-bounds indices.
+3. **Status Lists:** Active credentials, revoked credentials, suspended credentials, out-of-bounds indices, unsigned or wrongly-signed status lists.
 4. **Federation Trust Resolution:** Trust Mark `delegation.authorised_paths` coverage, unauthorised paths, wildcard matching (e.g. `Title:*`), trust level inheritance.
 5. **State Assembly:** Pruning tests (e.g. changing `heatingType` to "None" and ensuring `centralHeatingDetails` is stripped).
 

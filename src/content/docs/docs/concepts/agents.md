@@ -22,7 +22,7 @@ In an agentic workflow, an AI model reads the data. If that data is pulled from 
 By representing every property fact as a W3C Verifiable Credential:
 1. **Provenance is mathematically proven:** The AI can verify the `Ed25519` signature to know exactly who issued the credential.
 2. **Authority is governed:** The AI can perform an OpenID Federation trust chain resolution to ensure the issuer is authorised to provide that specific data path.
-3. **Revocation is instant:** The AI can check the Bitstring Status List to ensure the credential hasn't been revoked since issuance.
+3. **Revocation is instant:** The AI can check the issuer's signed status list to ensure the credential hasn't been revoked since issuance.
 
 When an AI model operates on PDTF 2.0 credentials, it is operating on verified facts, drastically reducing the risk of confident but incorrect outputs.
 
@@ -55,8 +55,12 @@ The agent issues an MCP tool call to retrieve the property pack:
 
 Before returning data, the PDTF MCP server checks the graph: Does this conveyancer's DID hold a valid `Representation` credential for the seller on this transaction? If yes, access is granted. **The graph is the ACL.**
 
+:::note[Provisional]
+How access is enforced, graph-based or against a hub ACL, is open for consultation ([Q17](/consultation/#q17-intent-based-access-control)). The classification vocabulary it applies is in [02 §7.2–7.4](/specs/02-vc-data-model/#73-confidentiality-levels).
+:::
+
 **3. State Assembly:**
-The MCP server doesn't just return a raw pile of JSON-LD credentials. It runs the `@pdtf/core` `composeV4StateFromGraph` algorithm:
+The MCP server doesn't just return a raw pile of credentials. It runs the `@pdtf/core` `composeV4StateFromGraph` algorithm:
 - It fetches the `Property`, `Title`, and `Transaction` credentials.
 - It verifies their signatures and OpenID Federation trust marks.
 - It resolves any conflicting claims (e.g., two different EPC ratings) based on issuance time and trust level.

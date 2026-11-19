@@ -9,10 +9,10 @@
 
 ## Key Concepts
 - Entity Graph: Transaction, Property, Title, Person, Organisation, plus role-embodying relationship credentials SellerCapacity, Offer, Gift, Representation, TransactionRole
-- Credentials: W3C Verifiable Credentials v2.0 with DataIntegrityProof (eddsa-jcs-2022, Ed25519)
-- Identity: did:key (persons), did:web (organisations, transactions), urn:pdtf:* (properties, titles, relationships)
-- Trust: OpenID Federation (TIR) — git-hosted, entity:path authorisation
-- Revocation: W3C Bitstring Status List v1.0
+- Credentials: W3C Verifiable Credentials v2.0 data model, secured as SD-JWT-VC with mdoc at the GOV.UK identity boundary (provisional, 02 §2.4, consultation Q20); the reference libraries currently implement Data Integrity (eddsa-jcs-2022, Ed25519)
+- Identity: did:key (persons; did:key or did:web for organisations), did:web (transactions, adapters), urn:pdtf:* (properties, titles, relationships, credential ids)
+- Trust: OpenID Federation 1.0, Trust Anchor https://propdata.org.uk (interim; governance consultation Q6), trust marks pdtf-verified-issuer / account-provider / regulated-conveyancer (provisional, Q7) with entity:path delegation; trust levels root_issuer, trusted_proxy, account_provider, assertion
+- Revocation: IETF Token Status List (`status` claim; provisional, follows Q20, 14 §1); W3C Bitstring Status List in the Data Integrity representation the libraries implement
 - Three trust phases: Moverly trusted proxies → hosted adapters → primary source root issuers
 
 ## Specifications
@@ -86,7 +86,7 @@ The key shift is not "OIDC → DIDs" but **"platform-bound claims → portable c
 
 | Entity | Identifier | Schema | Description |
 |--------|-----------|--------|-------------|
-| **Transaction** | `did:web` | `v4/Transaction.json` | The intent to sell. Metadata, status, dates, and financial context (`saleContext`). References exactly one Property and one or more Titles. DID document hosts service endpoints. |
+| **Transaction** | `did:web` | `v4/Transaction.json` | The intent to sell. Metadata, status, dates, and financial context (`saleContext`). References one Property and one or more Titles. One Property per Transaction is a provisional working assumption ([01 §9.1 Q2](./01-entity-graph.md), consultation [Q11](/consultation/#q11-single-property-multiple-titles)). DID document hosts service endpoints. |
 | **Property** | `urn:pdtf:uprn:{uprn}` | `v4/Property.json` | The physical land and buildings. Physical facts, construction, energy, environmental. Governed by the "logbook test" — only facts that survive the transaction belong here. |
 | **Title** | `urn:pdtf:titleNumber:{number}` | `v4/Title.json` | The legal right. Legal boundary, registered owner, tenure, charges. |
 | **Person** | `did:key` | `v4/Person.json` | A natural person (seller, buyer). |
@@ -211,17 +211,18 @@ The entity decomposition is already in progress on the schemas repo:
 
 ### 4.1 W3C VC Data Model
 
-Each piece of property data becomes a signed Verifiable Credential. PDTF defines property-specific credential types within the W3C VC Data Model v2.0, issued and presented using OpenID protocols (see §4.5).
+Each piece of property data becomes a signed Verifiable Credential. PDTF defines property-specific credential types within the W3C VC Data Model v2.0, issued and presented using OpenID protocols (see §4.5). The example below is the decoded SD-JWT-VC payload, the provisional securing mechanism (§4.4, [02 §2.4](./02-vc-data-model.md)):
 
 ```json
 {
-  "@context": [
-    "https://www.w3.org/ns/credentials/v2",
-    "https://trust.propdata.org.uk/ns/pdtf/v2"
-  ],
-  "type": ["VerifiableCredential", "PropertyCredential"],
-  "issuer": "did:key:z6Mkh...abc",
-  "validFrom": "2026-03-23T07:00:00Z",
+  "iss": "did:web:adapters.propdata.org.uk:epc",
+  "vct": "urn:pdtf:vct:PropertyCredential",
+  "jti": "urn:pdtf:vc:9b2e4f71-3c5a-4d8e-a1f6-2b7c9d0e3f45",
+  "sub": "urn:pdtf:uprn:100023456789",
+  "iat": 1774249200,
+  "status": {
+    "status_list": { "idx": 67890, "uri": "https://adapters.propdata.org.uk/status/epc/12345" }
+  },
   "credentialSubject": {
     "id": "urn:pdtf:uprn:100023456789",
     "energyEfficiency": {
@@ -243,23 +244,11 @@ Each piece of property data becomes a signed Verifiable Credential. PDTF defines
     "type": "PdtfAccessPolicy",
     "confidentiality": "public",
     "pii": false
-  }],
-  "credentialStatus": {
-    "id": "https://adapters.propdata.org.uk/status/epc/12345#67890",
-    "type": "BitstringStatusListEntry",
-    "statusPurpose": "revocation",
-    "statusListIndex": "67890",
-    "statusListCredential": "https://adapters.propdata.org.uk/status/epc/12345"
-  },
-  "proof": {
-    "type": "DataIntegrityProof",
-    "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:key:z6Mkh...abc#key-1",
-    "proofPurpose": "assertionMethod",
-    "proofValue": "z3FXQje..."
-  }
+  }]
 }
 ```
+
+The signature is the enclosing JWS ([02 §9](./02-vc-data-model.md)), not an embedded `proof`.
 
 ### 4.2 Relationship to OpenID Verified Claims
 
@@ -269,8 +258,8 @@ Implementers migrating from v1 should note:
 - The `credentialSubject` sparse object replaces `claimPath` + `claimValue`
 - The `evidence` model simplifies the deeply nested OIDC evidence schema
 - `termsOfUse` carries the same confidentiality/PII/role semantics as before
-- `credentialStatus` adds revocation capability (absent in v1)
-- `proof` adds cryptographic verification (absent in v1)
+- The `status` claim adds revocation capability, which v1 lacked ([14 §1](./14-credential-revocation.md))
+- The issuer's signature adds cryptographic verification, which v1 lacked ([02 §2.4](./02-vc-data-model.md))
 
 ### 4.3 Claims Representation — Sparse Objects + Dependency Pruning
 
@@ -300,36 +289,20 @@ State assembly uses MERGE semantics. A **dependency pruning pass** then strips `
 
 **Why this matters:** The pruning pass is the clean, spec-compliant way to handle dependent data. It requires implementers to understand schema discriminators, but the reference implementation will handle it and the alternative (REPLACE semantics with potential stale nested data) is worse.
 
-### 4.4 Proof Format: Data Integrity vs JWS/VC-JWT
+### 4.4 Securing Mechanism
 
-PDTF 2.0 uses **Data Integrity proofs** (`eddsa-jcs-2022`) as the primary securing mechanism for credentials at rest and in storage. Both Data Integrity and JWS are valid securing mechanisms for W3C VCs. The choice has meaningful consequences.
+:::caution[Provisional: consultation Q20]
+The securing mechanism is stated once, in [02 §2.4](./02-vc-data-model.md). This section summarises it and does not restate the decision.
+:::
 
-| | Data Integrity (PDTF primary) | JWS / VC-JWT |
-|---|---|---|
-| Proof location | `proof` object embedded in the VC JSON | Detached JWS or entire VC wrapped as a JWT (header.payload.signature) |
-| Canonicalisation | JCS (JSON Canonicalization Scheme, RFC 8785) | None needed — signs raw bytes |
-| Human readability | VC is plain JSON, directly inspectable | VC-JWT requires base64 decoding before any claims are visible |
-| Selective disclosure path | Foundation for BBS+ and JSON-LD ZKP mechanisms | Requires SD-JWT (separate spec) |
-| W3C VC 2.0 positioning | Primary securing mechanism | Supported but positioned as legacy |
-| OID4VCI format | `ldp_vc` credential format | `jwt_vc_json` credential format |
-| Key algorithm | Ed25519 (via `eddsa-jcs-2022` cryptosuite) | Algorithm-agnostic (RS256, ES256, EdDSA, etc.) |
+PDTF's working choice is **SD-JWT-VC** for its own credentials, with **mdoc** verified at the GOV.UK identity boundary. The choice is provisional pending consultation [Q20](/consultation/#q20-credential-format--securing-mechanism). Earlier drafts made embedded **Data Integrity** proofs (`eddsa-jcs-2022`) primary. That approach is retained in [02 §9.1](./02-vc-data-model.md) only as the superseded representation, and it is what the current reference libraries implement.
 
-**Rationale for Data Integrity as primary format:**
+Where JWS/JWT appears in PDTF 2.0:
 
-1. **JSON-native.** PDTF VCs stay as parseable JSON throughout their lifecycle. Consumers, debuggers, and AI agents can read claims without decoding. VC-JWT produces opaque base64 blobs that must be unpacked before inspection.
-
-2. **Selective disclosure upgrade path.** Data Integrity is the foundation for BBS+ signatures, enabling future scenarios like "share the EPC rating but not the address" without re-issuance.
-
-3. **W3C alignment.** The VC Data Model v2.0 editors have positioned Data Integrity as the primary path forward.
-
-4. **Deterministic serialisation.** JCS provides a canonical JSON form regardless of whitespace or key ordering.
-
-**Where JWS/JWT is used in PDTF 2.0:**
-
-- **OID4VCI credential responses** may use `jwt_vc_json` format when interacting with wallet implementations that prefer JWT. PDTF adapters MUST support `ldp_vc` and SHOULD support `jwt_vc_json`.
-- **OID4VP presentation tokens** use JWT as the transport envelope (VP Token), while the credentials inside remain Data Integrity VCs.
-- **OpenID Federation entity statements** are signed JWTs by definition — this is the federation layer, not the credential layer.
-- **Status list credentials** use Data Integrity for consistency, but JWS is technically permitted.
+- **Credentials.** Each credential is an SD-JWT-VC: an issuer-signed JWS with selective-disclosure Disclosures and, when holder-bound, a Key Binding JWT ([02 §9](./02-vc-data-model.md)).
+- **Status lists.** Under SD-JWT-VC these are Status List Tokens, which are signed JWTs ([14 §1.1](./14-credential-revocation.md)).
+- **OID4VP presentation tokens.** JWT is the transport envelope (VP Token).
+- **OpenID Federation.** Entity Statements and Trust Marks are signed JWTs by definition. This is the federation layer, not the credential layer.
 
 ### 4.5 Credential Issuance and Presentation Protocols
 
@@ -338,7 +311,7 @@ PDTF 2.0 uses OpenID standards for credential exchange:
 **OID4VCI (OpenID for Verifiable Credential Issuance)** — how credentials are issued:
 - Adapters and primary sources act as OID4VCI credential issuers
 - Each issuer publishes a credential issuer metadata document at `/.well-known/openid-credential-issuer`
-- Supported credential formats: `ldp_vc` (primary), `jwt_vc_json` (interoperability)
+- Supported credential formats: `dc+sd-jwt` (SD-JWT-VC, provisional per [02 §2.4](./02-vc-data-model.md)), with `mso_mdoc` accepted at the GOV.UK identity boundary. `ldp_vc` is the superseded Data Integrity format, which the current reference libraries emit.
 - Credential types are PDTF-defined: `PropertyCredential`, `TitleCredential`, `SellerCapacityCredential`, `RepresentationCredential`, etc.
 - Pre-authorised code flow for adapter-initiated issuance (no user interaction needed for data lookups)
 - Authorization code flow for user-initiated credential requests
@@ -422,10 +395,10 @@ To access restricted or confidential VCs (or the pre-composed state derived from
 
 1. **Present a valid credential via OID4VP** — a SellerCapacity, Offer, Representation, or TransactionRole credential proving their relationship to the transaction
 2. **Prove control of their DID** — implicit in the OID4VP flow (the VP is signed by the holder's key)
-3. **Revocation check** — the presented credential must not be revoked (Bitstring Status List check)
+3. **Revocation check** — the presented credential must not be revoked (status list check, [14 §1](./14-credential-revocation.md))
 4. **termsOfUse filtering** — the system returns only VCs whose `termsOfUse` policy permits access for the requester's role
 
-Public VCs (title deeds, EPCs, searches) require no authentication.
+Only `public` VCs require no authentication: EPCs, flood risk zones and council tax bands, for example. Title register extracts and local authority searches are `transactionParticipants`, because the register names the proprietors. The classification vocabulary and its examples are stated in [02 §7.2–7.3](./02-vc-data-model.md) (provisional, consultation Q17).
 
 ---
 
@@ -433,7 +406,7 @@ Public VCs (title deeds, EPCs, searches) require no authentication.
 
 ### 6.1 Federated Trust via OpenID Federation
 
-PDTF 2.0 uses **OpenID Federation (RFC 9396)** as its trust infrastructure. The federation model establishes who is authorised to issue which property credentials, using a chain of signed entity statements from a trust anchor down to leaf entities.
+PDTF 2.0 uses **[OpenID Federation 1.0](https://openid.net/specs/openid-federation-1_0.html)** as its trust infrastructure. The federation model establishes who is authorised to issue which property credentials, using a chain of signed entity statements from a trust anchor down to leaf entities.
 
 ```
                     ┌──────────────────────────┐
@@ -492,14 +465,14 @@ PDTF 2.0 uses **OpenID Federation (RFC 9396)** as its trust infrastructure. The 
       "credential_issuer": "https://adapters.propdata.org.uk/hmlr",
       "credential_endpoint": "https://adapters.propdata.org.uk/hmlr/credential",
       "credentials_supported": [{
-        "format": "ldp_vc",
-        "types": ["VerifiableCredential", "TitleCredential"],
+        "format": "dc+sd-jwt",
+        "vct": "urn:pdtf:vct:TitleCredential",
         "cryptographic_binding_methods_supported": ["did:key", "did:web"]
       }]
     }
   },
   "trust_marks": [{
-    "id": "https://propdata.org.uk/trust-marks/title-data-provider",
+    "id": "https://propdata.org.uk/trust-marks/pdtf-verified-issuer",
     "trust_mark": "eyJhbGciOiJFZERTQSIs..."
   }],
   "authority_hints": ["https://propdata.org.uk"]
@@ -510,41 +483,36 @@ PDTF 2.0 uses **OpenID Federation (RFC 9396)** as its trust infrastructure. The 
 
 Trust marks are the PDTF-specific mechanism for expressing what an entity is authorised to do within the property ecosystem. They use the OpenID Federation trust mark standard (see [Sub-spec 04](./04-openid-federation.md)).
 
-Each trust mark is a signed JWT issued by the trust anchor (or a delegated trust mark issuer), asserting that an entity meets the requirements for a specific role:
+Each trust mark is a signed JWT issued by the trust anchor (or a delegated trust mark issuer), asserting that an entity meets the requirements for a specific role.
 
-| Trust Mark ID | Meaning | Issued To |
-|---------------|---------|-----------|
-| `https://propdata.org.uk/trust-marks/title-data-provider` | Authorised to issue TitleCredentials | HMLR, adapters proxying HMLR data |
-| `https://propdata.org.uk/trust-marks/search-provider` | Authorised to issue property search credentials | Search providers, LLC adapters |
-| `https://propdata.org.uk/trust-marks/regulated-conveyancer` | SRA/CLC regulated conveyancing firm | Conveyancer organisations |
-| `https://propdata.org.uk/trust-marks/energy-data-provider` | Authorised to issue EPC/energy credentials | MHCLG, EPC adapters |
-| `https://propdata.org.uk/trust-marks/environmental-data-provider` | Authorised to issue environmental risk credentials | EA, flood risk adapters |
-| `https://propdata.org.uk/trust-marks/account-provider` | Authorised to issue user DIDs on behalf of persons | The reference platform, LMS, wallet providers |
+:::note[Catalogue: provisional, consultation Q7]
+The trust mark catalogue is stated once, in [04 §5](./04-openid-federation.md): `pdtf-verified-issuer`, `account-provider` and `regulated-conveyancer`. It is provisional pending consultation [Q7](/consultation/#q7-trust-mark-granularity). Data-category authority, such as title data or EPC data, is not a separate trust mark. It is the `delegation.authorised_paths` inside a `pdtf-verified-issuer` mark.
+:::
 
-**Trust mark structure:**
+**Trust mark structure** (see [04 §5.1](./04-openid-federation.md)):
 
 ```json
 {
   "iss": "https://propdata.org.uk",
   "sub": "https://adapters.propdata.org.uk/hmlr",
-  "id": "https://propdata.org.uk/trust-marks/title-data-provider",
+  "id": "https://propdata.org.uk/trust-marks/pdtf-verified-issuer",
   "iat": 1713186000,
-  "exp": 1744722000,
-  "ref": "https://propdata.org.uk/trust-marks/title-data-provider/policy",
+  "exp": 1713790800,
+  "ref": "https://propdata.org.uk/trust-marks/pdtf-verified-issuer/policy",
   "delegation": {
     "authorised_paths": [
       "Title:/titleNumber",
       "Title:/titleExtents",
-      "Title:/registerExtract",
+      "Title:/registerExtract/*",
       "Title:/ownership/*"
     ],
     "trust_level": "trusted_proxy",
-    "proxy_for": "hmlr.gov.uk"
+    "proxy_for": "https://hmlr.gov.uk"
   }
 }
 ```
 
-The `delegation` claim is a PDTF extension to the standard trust mark. It carries the **entity:path authorisation** — specifying exactly which credential subject paths an issuer is authorised to populate. This is PDTF's domain-specific contribution to the trust mark: not just "this entity is a title data provider" but "this entity is authorised to issue credentials covering these specific data paths."
+The `delegation` claim is a PDTF extension to the standard trust mark. It carries the **entity:path authorisation** — specifying exactly which credential subject paths an issuer is authorised to populate. This is PDTF's domain-specific contribution to the trust mark: not just "this entity is a verified issuer" but "this entity is authorised to issue credentials covering these specific data paths."
 
 ### 6.3 Issuer Accreditation
 
@@ -593,10 +561,10 @@ EBSI's Root-TAO/TAO hierarchy is conceptually elegant — trust chains are VCs a
 ### 6.5 Three-Phase Evolution
 
 **Phase 1 (now): The Platform as Federation Trust Anchor**
-- The platform operator runs the trust anchor at `propdata.org.uk`
+- The platform operator runs the interim Trust Anchor at `https://propdata.org.uk` ([04 §3](./04-openid-federation.md); who operates it is held open by consultation [Q6](/consultation/#q6-trust-anchor-governance))
 - Existing collectors become OID4VCI credential issuers (adapters) as leaf entities
 - Each adapter holds trust marks issued by the trust anchor
-- Federation metadata served from the PDTF Trust Anchor at `trust.pdtf.org`
+- Federation metadata is served from the Trust Anchor's `.well-known/openid-federation` and federation endpoints
 - The reference platform is the sole account provider for user DIDs
 - "Map-and-wrap": call existing APIs (HMLR OC1, EPC API, EA flood), issue as signed VCs via OID4VCI
 
@@ -657,7 +625,7 @@ The overlap period ensures that credentials signed with the old key remain verif
 
 ### 7.3 Credential Revocation
 
-All issuers **must** support revocation via [W3C Bitstring Status List v2](https://www.w3.org/TR/vc-bitstring-status-list/). This is critical for:
+All issuers **must** support revocation. The mechanism is stated once, in [14 §1 (D18) and §1.1](./14-credential-revocation.md): the IETF **Token Status List** (`status` claim) under the provisional SD-JWT-VC securing mechanism, and the W3C Bitstring Status List only in the superseded representation. Revocation is critical for:
 
 - **SellerCapacity/Representation credentials** — must be revocable when a sale completes, a mandate is withdrawn, or a conveyancer is replaced
 - **Property data VCs** — revocable when data is superseded (e.g. new EPC issued, updated flood risk assessment)
@@ -665,11 +633,13 @@ All issuers **must** support revocation via [W3C Bitstring Status List v2](https
 - **Trust marks** — revocable when an entity's accreditation is withdrawn (complementing the trust mark's `exp`)
 
 **How it works:**
-1. Each issuer hosts one or more Bitstring Status List credentials at a public URL
-2. Each VC includes a `credentialStatus` field pointing to its entry in the status list
-3. The status list is a compressed bitstring — each bit position maps to a credential
-4. To revoke: issuer flips the bit at the credential's `statusListIndex`
-5. Verifiers fetch the status list (cacheable with short TTL) and check the bit
+1. Each issuer hosts one or more signed status lists at a public URL
+2. Each credential carries a `status` claim pointing to its entry (`idx`) in a list (`uri`)
+3. The status list is a compressed bitstring — each entry maps to a credential
+4. To revoke: the issuer sets the credential's entry and re-signs the list
+5. Verifiers fetch the status list (cacheable with short TTL), verify its signature and read the entry
+
+Suspension as well as revocation is the working position for relationship credentials ([14 §8](./14-credential-revocation.md)).
 
 **Adapter hosting:** Each adapter hosts its own status list endpoints (e.g. `adapters.propdata.org.uk/status/epc/{listId}`). Status lists are signed by the same adapter key used for VC issuance.
 
@@ -703,12 +673,12 @@ To solve this while retaining cryptographic provenance, PDTF platforms use a **C
 1. **Onboarding & IDV:** The platform performs AML/ID checks and issues an Identity VC for the user.
 2. **Key Provisioning:** The platform generates a unique, secure enclave key pair (e.g. in Cloud KMS) for that specific user.
 3. **Session Binding:** When the user logs into the web portal, their session is securely bound to that cloud wallet key.
-4. **Seamless Signing:** As the user fills out forms, the platform backend uses the user's KMS key to sign the assertions in the background.
-5. **Presentation:** The platform packages the signed assertions plus the Identity VC into an OID4VP presentation and delivers it to the verifier (e.g. the buyer's conveyancer).
+4. **Seamless Issuance:** As the user fills out forms, the platform issues each assertion as a credential under its own `did:web`. It records the user's `did:key` in `evidence` and, where the credential is holder-bound, in `cnf`. The working assumption is stated in [02 §3.2.1](./02-vc-data-model.md); it is provisional, consultation Q4.
+5. **Presentation:** The platform uses the user's KMS key to sign the presentation (the Key Binding JWT / VP). It delivers the assertions plus the Identity VC to the verifier (e.g. the buyer's conveyancer) through OID4VP.
 
-To the verifier, this looks exactly like a standard OpenID presentation from a personal digital wallet — they receive cryptographic proof that the verified person made the assertions. To the user, it feels like a normal web application.
+To the verifier, this looks exactly like a standard OpenID presentation from a personal digital wallet. They receive cryptographic proof that an accredited account provider recorded the assertion from that verified person, and that the person's key controls the presentation. To the user, it feels like a normal web application.
 
-**Future migration to BYOW:** When government or ecosystem wallets (e.g. GOV.UK Wallet, EUDI) become mainstream, users can choose to "Bring Your Own Wallet" (BYOW). They authenticate via OID4VP and sign a finalised document at the end of the process using their own device key. The underlying PDTF architecture and verification logic does not need to change to support this migration.
+**Future migration to BYOW:** When government or ecosystem wallets (e.g. GOV.UK Wallet, EUDI) become mainstream, users can choose to "Bring Your Own Wallet" (BYOW). They authenticate via OID4VP and sign a finalised document at the end of the process using their own device key. At that point 02 §3.2.1 is revisited, and a person MAY issue directly. The underlying PDTF architecture and verification logic does not need to change to support this migration.
 
 ---
 
@@ -766,14 +736,16 @@ Each adapter is an **OID4VCI credential issuer** and an **OpenID Federation leaf
 
 ### 9.2 Initial Adapters (from existing collectors)
 
-| Adapter | Source API | Credential Types | Trust Mark | Priority |
+Every adapter holds the `pdtf-verified-issuer` trust mark ([04 §5](./04-openid-federation.md); catalogue provisional, consultation Q7). What differs between adapters is the `delegation.authorised_paths` inside it.
+
+| Adapter | Source API | Credential Types | Authorised paths (`delegation`) | Priority |
 |---------|-----------|-----------------|------------|----------|
-| `hmlr` | HMLR OC1/OC2 | `TitleCredential` | `title-data-provider` | High |
-| `epc` | MHCLG EPC API | `PropertyCredential` (energy paths) | `energy-data-provider` | High (just rebuilt) |
-| `ea-flood` | EA Flood Risk API | `PropertyCredential` (flood paths) | `environmental-data-provider` | High |
-| `llc` | HMLR LLC API | `PropertyCredential` (LLC paths) | `search-provider` | Medium |
-| `bsr` | BSR Register API | `PropertyCredential` (building safety) | `search-provider` | Medium |
-| `voa` | VOA Council Tax | `PropertyCredential` (council tax) | `search-provider` | Lower |
+| `hmlr` | HMLR OC1/OC2 | `TitleCredential` | `Title:/registerExtract/*`, `Title:/titleExtents`, … | High |
+| `epc` | MHCLG EPC API | `PropertyCredential` (energy paths) | `Property:/energyEfficiency/*` | High (just rebuilt) |
+| `ea-flood` | EA Flood Risk API | `PropertyCredential` (flood paths) | `Property:/environmentalIssues/flooding/*` | High |
+| `llc` | HMLR LLC API | `PropertyCredential` (LLC paths) | `Property:/localSearches/*` | Medium |
+| `bsr` | BSR Register API | `PropertyCredential` (building safety) | building safety paths | Medium |
+| `voa` | VOA Council Tax | `PropertyCredential` (council tax) | `Property:/councilTax/*` | Lower |
 
 ### 9.3 Adapter Credential Issuance Flow
 
@@ -792,7 +764,7 @@ The pre-authorised code flow is typical for adapter-initiated issuance: the plat
 
 1. Requester presents a **SellerCapacity, Offer, Representation, or TransactionRole credential** via OID4VP
 2. Adapter verifies the VP signature and the contained credential(s)
-3. Adapter checks credential is **not revoked** (Bitstring Status List)
+3. Adapter checks credential is **not revoked** (status list, 14 §1)
 4. Adapter verifies its own **trust chain** is valid (federation metadata)
 5. Adapter checks `termsOfUse` of requested entity:paths against requester's role
 6. If authorised: fetch data, issue VC, return
@@ -829,11 +801,11 @@ Input: VC document
       → Verify trust marks held by issuer
   → Check issuer's trust marks cover the credential's entity:path combinations
   → Check credential is not expired
-  → Check credential revocation status:
-      → Fetch Bitstring Status List from credentialStatus.statusListCredential (cached, short TTL)
-      → Verify status list credential signature
-      → Check bit at statusListIndex — if set, credential is revoked
-  → Return: { valid: true, trustLevel: "trusted_proxy", trustMarks: ["title-data-provider"], revoked: false }
+  → Check credential revocation status (14 §1):
+      → Fetch the Status List Token from status.status_list.uri (cached, short TTL)
+      → Verify the status list signature
+      → Check the entry at status.status_list.idx — if set, credential is revoked
+  → Return: { valid: true, trustLevel: "trusted_proxy", trustMarks: ["pdtf-verified-issuer"], revoked: false }
 ```
 
 ---
@@ -970,7 +942,7 @@ With envelope encryption, platforms can sync freely:
 - **Replicate all encrypted VCs** for a transaction — they're opaque blobs to non-participants
 - **Only participants with a wrapped key can decrypt** — decryption requires the X25519 private key matching one of the `recipients`
 - **A platform that can't decrypt is not a data controller** for that content under GDPR
-- **Revocation status is still public** (Bitstring Status Lists are unsigned data) — platforms can check revocation without decrypting content
+- **Revocation status is still public.** Status lists are signed by their issuer but not encrypted ([14 §4](./14-credential-revocation.md)), so platforms can check revocation without decrypting content
 - **VC signatures remain valid inside the encryption envelope** — decrypt first, then verify the inner VC proof
 
 #### Recipient Management
@@ -988,13 +960,13 @@ When a participant is removed or a credential is revoked:
 
 #### Confidentiality Tiers
 
-Not all VCs need encryption. The encryption model follows the existing `termsOfUse` confidentiality levels:
+Not all VCs need encryption. The encryption model follows the `termsOfUse` confidentiality levels defined in [02 §7.2–7.3](./02-vc-data-model.md), which are provisional (consultation Q17, Q19):
 
 | Confidentiality | Encryption | Rationale |
 |----------------|------------|-----------|
-| `public` | None — plaintext VC | Public register data, EPC ratings |
-| `transactionParticipants` | Encrypted, all participant DIDs as recipients | Most property data |
-| `roleRestricted` | Encrypted, only matching-role DIDs as recipients | Financial data, personal details |
+| `public` | None — plaintext VC | EPC ratings, flood risk zones |
+| `transactionParticipants` | Encrypted, all participant DIDs as recipients | Most property data, title register extracts, searches |
+| `roleRestricted` | Encrypted, only DIDs holding a role in `roleRestrictions` as recipients | Financial data, personal details, offer and gift terms |
 | `partyOnly` | Encrypted, only the data subject's DID as recipient | Identity verification details |
 
 ### 12.5 Key Agreement Key Derivation
@@ -1057,7 +1029,7 @@ Because `did:web` encodes the domain into the identifier itself, a staging crede
 
 #### Local development
 
-For local development and unit testing, `did:key` eliminates all infrastructure dependencies. The `MemoryKeyProvider` generates ephemeral keys, the `VcValidator` resolves `did:key` DIDs locally without network access, and an in-memory mock federation (Entity Statements + Trust Marks signed by a dev-only Trust Anchor key) replaces the live `trust.pdtf.org` endpoints. This means a developer can sign, verify, and compose credentials on a laptop with zero cloud access.
+For local development and unit testing, `did:key` eliminates all infrastructure dependencies. The `MemoryKeyProvider` generates ephemeral keys, the `VcValidator` resolves `did:key` DIDs locally without network access, and an in-memory mock federation (Entity Statements + Trust Marks signed by a dev-only Trust Anchor key) replaces the live Trust Anchor endpoints at `propdata.org.uk`. This means a developer can sign, verify, and compose credentials on a laptop with zero cloud access.
 
 ---
 
@@ -1079,7 +1051,7 @@ For local development and unit testing, `did:key` eliminates all infrastructure 
 | 11 | `11-api-design.md` | TODO | FAPI 2.0 security profile, MCP + OpenAPI interface, OID4VCI/OID4VP flows, AI agent skills |
 | 12 | `12-access-control-and-encryption.md` | TODO | OID4VP authentication, VP presentation, VC envelope encryption *(Phase 2+)*, platform sync |
 | 13 | `13-reference-implementations.md` | DRAFTED | VC validator, federation client, graph composer, DID resolver specs |
-| 14 | `14-credential-revocation.md` | DRAFTED | Bitstring Status List hosting, revocation flows, cache strategy |
+| 14 | `14-credential-revocation.md` | DRAFTED | Status mechanism (Token Status List, provisional), status list hosting, revocation flows, cache strategy |
 | 15 | `15-conformance-testing.md` | DRAFTED | Conformance levels, test vectors, interop protocols |
 
 ---
@@ -1106,7 +1078,7 @@ All architectural decisions made through v0.3 of this document are baked into th
 | # | Question | Spec Ref | Decision | Date |
 |---|----------|----------|----------|------|
 | Q1.1 | Claims merge strategy: REPLACE vs MERGE vs hybrid. | 02 §5, 07 §4 | Issuer-driven credential granularity cannot be mandated (see Q1.2 resolution), which weakens the REPLACE case: REPLACE requires issuers to understand path boundaries precisely. MERGE with schema-driven pruning is simpler for issuers but requires the assembler to understand dependencies. Tradeoff still open for industry consensus. | |
-| Q2.1 | Multi-property transactions: how do overlays, form mappings, and v3 `propertyPack` (singular) handle multiple properties? | 01 §9.1, 07 §12.1 | | |
+| Q2.1 | Multi-property transactions: how do overlays, form mappings, and v3 `propertyPack` (singular) handle multiple properties? | 01 §9.1 Q2, 07 §12.1 | Working assumption: one Property, one or more Titles per Transaction (01 §9.1 Q2). Held open by consultation Q11. | |
 
 ### 14.2.1 Theme 7: Entity Model Boundaries
 
@@ -1660,14 +1632,14 @@ The array order is the v3 participants order and is authoritative for recomposit
 | Transaction | `did:web` | `did:web:platform.example.com:transactions:abc123` | Platform-assigned; embeds the v3 `transactionId` |
 | Property | `urn:pdtf:uprn:{uprn}` | `urn:pdtf:uprn:100023456789` | Ordnance Survey UPRN |
 | Title | `urn:pdtf:titleNumber:{number}` | `urn:pdtf:titleNumber:AB12345` | HMLR title number |
-| Title (unregistered) | `urn:pdtf:unregisteredTitle:{id}` | `urn:pdtf:unregisteredTitle:ut-7f3a` | Generated (minting open — §9.1 Q7); kept in `alsoKnownAs` after first registration (§4.2.2) |
+| Title (unregistered) | `urn:pdtf:unregisteredTitle:{id}` | `urn:pdtf:unregisteredTitle:f47ac10b-58cc-4372-a567-0e02b2c3d479` | Generated (minting open — §9.1 Q7); kept in `alsoKnownAs` after first registration (§4.2.2) |
 | Person | `did:key` | `did:key:z6Mkhabc123...` | The party's own DID, stable across transactions |
 | Organisation | `did:web` | `did:web:smithandco.law` | Self-hosted or orchestrator-hosted |
-| SellerCapacity | `urn:pdtf:capacity:{id}` | `urn:pdtf:capacity:own-1a2b` | Generated |
-| Offer | `urn:pdtf:offer:{id}` | `urn:pdtf:offer:off-7g8h` | Generated (or migrated from v3 offer key) |
-| Gift | `urn:pdtf:gift:{id}` | `urn:pdtf:gift:gf-9i0j` | Generated |
-| Representation | `urn:pdtf:representation:{id}` | `urn:pdtf:representation:rep-3c4d` | Generated |
-| TransactionRole | `urn:pdtf:role:{id}` | `urn:pdtf:role:tr-5e6f` | Generated |
+| SellerCapacity | `urn:pdtf:capacity:{id}` | `urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7` | Generated |
+| Offer | `urn:pdtf:offer:{id}` | `urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f` | Generated (or migrated from v3 offer key) |
+| Gift | `urn:pdtf:gift:{id}` | `urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e` | Generated |
+| Representation | `urn:pdtf:representation:{id}` | `urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d` | Generated |
+| TransactionRole | `urn:pdtf:role:{id}` | `urn:pdtf:role:d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a` | Generated |
 | PropertyTitleLink | `urn:pdtf:propertyTitleLink:{id}` | `urn:pdtf:propertyTitleLink:e5f6a7b8-c9d0-4e1f-8a3b-4c5d6e7f8a9b` | Generated by the issuer (HMLR, or the seller's conveyancer for unregistered land) |
 
 Entity ids come from the `idFactory` passed to `decompose`. The built-in default is deterministic and derived from `transactionId`, so repeated runs are stable and diffable, but it is a placeholder: supply your own to mint real identifiers. `Transaction.id` is synthetic — `decompose` mints it and `recompose` drops it — so the choice of DID method makes no difference to the v3 that comes back.
@@ -1693,7 +1665,7 @@ Entity ids come from the `idFactory` passed to `decompose`. The built-in default
 
 ### 6.1 Top-Level Structure
 
-Composed v4 state keeps the Transaction's own fields at the top level, with ID-keyed maps for the data entities and one collection per relationship credential type:
+Composed v4 state keeps the Transaction's own fields at the top level, with ID-keyed maps for the data entities and one collection per relationship credential type. Identifiers in the example are abbreviated for readability (`own-1`, `rep-1`). Real generated identifiers are UUID v4, as in §5.1 and [03 §3.3](./03-did-methods.md):
 
 ```json
 {
@@ -2028,7 +2000,7 @@ Every piece of property data in PDTF 2.0 — from an EPC rating to an ownership 
 - Claims representation: sparse objects with MERGE semantics and dependency pruning
 - Evidence model (simplified from OIDC-derived schema)
 - Terms of use (access control metadata)
-- Credential status (revocation via Bitstring Status List)
+- Credential status (the revocation reference each credential carries; the mechanism is stated in [14 §1](./14-credential-revocation.md))
 - Securing mechanism (SD-JWT-VC — provisional; Data Integrity / eddsa-jcs-2022 retained as superseded fallback)
 - Type metadata (`vct`) and optional JSON-LD context definition
 - Migration path from current OIDC verified claims
@@ -2038,7 +2010,7 @@ Every piece of property data in PDTF 2.0 — from an EPC rating to an ownership 
 - DID methods and resolution (see 03 — DID Methods)
 - OpenID Federation trust architecture and Trust Mark schema (see 04 — OpenID Federation)
 - State assembly algorithms (see 07 — State Assembly)
-- Bitstring Status List hosting infrastructure (see 14 — Credential Revocation)
+- Status list hosting infrastructure (see 14 — Credential Revocation)
 
 ---
 
@@ -2057,14 +2029,14 @@ Every PDTF credential MUST include:
 | `issuer` | Required | Required | DID string (not object form) |
 | `validFrom` | Optional in W3C | **Required** in PDTF | ISO 8601 datetime — when data was asserted/retrieved |
 | `credentialSubject` | Required | Required | Single subject (not array). `id` is always present. |
-| `credentialStatus` | Optional in W3C | **Required** in PDTF | BitstringStatusListEntry — see §8 |
+| Revocation reference | Optional in W3C | **Required** in PDTF | Under SD-JWT-VC, the Token Status List `status` claim. `credentialStatus` (`BitstringStatusListEntry`) appears only in the superseded representation. The mechanism is provisional and is stated in [14 §1](./14-credential-revocation.md); see §8 |
 | `proof` | — | — | Under SD-JWT-VC the credential is JWS-secured (§9), not an embedded `proof`; the `proof` block appears only in the superseded Data-Integrity representation |
 
 ### 2.2 Optional Properties (Used)
 
 | Property | PDTF Usage | Notes |
 |----------|-----------|-------|
-| `id` | Required | Credential identifier URI. REQUIRED for deduplication (Q3.3 resolved). Format: `urn:pdtf:vc:{uuid}`. |
+| `id` | Required | Credential identifier URI. REQUIRED for deduplication ([00 §14.1 Q3.3](./00-architecture-overview.md)). Carried as the `jti` claim under SD-JWT-VC (§9). Format: `urn:pdtf:vc:{uuid}`. |
 | `validUntil` | Optional | Expiry datetime. Used for time-limited credentials (e.g. EPC with known expiry). |
 | `evidence` | Used | Simplified evidence model — see §6 |
 | `termsOfUse` | Used | PdtfAccessPolicy — see §7 |
@@ -2084,6 +2056,8 @@ Every PDTF credential MUST include:
 This section documents PDTF's **working** securing-mechanism choice: **SD-JWT-VC**. It is **provisional** pending industry consultation ([Q20](/consultation/#q20-credential-format--securing-mechanism)) and confirmation against the GOV.UK Wallet's published format list. Decision record: [§13.4](#134-credential-format--securing-mechanism).
 :::
 
+**This section is the single statement of PDTF's securing mechanism.** Other sub-specs and the documentation site defer to it. Where they still show `DataIntegrityProof` / `eddsa-jcs-2022`, that is either the superseded representation or the current state of the reference libraries, which implement Data Integrity only. Neither is the spec's answer.
+
 PDTF secures credentials as **SD-JWT-VC** ([IETF SD-JWT VC](https://datatracker.ietf.org/doc/draft-ietf-oauth-sd-jwt-vc/)) — a JWS-signed credential with selective disclosure and holder key binding — and verifies **mdoc** (ISO/IEC 18013-5) at the GOV.UK identity boundary. Rationale:
 
 1. **Ecosystem alignment** — SD-JWT-VC + mdoc are the formats mandated by eIDAS 2.0 and profiled by [OpenID4VC HAIP](https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0.html); the GOV.UK Wallet issues mdoc. Plain JSON-LD Data Integrity is issued by neither.
@@ -2094,7 +2068,7 @@ PDTF secures credentials as **SD-JWT-VC** ([IETF SD-JWT VC](https://datatracker.
 **Superseded approach.** Earlier drafts used embedded W3C **Data Integrity** proofs (`DataIntegrityProof`, `eddsa-jcs-2022`) over JSON-LD; that is retained as a documented fallback/alternative in [§9.1](#91-superseded--data-integrity-eddsa-jcs-2022) but is no longer primary. PDTF MAY keep a JSON-LD `@context` purely as an optional **semantic overlay** ([§10](#10-type-metadata--json-ld-context)), decoupled from the securing mechanism.
 
 :::note[Reading the examples in this spec]
-The credential examples throughout this document show the credential **claims payload** (the `credentialSubject` content) — which is unchanged by the securing-mechanism choice — still illustrated with a JSON-LD `@context` and a `DataIntegrityProof` block for readability. Under SD-JWT-VC those same claims are carried in the JWS/SD-JWT envelope defined in [§9](#9-securing-mechanism); the inline `@context`/`proof` blocks reflect the superseded approach and are pending migration.
+The examples in §3.2 and the §9 worked example are in SD-JWT-VC form. The other credential examples show the credential **claims payload** (the `credentialSubject` content), which the securing-mechanism choice does not change. They are still illustrated with a JSON-LD `@context` and a `DataIntegrityProof` block. Under SD-JWT-VC those same claims are carried in the JWS/SD-JWT envelope defined in [§9](#9-securing-mechanism); the inline `@context`/`proof` blocks reflect the superseded approach and are pending migration.
 :::
 
 ### 2.5 Credential Subject Constraints
@@ -2135,9 +2109,9 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](./01-entity
 | `PropertyCredential` | Property | `urn:pdtf:uprn:{uprn}` | Trusted proxy / root issuer / user | Property facts: EPC, flood, build info, legal questions, fixtures, searches |
 | `TitleCredential` | Title | `urn:pdtf:titleNumber:{n}` or `urn:pdtf:unregisteredTitle:{id}` | HMLR proxy / root issuer | Register extract, ownership type, leasehold terms, encumbrances |
 | `SellerCapacityCredential` | SellerCapacity | `urn:pdtf:capacity:{id}` | Account provider | The capacity in which a party sells. Implies Seller. |
-| `OfferCredential` | Offer | `urn:pdtf:offer:{id}` | Buyer (Person) or platform | Buyer DID, amount, status, conditions. Implies Buyer. |
-| `GiftCredential` | Gift | `urn:pdtf:gift:{id}` | Giftor or platform | Donor DID, offer, gift terms. Implies Giftor. |
-| `RepresentationCredential` | Representation | `urn:pdtf:representation:{id}` | Instructing party (Person/Org) | Representative DID, represented party DID, kind of representation |
+| `OfferCredential` | Offer | `urn:pdtf:offer:{id}` | Platform, for the buyer (§3.2) | Buyer DID, amount, status, conditions. Implies Buyer. |
+| `GiftCredential` | Gift | `urn:pdtf:gift:{id}` | Platform, for the giftor (§3.2) | Donor DID, offer, gift terms. Implies Giftor. |
+| `RepresentationCredential` | Representation | `urn:pdtf:representation:{id}` | Platform, for the instructing party (§3.2) | Representative DID, represented party DID, kind of representation |
 | `TransactionRoleCredential` | TransactionRole | `urn:pdtf:role:{id}` | Platform | Participant DID, role, where no more specific relationship applies |
 | `PropertyTitleLinkCredential` | PropertyTitleLink | `urn:pdtf:propertyTitleLink:{id}` | HMLR (registered title) / seller's conveyancer (unregistered land) | Standing UPRN↔title link with its basis (register dataset and as-of date, or epitome of title). References no Transaction; implies no role (01 D34, §4.2.1) |
 | `TransactionCredential` | Transaction | `did:web:...` | Platform | Transaction metadata, status, milestones, financial context |
@@ -2176,6 +2150,7 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](./01-entity
 {
   "iss": "did:web:adapters.propdata.org.uk:epc",
   "vct": "urn:pdtf:vct:PropertyCredential",
+  "jti": "urn:pdtf:vc:9b2e4f71-3c5a-4d8e-a1f6-2b7c9d0e3f45",
   "sub": "urn:pdtf:uprn:100023456789",
   "iat": 1774339200,
   "exp": 2088547200,
@@ -2215,17 +2190,21 @@ Each entity type in the PDTF entity graph (see [01 — Entity Graph](./01-entity
 
 The signature is the enclosing JWS (§9), not an embedded `proof`; revocation is the `status` (Token Status List) claim, replacing the former `credentialStatus`.
 
-**Seller-attested PropertyCredential (heating):**
+**Seller-attested PropertyCredential (heating)**, in the same decoded SD-JWT-VC form. The platform issues it, the seller's DID is in `evidence`, and it is not holder-bound (see the issuer note below):
 
 ```json
 {
-  "@context": [
-    "https://www.w3.org/ns/credentials/v2",
-    "https://trust.propdata.org.uk/ns/pdtf/v2"
-  ],
-  "type": ["VerifiableCredential", "PropertyCredential"],
-  "issuer": "did:web:platform.example.com",
-  "validFrom": "2026-03-20T14:30:00Z",
+  "iss": "did:web:platform.example.com",
+  "vct": "urn:pdtf:vct:PropertyCredential",
+  "jti": "urn:pdtf:vc:3f9c2a71-5d4e-4b8a-9c1f-7e6d5a4b3c2d",
+  "sub": "urn:pdtf:uprn:100023456789",
+  "iat": 1774017000,
+  "status": {
+    "status_list": {
+      "idx": 4521,
+      "uri": "https://api.platform.example.com/status/property/list-007"
+    }
+  },
   "credentialSubject": {
     "id": "urn:pdtf:uprn:100023456789",
     "heating": {
@@ -2247,29 +2226,29 @@ The signature is the enclosing JWS (§9), not an embedded `proof`; revocation is
   }],
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
-    "confidentiality": "restricted",
-    "pii": false,
-    "roleRestrictions": ["sellerConveyancer", "buyerConveyancer", "estateAgent", "buyer"]
-  }],
-  "credentialStatus": {
-    "id": "https://api.platform.example.com/status/property/list-007#4521",
-    "type": "BitstringStatusListEntry",
-    "statusPurpose": "revocation",
-    "statusListIndex": "4521",
-    "statusListCredential": "https://api.platform.example.com/status/property/list-007"
-  },
-  "proof": {
-    "type": "DataIntegrityProof",
-    "cryptosuite": "eddsa-jcs-2022",
-    "verificationMethod": "did:web:platform.example.com#platform-key-1",
-    "proofPurpose": "assertionMethod",
-    "created": "2026-03-20T14:30:00Z",
-    "proofValue": "z3hQ8xNr..."
-  }
+    "confidentiality": "transactionParticipants",
+    "pii": false
+  }]
 }
 ```
 
-**Note on issuer for user attestations:** When a seller fills in a form, the platform signs the credential on their behalf (custodial key management — see D14 in Architecture Overview). The `evidence` section records that the attestation came from the seller's DID. When wallet-held keys are available (future), the seller will sign directly.
+#### 3.2.1 Issuer of a person's assertion
+
+:::caution[Working assumption: provisional, consultation Q4 and §13.3 Q10]
+This is the single statement of who issues a credential that records a person's assertion. Other sub-specs (00 §7.5, 06 §3.2, 07 §4.2) and the documentation defer to it. It is held open by consultation [Q4](/consultation/#q4-the-consumer-wallet-gap) and by §13.3 Q10.
+:::
+
+When a person asserts something through a platform, the **platform issues and signs the credential under its own `did:web`**, acting as the person's account provider. Examples are a seller completing BASPI, a seller instructing a conveyancer, and a buyer making an offer. This covers the seller-attested PropertyCredential above and the Offer, Gift and Representation credentials (§3.5–3.7a).
+
+- The person's `did:key` is recorded in `evidence` as the `UserAttestation` `source`. Where the relationship needs it, it is also a subject claim, such as `seller` or `representedParty`.
+- Where a credential is holder-bound, the person's key is the `cnf` key. The person's custodial key then proves possession at presentation through the Key Binding JWT (§9). The person's key signs presentations, not the credential.
+- Verifiers treat the credential at the `assertion` trust level ([04 §8.4](./04-openid-federation.md)) because its evidence is a `UserAttestation`. It is not independent confirmation.
+
+**Why:**
+- The issuer's authority resolves through the federation: the platform holds an `account-provider` Trust Mark ([04 §5.2](./04-openid-federation.md)). A person's `did:key` has no Entity Configuration.
+- The signature records honestly who signed, which addresses the concern in §13.3 Q10.
+
+When people hold wallet keys (consultation Q4, D14), a person MAY issue directly under their own DID, and this section will be revised.
 
 ### 3.3 TitleCredential
 
@@ -2323,9 +2302,8 @@ The signature is the enclosing JWS (§9), not an embedded `proof`; revocation is
   }],
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
-    "confidentiality": "restricted",
-    "pii": true,
-    "roleRestrictions": ["sellerConveyancer", "buyerConveyancer"]
+    "confidentiality": "transactionParticipants",
+    "pii": true
   }],
   "credentialStatus": {
     "id": "https://adapters.propdata.org.uk/status/hmlr/list-015#7742",
@@ -2394,7 +2372,7 @@ The signature is the enclosing JWS (§9), not an embedded `proof`; revocation is
   "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-18T09:00:00Z",
   "credentialSubject": {
-    "id": "urn:pdtf:capacity:own-a1b2c3",
+    "id": "urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7",
     "seller": "did:key:z6MkhSellerAbc123",
     "transaction": "did:web:platform.example.com:transactions:tx-789",
     "sellersCapacity": { "capacity": "Legal Owner" },
@@ -2408,7 +2386,7 @@ The signature is the enclosing JWS (§9), not an embedded `proof`; revocation is
   }],
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
-    "confidentiality": "restricted",
+    "confidentiality": "roleRestricted",
     "pii": true,
     "roleRestrictions": ["Seller's Conveyancer", "Buyer's Conveyancer", "Estate Agent"]
   }],
@@ -2456,7 +2434,7 @@ This separation means the capacity can be revoked (sale completes, a personal re
 
 **Subject ID:** `urn:pdtf:representation:{id}` — a generated URN for this representation.
 
-**Issuer:** The party granting the authority. In practice, during Phase 1, the platform signs on behalf of the person (custodial keys), so the `issuer` is `did:web:platform.example.com` and the `evidence` records the person's DID and their explicit instruction.
+**Issuer:** The platform, for the party granting the authority (working assumption, §3.2.1). The `issuer` is `did:web:platform.example.com`, and the `evidence` records the instructing person's DID and their explicit instruction.
 
 **Key design decision (D33):** One credential per **(representative, represented party)** pair. A conveyancer instructed jointly by two sellers holds two, each presentable or revocable on its own. A separated couple instructing their own conveyancers yields one each. The retainer is with the client, so `representedParty` is a person or organisation, never an offer — a prospective buyer with no offer yet can still be represented. The representative's firm is recorded on the Transaction roster, not here, because where someone works does not stop being true when a representation ends; the professional duty, PI insurance and regulatory obligations are resolved through that firm.
 
@@ -2470,7 +2448,7 @@ This separation means the capacity can be revoked (sale completes, a personal re
   "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-15T11:00:00Z",
   "credentialSubject": {
-    "id": "urn:pdtf:representation:rep-d4e5f6",
+    "id": "urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
     "representative": "did:key:z6MkhConveyancerDef456",
     "representedParty": "did:key:z6MkhSellerAbc123",
     "role": "Seller's Conveyancer",
@@ -2484,7 +2462,7 @@ This separation means the capacity can be revoked (sale completes, a personal re
   }],
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
-    "confidentiality": "restricted",
+    "confidentiality": "roleRestricted",
     "pii": true,
     "roleRestrictions": ["Seller's Conveyancer", "Buyer's Conveyancer"]
   }],
@@ -2537,7 +2515,7 @@ The giftor's link to the offer lives here (`offerId`) rather than on the Offer, 
   "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-22T16:00:00Z",
   "credentialSubject": {
-    "id": "urn:pdtf:gift:gf-m4n5o6",
+    "id": "urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
     "donor": "did:key:z6MkhParentPqr456",
     "transaction": "did:web:platform.example.com:transactions:tx-789",
     "offerId": "o1",
@@ -2559,7 +2537,7 @@ The giftor's link to the offer lives here (`offerId`) rather than on the Offer, 
   }],
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
-    "confidentiality": "confidential",
+    "confidentiality": "roleRestricted",
     "pii": true,
     "roleRestrictions": ["Buyer's Conveyancer", "Lender"]
   }],
@@ -2610,14 +2588,14 @@ This is how a lender becomes a party to the transaction (Q4.2 in 00). It asserts
   "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-22T16:00:00Z",
   "credentialSubject": {
-    "id": "urn:pdtf:role:tr-g7h8i9",
+    "id": "urn:pdtf:role:d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a",
     "participant": "did:web:bigbank.co.uk",
     "role": "Lender",
     "transaction": "did:web:platform.example.com:transactions:tx-789"
   },
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
-    "confidentiality": "restricted",
+    "confidentiality": "roleRestricted",
     "pii": false,
     "roleRestrictions": ["Buyer's Conveyancer", "Seller's Conveyancer", "Estate Agent"]
   }],
@@ -2665,7 +2643,7 @@ This is how a lender becomes a party to the transaction (Q4.2 in 00). It asserts
   "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-20T09:30:00Z",
   "credentialSubject": {
-    "id": "urn:pdtf:offer:off-j1k2l3",
+    "id": "urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f",
     "buyer": "did:key:z6MkhBuyerXyz789",
     "transaction": "did:web:platform.example.com:transactions:tx-789",
     "offerId": "o1",
@@ -2691,7 +2669,7 @@ This is how a lender becomes a party to the transaction (Q4.2 in 00). It asserts
   }],
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
-    "confidentiality": "confidential",
+    "confidentiality": "roleRestricted",
     "pii": true,
     "roleRestrictions": ["Seller's Conveyancer", "Buyer's Conveyancer", "Estate Agent"]
   }],
@@ -2772,7 +2750,7 @@ This is how a lender becomes a party to the transaction (Q4.2 in 00). It asserts
   },
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
-    "confidentiality": "restricted",
+    "confidentiality": "roleRestricted",
     "pii": false,
     "roleRestrictions": ["Seller's Conveyancer", "Buyer's Conveyancer", "Estate Agent"]
   }],
@@ -2806,11 +2784,11 @@ The `credentialSubject.id` field identifies the entity the credential makes asse
 |----------------|-------------------|---------|
 | PropertyCredential | `urn:pdtf:uprn:{uprn}` | `urn:pdtf:uprn:100023456789` |
 | TitleCredential | `urn:pdtf:titleNumber:{n}` | `urn:pdtf:titleNumber:AB12345` |
-| SellerCapacityCredential | `urn:pdtf:capacity:{id}` | `urn:pdtf:capacity:own-a1b2c3` |
-| OfferCredential | `urn:pdtf:offer:{id}` | `urn:pdtf:offer:off-j1k2l3` |
-| GiftCredential | `urn:pdtf:gift:{id}` | `urn:pdtf:gift:gf-m4n5o6` |
-| RepresentationCredential | `urn:pdtf:representation:{id}` | `urn:pdtf:representation:rep-d4e5f6` |
-| TransactionRoleCredential | `urn:pdtf:role:{id}` | `urn:pdtf:role:tr-g7h8i9` |
+| SellerCapacityCredential | `urn:pdtf:capacity:{id}` | `urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7` |
+| OfferCredential | `urn:pdtf:offer:{id}` | `urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f` |
+| GiftCredential | `urn:pdtf:gift:{id}` | `urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e` |
+| RepresentationCredential | `urn:pdtf:representation:{id}` | `urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d` |
+| TransactionRoleCredential | `urn:pdtf:role:{id}` | `urn:pdtf:role:d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a` |
 | TransactionCredential | `did:web:{host}:transactions:{id}` | `did:web:platform.example.com:transactions:tx-789` |
 
 ### 4.2 Sparse Object Model
@@ -3194,8 +3172,8 @@ Any evidence type MAY include a `sourceDocument` field referencing the underlyin
 | `size` | integer | Optional | File size in bytes |
 | `name` | string | Optional | Human-readable filename |
 | `url` | string | Required | Retrieval URL — a `pdtf://` URI that resolves via the Transaction DID's document endpoint |
-| `confidentiality` | string | Required | Access level — same values as `termsOfUse` (see §7): `public`, `transactionParticipants`, `roleRestricted`, `partyOnly` |
-| `authorisedRoles` | string[] | Conditional | Required when `confidentiality` is `roleRestricted`. Role identifiers from the same table as `termsOfUse` role restrictions. |
+| `confidentiality` | string | Required | Access level. Same vocabulary as `termsOfUse` (§7.2): `public`, `transactionParticipants`, `roleRestricted`, `partyOnly` |
+| `roleRestrictions` | string[] | Conditional | Required when `confidentiality` is `roleRestricted`. Role identifiers from §7.4, the same field and values as `termsOfUse`. |
 
 Example — title register PDF referenced from a DocumentExtraction evidence item:
 
@@ -3214,7 +3192,7 @@ Example — title register PDF referenced from a DocumentExtraction evidence ite
     "name": "Official Copy - Title Register NK123456.pdf",
     "url": "pdtf://transactions/abc123/documents/doc-tr-nk123456",
     "confidentiality": "roleRestricted",
-    "authorisedRoles": ["sellerConveyancer", "buyerConveyancer"]
+    "roleRestrictions": ["Seller's Conveyancer", "Buyer's Conveyancer"]
   }
 }
 ```
@@ -3236,13 +3214,12 @@ Example — survey report with restricted access:
     "size": 4521984,
     "name": "HomeBuyer Report - 42 Oak Lane.pdf",
     "url": "pdtf://transactions/abc123/documents/doc-survey-hb-001",
-    "confidentiality": "partyOnly",
-    "authorisedRoles": []
+    "confidentiality": "partyOnly"
   }
 }
 ```
 
-A `partyOnly` survey report is accessible only to the party who commissioned it (typically the buyer). They may choose to share it by upgrading confidentiality or adding authorised roles.
+A `partyOnly` survey report is accessible only to the party who commissioned it (typically the buyer). They may choose to share it by changing the level to `roleRestricted` and listing roles in `roleRestrictions`.
 
 #### 6.6.2 Document Retrieval Protocol
 
@@ -3263,7 +3240,7 @@ The `pdtf://` URL scheme resolves through the Transaction DID document:
 ```
 
 4. Present a Verifiable Presentation containing the requester's participation credential to the service endpoint
-5. The endpoint verifies the VP, checks the requester's role against the document's `confidentiality` and `authorisedRoles`, and returns the file or a 403
+5. The endpoint verifies the VP, checks the requester's role against the document's `confidentiality` and `roleRestrictions`, and returns the file or a 403
 6. The requester verifies the file's content against the `digest` field
 
 ```
@@ -3279,13 +3256,13 @@ PDTF-Digest: sha256:a3f2b8c9d1e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8
 
 #### 6.6.3 Confidentiality Levels for Documents
 
-Document confidentiality uses the same levels as credential `termsOfUse` (§7), ensuring a single access control model across the framework:
+Document confidentiality uses the same levels as credential `termsOfUse` (§7.2–7.3), ensuring a single access control model across the framework:
 
 | Level | Who Can Access | Typical Documents |
 |-------|---------------|-------------------|
 | `public` | Anyone with the URL | EPC certificates, flood zone maps |
 | `transactionParticipants` | Any party with a valid participation credential | Title registers, local authority searches |
-| `roleRestricted` | Parties whose role matches `authorisedRoles` | Environmental search reports (conveyancers only), contract drafts |
+| `roleRestricted` | Parties whose role is listed in `roleRestrictions` | Environmental search reports (conveyancers only), contract drafts |
 | `partyOnly` | The data subject / commissioning party only | Survey reports (buyer), mortgage offers (buyer), identity documents |
 
 Documents follow the same encryption model as credentials when synced between platforms (see Architecture Overview D30). The `confidentiality` level determines the recipient set for per-document encryption keys.
@@ -3320,21 +3297,25 @@ Every PDTF credential SHOULD include a `termsOfUse` entry defining its access po
 {
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
-    "confidentiality": "restricted",
+    "confidentiality": "roleRestricted",
     "pii": true,
-    "roleRestrictions": ["sellerConveyancer", "buyerConveyancer"]
+    "roleRestrictions": ["Seller's Conveyancer", "Buyer's Conveyancer"]
   }]
 }
 ```
+
+:::caution[Working assumption: provisional, consultation Q17 and Q19]
+§7.2–7.4 are the single statement of PDTF's classification vocabulary and role identifiers. Source documents (§6.6), the encryption tiers ([00 §12.4](./00-architecture-overview.md)) and the documentation use the same values. How access is enforced is still open: consultation [Q17](/consultation/#q17-intent-based-access-control) covers graph-based access against a hub ACL, and [Q19](/consultation/#q19-file-handling-and-evidence-access) covers access to source documents.
+:::
 
 ### 7.2 Fields
 
 | Field | Type | Required | Values | Description |
 |-------|------|----------|--------|-------------|
 | `type` | string | Required | `"PdtfAccessPolicy"` | Discriminator |
-| `confidentiality` | enum | Required | `public`, `restricted`, `confidential` | Access tier |
+| `confidentiality` | enum | Required | `public`, `transactionParticipants`, `roleRestricted`, `partyOnly` | Access tier (§7.3) |
 | `pii` | boolean | Required | `true`, `false` | Whether the data contains personally identifiable information |
-| `roleRestrictions` | string[] | Conditional | Role identifiers | Required when confidentiality is `restricted` or `confidential` |
+| `roleRestrictions` | string[] | Conditional | Role identifiers (§7.4) | Required when confidentiality is `roleRestricted`; omitted otherwise |
 
 ### 7.3 Confidentiality Levels
 
@@ -3343,14 +3324,19 @@ Every PDTF credential SHOULD include a `termsOfUse` entry defining its access po
 - `roleRestrictions` SHOULD be omitted or empty
 - `pii` MUST be `false`
 
-**`restricted`** — Available to authenticated participants with a matching role.
-- Examples: Seller contact details, legal questions, title register extract, offer details
-- `roleRestrictions` specifies which roles can access
-- `pii` may be `true` or `false`
+**`transactionParticipants`** — Available to any party holding a valid role-bearing credential on the transaction (§7.4).
+- Examples: title register extract, local authority searches, seller-attested property information (BASPI / TA6 answers), legal questions
+- `roleRestrictions` SHOULD be omitted
+- `pii` may be `true` or `false`. A register extract names the proprietors, so it is `transactionParticipants` with `pii: true`, not `public`
 
-**`confidential`** — Available only to specifically authorised parties.
-- Examples: AML verification results, gift terms, internal financial data
-- `roleRestrictions` typically limited to direct legal representatives
+**`roleRestricted`** — Available only to parties whose role is listed in `roleRestrictions`.
+- Examples: seller contact details, offer and gift terms, SellerCapacity and Representation details, environmental search reports (conveyancers only), contract drafts
+- `roleRestrictions` MUST list at least one role
+- `pii` is typically `true`
+
+**`partyOnly`** — Available only to the party the data concerns or who commissioned it.
+- Examples: AML / identity verification results, a buyer's survey report, a mortgage offer
+- `roleRestrictions` MUST be omitted
 - `pii` is typically `true`
 
 ### 7.4 Role Identifiers
@@ -3380,9 +3366,10 @@ When a requester queries transaction state (either via the API or through the gr
 
 2. **Filter credentials** — for each credential in the entity graph:
    - If `confidentiality` is `public` → include
-   - If `confidentiality` is `restricted` or `confidential`:
-     - Check if the requester has at least one role listed in `roleRestrictions`
-   - If no match → exclude the credential from the response
+   - If `confidentiality` is `transactionParticipants` → include if the requester holds any role on the transaction
+   - If `confidentiality` is `roleRestricted` → include if the requester has at least one role listed in `roleRestrictions`
+   - If `confidentiality` is `partyOnly` → include only if the requester is the party the data concerns
+   - Otherwise → exclude the credential from the response
 
 3. **Assemble filtered state** — compose state only from included credentials.
 
@@ -3391,13 +3378,13 @@ This means different requesters see different views of the same transaction. A b
 ```
 Buyer's Conveyancer requests state
   → Present RepresentationCredential (role: Buyer's Conveyancer)
-  → Filter: include all public + restricted/confidential where "Buyer's Conveyancer" ∈ roleRestrictions
+  → Filter: include public + transactionParticipants + roleRestricted where "Buyer's Conveyancer" ∈ roleRestrictions
   → Result: property data, title register, ownership claims, offer details, legal questions
 
 Estate Agent requests state
   → Present RepresentationCredential (role: Estate Agent)
-  → Filter: include all public + restricted where "Estate Agent" ∈ roleRestrictions
-  → Result: property data, basic offer info — NOT title register, NOT AML details
+  → Filter: include public + transactionParticipants + roleRestricted where "Estate Agent" ∈ roleRestrictions
+  → Result: property data, title register, basic offer info. NOT environmental search reports, NOT AML details
 
 Unauthenticated request
   → No credential presented
@@ -3422,13 +3409,17 @@ The `pii` flag is informational — it doesn't affect access control (that's `co
 
 ### 8.1 Mandatory Revocation Support
 
-**Decision D18:** Every PDTF credential MUST include a `credentialStatus` field pointing to a [W3C Bitstring Status List v2](https://www.w3.org/TR/vc-bitstring-status-list/) entry. There are no exceptions.
+:::caution[Provisional: follows consultation Q20]
+The status mechanism is stated once, in [14 §1 (D18) and §1.1](./14-credential-revocation.md). It follows the securing mechanism (§2.4, consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)), so it is provisional too.
+:::
+
+**Decision D18 (provisional):** Every PDTF credential MUST carry a revocation reference, with no exceptions. Under SD-JWT-VC this is the IETF Token Status List `status` claim (§9). In the superseded Data Integrity representation it is a `credentialStatus` field pointing to a [W3C Bitstring Status List v2](https://www.w3.org/TR/vc-bitstring-status-list/) entry. §8.2–8.3 document the superseded form. The mechanics carry across directly ([14 §1.1](./14-credential-revocation.md)).
 
 **Rationale:** In a property transaction, data changes frequently (new EPC, price reduction, change of conveyancer, sale falling through). Without revocation, stale credentials are indistinguishable from current ones. A verifier must be able to check whether a credential is still valid.
 
-### 8.2 BitstringStatusListEntry
+### 8.2 BitstringStatusListEntry (superseded representation)
 
-Every PDTF credential includes:
+In the superseded representation, every PDTF credential includes:
 
 ```json
 {
@@ -3446,13 +3437,13 @@ Every PDTF credential includes:
 |-------|------|-------------|
 | `id` | URI | Unique identifier for this status entry (list URL + fragment) |
 | `type` | string | Always `"BitstringStatusListEntry"` |
-| `statusPurpose` | string | Always `"revocation"` for PDTF (not `"suspension"`) |
+| `statusPurpose` | string | `"revocation"` on every credential. A second entry with `"suspension"` is RECOMMENDED for relationship credentials and OPTIONAL for property data (working position, [14 §8](./14-credential-revocation.md)) |
 | `statusListIndex` | string | Bit position in the status list bitstring |
 | `statusListCredential` | URI | URL of the status list credential |
 
 ### 8.3 Status List Credentials
 
-Each issuer hosts one or more Bitstring Status List credentials. These are themselves VCs:
+Each issuer hosts one or more status lists, and each is **signed by the issuer** ([14 §4](./14-credential-revocation.md)). Under SD-JWT-VC it is a Status List Token (a signed JWT, [14 §1.1](./14-credential-revocation.md)). In the superseded representation it is a Bitstring Status List credential, which is itself a VC:
 
 ```json
 {
@@ -3487,7 +3478,7 @@ The `encodedList` is a GZIP-compressed, base64url-encoded bitstring. Each bit po
 ```
 1. Issuer decides to revoke (data superseded, error found, mandate withdrawn)
 2. Issuer flips bit at statusListIndex in the relevant status list
-3. Issuer re-signs the status list credential
+3. Issuer re-signs the status list (Status List Token, or status list credential)
 4. Verifiers fetch the status list (HTTP GET, cacheable with short TTL)
 5. Verifier checks the bit at the credential's statusListIndex
 6. If bit = 1 → credential is revoked → exclude from state assembly
@@ -3532,10 +3523,11 @@ PDTF issues credentials as **SD-JWT-VC** (IETF `draft-ietf-oauth-sd-jwt-vc`, bui
 |-------|-------------|
 | `iss` | Issuer identifier (DID or HTTPS origin); signing key discovered via the issuer DID document or JWKS |
 | `vct` | Verifiable Credential Type — identifies the PDTF credential type and resolves to its Type Metadata (§10), e.g. `urn:pdtf:vct:PropertyCredential` |
+| `jti` | Credential identifier, `urn:pdtf:vc:{uuid}`: the `id` of §2.2. REQUIRED ([00 §14.1 Q3.3](./00-architecture-overview.md)) |
 | `sub` | Entity identifier — the DID/URN that the claims model calls `credentialSubject.id` |
 | `iat` / `exp` | Issued-at / optional expiry |
 | `cnf` | Holder public key (confirmation), for key binding |
-| `status` | IETF **Token Status List** reference for revocation (replaces W3C BitstringStatusList — the revocation sub-spec 14 needs a matching update, tracked in §13.4) |
+| `status` | IETF **Token Status List** reference for revocation. It replaces W3C BitstringStatusList ([14 §1.1](./14-credential-revocation.md)) |
 | `_sd`, `_sd_alg` | Selective-disclosure digests and hash algorithm |
 | *(entity claims)* | The property/entity data (e.g. `energyEfficiency`, `registerExtract`, or a nested `credentialSubject` object) |
 
@@ -3560,13 +3552,14 @@ Decoded **issuer-signed payload**:
 {
   "iss": "did:web:platform.example.com",
   "vct": "urn:pdtf:vct:SellerCapacityCredential",
-  "sub": "urn:pdtf:capacity:own-1a2b",
+  "jti": "urn:pdtf:vc:3a2b1c7f-4e9d-4a5f-9c8b-1e0d2f3a4b5c",
+  "sub": "urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7",
   "iat": 1774339200,
   "cnf": { "jwk": { "kty": "OKP", "crv": "Ed25519", "x": "l8k…holderPubKey" } },
   "status": { "status_list": { "idx": 94, "uri": "https://platform.example.com/status/capacity/1" } },
   "_sd_alg": "sha-256",
   "credentialSubject": {
-    "id": "urn:pdtf:capacity:own-1a2b",
+    "id": "urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7",
     "seller": "did:key:z6Mkh…abc",
     "transaction": "did:web:platform.example.com:transactions:tx-789",
     "sellersCapacity": { "capacity": "Legal Owner" },
@@ -3825,7 +3818,7 @@ A complete EPC credential issued by the PDTF EPC adapter (trusted proxy for MHCL
     "https://www.w3.org/ns/credentials/v2",
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
-  "id": "urn:pdtf:vc:epc-7f3a2b1c-9d4e-5f6a-8b7c-0d1e2f3a4b5c",
+  "id": "urn:pdtf:vc:7f3a2b1c-9d4e-4f6a-8b7c-0d1e2f3a4b5c",
   "type": ["VerifiableCredential", "PropertyCredential"],
   "issuer": "did:web:adapters.propdata.org.uk:epc",
   "validFrom": "2026-03-24T10:00:00Z",
@@ -3903,12 +3896,12 @@ A complete ownership credential — thin assertion only, no duplicated title dat
     "https://www.w3.org/ns/credentials/v2",
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
-  "id": "urn:pdtf:vc:own-3a2b1c7f-4e9d-6a5f-7c8b-1e0d2f3a4b5c",
+  "id": "urn:pdtf:vc:3a2b1c7f-4e9d-4a5f-9c8b-1e0d2f3a4b5c",
   "type": ["VerifiableCredential", "SellerCapacityCredential"],
   "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-18T09:00:00Z",
   "credentialSubject": {
-    "id": "urn:pdtf:capacity:own-a1b2c3",
+    "id": "urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7",
     "seller": "did:key:z6MkhRqN4v5sW8xZ1bD4gJ6kM9nP2qS0tSellerAbc",
     "transaction": "did:web:platform.example.com:transactions:tx-789",
     "sellersCapacity": { "capacity": "Legal Owner" },
@@ -3930,9 +3923,9 @@ A complete ownership credential — thin assertion only, no duplicated title dat
   ],
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
-    "confidentiality": "restricted",
+    "confidentiality": "roleRestricted",
     "pii": true,
-    "roleRestrictions": ["sellerConveyancer", "buyerConveyancer", "estateAgent"]
+    "roleRestrictions": ["Seller's Conveyancer", "Buyer's Conveyancer", "Estate Agent"]
   }],
   "credentialStatus": {
     "id": "https://api.platform.example.com/status/ownership/list-001#892",
@@ -3962,12 +3955,12 @@ A complete representation credential — seller instructs a conveyancer, whose f
     "https://www.w3.org/ns/credentials/v2",
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
-  "id": "urn:pdtf:vc:rep-1c7f3a2b-9d4e-5f6a-8b7c-0d1e2f3a4b5c",
+  "id": "urn:pdtf:vc:1c7f3a2b-9d4e-4f6a-8b7c-0d1e2f3a4b5c",
   "type": ["VerifiableCredential", "RepresentationCredential"],
   "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-15T11:00:00Z",
   "credentialSubject": {
-    "id": "urn:pdtf:representation:rep-d4e5f6",
+    "id": "urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
     "representative": "did:key:z6MkjConveyancerT3uW8yB1dF6hI4jL9mO2pR0sV7xDef",
     "representedParty": "did:key:z6MkhRqN4v5sW8xZ1bD4gJ6kM9nP2qS0tSellerAbc",
     "role": "Seller's Conveyancer",
@@ -3981,9 +3974,9 @@ A complete representation credential — seller instructs a conveyancer, whose f
   }],
   "termsOfUse": [{
     "type": "PdtfAccessPolicy",
-    "confidentiality": "restricted",
+    "confidentiality": "roleRestricted",
     "pii": true,
-    "roleRestrictions": ["sellerConveyancer", "buyerConveyancer"]
+    "roleRestrictions": ["Seller's Conveyancer", "Buyer's Conveyancer"]
   }],
   "credentialStatus": {
     "id": "https://api.platform.example.com/status/representation/list-001#334",
@@ -4119,7 +4112,7 @@ This is more natural, more efficient (one signature instead of four), and preser
 
 4. **Evidence granularity.** Should evidence be per-credential (current design) or per-path within a credential? Per-credential is simpler but means all paths in a credential share the same evidence metadata. Per-path is more precise but adds significant complexity.
 
-5. **Credential ID assignment.** Should all credentials have an `id` field, or should it be optional for privacy reasons? IDs enable deduplication and reference but create correlation vectors.
+5. **Credential ID assignment.** *Resolved by [00 §14.1 Q3.3](./00-architecture-overview.md):* every credential MUST carry an `id` (`jti` under SD-JWT-VC), because state assembly needs it for deduplication. The correlation risk is mitigated as described in §14.7, not by omitting the `id`.
 
 ### 13.2 Architectural
 
@@ -4133,7 +4126,7 @@ This is more natural, more efficient (one signature instead of four), and preser
 
 ### 13.3 Internal (Platform)
 
-10. **Custodial signing for user attestations.** In Phase 1, the platform signs on behalf of users. The evidence records the user's DID. But the proof doesn't come from the user's key. Is this semantically honest? Should we use a different proof mechanism (e.g. counter-signature) that makes the custodial relationship explicit?
+10. **Custodial signing for user attestations.** In Phase 1, the platform signs on behalf of users. The evidence records the user's DID. But the proof doesn't come from the user's key. Is this semantically honest? Should we use a different proof mechanism (e.g. counter-signature) that makes the custodial relationship explicit? *Working assumption (provisional, with consultation Q4):* §3.2.1. The platform is the issuer, and it says so. The person is named in `evidence` and bound as holder through `cnf`, and their key signs presentations.
 
 11. **Adapter credential caching.** Should adapters cache issued credentials (return the same VC for repeated requests for the same data) or always issue fresh ones? Caching is efficient but means the adapter stores credentials. Fresh issuance is stateless but means multiple VCs for the same data.
 
@@ -4157,9 +4150,9 @@ This is more natural, more efficient (one signature instead of four), and preser
 
     **Still open (why this remains a question):**
     - Confirm SD-JWT-VC against the GOV.UK Wallet's current published format list, and ratify via consultation **Q20** before locking in.
-    - **Revocation:** SD-JWT-VC uses the IETF **Token Status List** (`status` claim), not W3C BitstringStatusList — sub-spec 14 (revocation) must be updated to match.
-    - **Example migration:** the ~15 inline credential examples in this spec still show the superseded JSON-LD + `DataIntegrityProof` serialisation and need reissuing as SD-JWT-VC (claims model unchanged).
-    - **Ripple:** references in the reference docs (credential-types, schemas, urn-scheme) and specs 03/04 that assume Data Integrity / `@context` need reconciling.
+    - **Revocation:** SD-JWT-VC uses the IETF **Token Status List** (`status` claim), not W3C BitstringStatusList. Sub-spec 14 now states this ([14 §1.1](./14-credential-revocation.md)), and §8 defers to it.
+    - **Example migration:** the §3.2 examples and the §9 worked example are in SD-JWT-VC form. The remaining inline credential examples (§3.3–3.8, §11) still show the superseded JSON-LD + `DataIntegrityProof` serialisation. They need reissuing as SD-JWT-VC, with the claims model unchanged.
+    - **Ripple:** 00 §4.4, 03, 04, 06, 13, 14, 15 and the documentation site now defer to §2.4. Their remaining Data Integrity material is labelled as the superseded representation, or as the current state of the reference libraries, which implement Data Integrity only.
     - Decide whether PDTF keeps the optional JSON-LD `@context` overlay for linked-data / ontology tooling, or drops it entirely.
 
 ---
@@ -4179,6 +4172,8 @@ The following reference implementations support this spec:
 | `@pdtf/context` | PDTF v2 JSON-LD context document | Planned |
 
 ### 14.2 VC Builder Flow
+
+The builder and validator flows below describe the superseded Data Integrity representation, which the current reference libraries implement. Under SD-JWT-VC (§2.4, §9), the builder signs a JWS over the payload and attaches a `status` claim, and the validator follows the verification bullet in §9.
 
 ```
 Input: entity data (sparse object), entity ID, issuer DID, evidence, termsOfUse
@@ -4271,7 +4266,7 @@ A typical transaction might have 20–40 credentials totalling 30–80 KB of VC 
 | 04 — OpenID Federation | Defines which issuers are trusted for which entity:path combos, via Trust Mark `delegation` claims. This spec's credentials are validated against those Trust Marks. |
 | 07 — State Assembly | Implements the MERGE + prune semantics defined in §5 of this spec. |
 | 08 — DE Migration | Maps DE evaluation paths to credential `credentialSubject` paths. |
-| 14 — Credential Revocation | Details the hosting, caching, and operational aspects of BitstringStatusList referenced in §8. |
+| 14 — Credential Revocation | States the status mechanism (§1, D18). Details the hosting, caching and operational aspects of the status lists referenced in §8. |
 
 ### 14.7 Security Considerations
 
@@ -4281,7 +4276,7 @@ A typical transaction might have 20–40 credentials totalling 30–80 KB of VC 
 
 3. **Issuer impersonation.** `did:web` resolution depends on DNS. An attacker who compromises a domain could issue fraudulent credentials. Mitigation: OpenID Federation trust resolution provides a second check — the issuer must hold a valid Trust Mark whose `delegation.authorised_paths` covers the relevant paths, and the Subordinate Entity Statement from the Trust Anchor pins the expected JWKS. Monitor DID document changes.
 
-4. **Credential correlation.** Credentials with `id` fields create correlation vectors — the same credential ID appearing in different contexts links those contexts. For privacy-sensitive credentials, omit the `id` field.
+4. **Credential correlation.** Every credential MUST carry an `id` ([00 §14.1 Q3.3](./00-architecture-overview.md)), and the same `id` appearing in different contexts links those contexts. Mitigations: mint each `id` as a fresh random UUID v4 that encodes nothing about the subject; never reuse an `id` across re-issuance; and rely on `termsOfUse` filtering (§7.5) to limit who sees a credential in the first place. Omitting the `id` is not permitted.
 
 5. **Key compromise.** If an issuer's private key is compromised, all credentials signed with that key are suspect. The issuer must: rotate keys in the DID document, revoke all credentials signed with the compromised key, re-issue with the new key. See 06 — Key Management for rotation procedures.
 
@@ -4300,9 +4295,9 @@ A typical transaction might have 20–40 credentials totalling 30–80 KB of VC 
 | D5 | Sparse objects + dependency pruning | 🟡 Needs consensus | §5 — Claims representation model |
 | D6 | Simpler evidence model | ✅ Confirmed | §6 — Four evidence types replacing OIDC-derived schema |
 | D7 | did:key for users, did:web for transactions/adapters | ✅ Confirmed | §9 — verificationMethod DID formats |
-| D14 | Digital ID wallet binding (future, custodial for now) | ✅ Confirmed | §3.2 note on custodial signing |
-| D16 | Ed25519 key algorithm | ✅ Confirmed | §9 — eddsa-jcs-2022 cryptosuite |
-| D18 | Bitstring Status List revocation mandatory | ✅ Confirmed | §8 — credentialStatus required on all VCs |
+| D14 | Digital ID wallet binding (future, custodial for now) | ✅ Confirmed | §3.2.1 issuer of a person's assertion (provisional, Q4) |
+| D16 | Ed25519 key algorithm | ✅ Confirmed | §9 — `EdDSA` JWS (and `eddsa-jcs-2022` in the superseded representation) |
+| D18 | Revocation reference mandatory on every credential (Token Status List under SD-JWT-VC; Bitstring Status List in the superseded representation) | 🟡 Provisional, follows Q20 ([14 §1](./14-credential-revocation.md)) | §8 |
 | D28 | SellerCapacity credential is thin (claim-vs-evidence separation) | ✅ Confirmed | §3.4 — SellerCapacityCredential design |
 
 ---
@@ -4382,7 +4377,7 @@ This sub-specification defines the decentralised identifier (DID) system and URN
 
 This spec covers:
 
-- DID method selection and rationale (decisions **D7**, **D26**)
+- DID method selection and rationale (decisions **D7**, **D35**)
 - URN scheme for non-DID entities (decision **D23**)
 - DID document structure for each entity type
 - Verification methods and key encoding
@@ -4416,7 +4411,7 @@ It does **not** cover:
 |----|----------|-----------|
 | **D7** | `did:key` for Persons; `did:key` or `did:web` for Organisations; `did:web` for Transactions and Trusted Adapters | Persons need zero-infrastructure identifiers derived from their signing keys. Organisations may use provider-managed `did:key` (the common case — issued by their case management platform) or self-hosted `did:web` (for firms wanting direct control). Transactions and adapters need discoverable service endpoints that `did:web` provides. |
 | **D23** | `urn:pdtf:unregisteredTitle:{uuid}` for unregistered titles | Unregistered land has no HMLR title number. A PDTF-minted UUID provides a stable identifier until first registration completes. **Open:** confirm UUID version and whether the URN should survive first registration. |
-| **D26** | `did:key` (provider-managed) or `did:web` (self-hosted) for Organisations | Most organisations will use provider-managed `did:key` identifiers issued by their account provider (e.g. LMS). The provider verifies the organisation's identity and regulatory status. Self-hosted `did:web` at the firm's domain is available for firms wanting direct control. |
+| **D35** | `did:key` (provider-managed) or `did:web` (self-hosted) for Organisations | Most organisations will use provider-managed `did:key` identifiers issued by their account provider (e.g. LMS). The provider verifies the organisation's identity and regulatory status. Self-hosted `did:web` at the firm's domain is available for firms wanting direct control. |
 
 ---
 
@@ -4560,6 +4555,7 @@ Registrant: Property Data Standards Company
 | `urn:pdtf:uprn:{uprn}` | Property | Ordnance Survey UPRN (Unique Property Reference Number) |
 | `urn:pdtf:titleNumber:{number}` | Title (registered) | HMLR title number |
 | `urn:pdtf:unregisteredTitle:{uuid}` | Title (unregistered) | Platform-generated UUID v4 (D23) |
+| `urn:pdtf:vc:{uuid}` | Credential identifier (the credential's `id` / `jti`, not an entity) | Issuer-generated UUID v4 ([00 §14.1 Q3.3](./00-architecture-overview.md), [02 §2.2](./02-vc-data-model.md)) |
 | `urn:pdtf:capacity:{uuid}` | SellerCapacity | Platform-generated UUID v4 |
 | `urn:pdtf:offer:{uuid}` | Offer | Platform-generated UUID v4 |
 | `urn:pdtf:gift:{uuid}` | Gift | Platform-generated UUID v4 |
@@ -4582,6 +4578,7 @@ pdtf-nss          = property-urn
                   / offer-urn
                   / gift-urn
                   / representation-urn
+                  / vc-urn
                   / role-urn
                   / property-title-link-urn
 
@@ -4596,6 +4593,9 @@ district-prefix   = 1*4ALPHA
 
 ; Unregistered Title — UUID v4 (D23)
 unregistered-title-urn = "unregisteredTitle:" uuid-v4
+
+; Credential identifier — UUID v4 (00 Q3.3)
+vc-urn            = "vc:" uuid-v4
 
 ; SellerCapacity — UUID v4
 capacity-urn      = "capacity:" uuid-v4
@@ -4636,10 +4636,10 @@ urn:pdtf:titleNumber:DN123456
 urn:pdtf:titleNumber:AGL12345
 urn:pdtf:unregisteredTitle:f47ac10b-58cc-4372-a567-0e02b2c3d479
 urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7
-urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f
 urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
 urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
-urn:pdtf:role:d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a
+urn:pdtf:role:d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a
 urn:pdtf:propertyTitleLink:e5f6a7b8-c9d0-4e1f-8a3b-4c5d6e7f8a9b
 ```
 
@@ -4653,7 +4653,7 @@ The boundary is clear: **actors get DIDs, subjects get URNs**.
 | Yes | Yes | `did:web` |
 | No | No | `urn:pdtf:*` |
 
-- **Persons** sign credentials → `did:key`
+- **Persons** hold signing keys (holder binding and presentations) → `did:key`. Who issues a credential recording a person's assertion is stated in [02 §3.2.1](./02-vc-data-model.md) (provisional, consultation Q4)
 - **Organisations** sign credentials → `did:key` (provider-managed, common case) or `did:web` (self-hosted, with service endpoints)
 - **Transactions** host endpoints (PDTF API, MCP) → `did:web`
 - **Properties** are credential subjects, never issuers → `urn:pdtf:uprn:*`
@@ -4913,7 +4913,7 @@ For the HMLR Official Copies adapter at `did:web:adapters.propdata.org.uk:hmlr`,
 
 - Multiple keys in `assertionMethod` — adapters may use key rotation with overlapping validity periods. `key-2` might be the next rotation key, already listed in `assertionMethod` but not yet primary.
 - The `#vc-issuance` service endpoint tells consumers where to request VCs and what credential types the adapter issues.
-- The `#status` endpoint links to the Bitstring Status List for revocation checking.
+- The `#status` endpoint links to the adapter's status lists for revocation checking ([14 §1](./14-credential-revocation.md)).
 - `credentialTypes` in the service endpoint metadata lists the VC types this adapter can issue, enabling automated discovery.
 
 ---
@@ -4971,7 +4971,11 @@ DID documents assign keys to specific verification relationships, which determin
 
 ### 5.3 Proof Cryptosuite
 
-Verifiable Credentials in PDTF 2.0 use the `eddsa-jcs-2022` cryptosuite for Data Integrity Proofs:
+:::note[Superseded representation]
+The Data Integrity proof below is the superseded representation, and the one the current reference libraries implement. The securing mechanism is stated once, in [02 §2.4](./02-vc-data-model.md): SD-JWT-VC, provisional pending consultation [Q20](/consultation/#q20-credential-format--securing-mechanism). Under SD-JWT-VC the JWS header `kid` MUST likewise reference a key listed under the issuer's `assertionMethod`.
+:::
+
+In the Data Integrity representation, Verifiable Credentials in PDTF 2.0 use the `eddsa-jcs-2022` cryptosuite:
 
 ```json
 {
@@ -4999,7 +5003,7 @@ The `verificationMethod` in the proof MUST reference a key listed in the issuer'
 
 ## 6. Service Endpoints
 
-Service endpoints in DID documents enable machine-readable discovery of APIs and capabilities. PDTF 2.0 defines three custom service endpoint types.
+Service endpoints in DID documents enable machine-readable discovery of APIs and capabilities. PDTF 2.0 defines three custom service endpoint types (§6.1–6.3) plus the additional types in §6.4. These `type` values are canonical, and the documentation and guides use them. A client looking for a transaction's API looks for `PdtfTransactionEndpoint`; one looking for its MCP server looks for `McpEndpoint`.
 
 ### 6.1 PdtfTransactionEndpoint
 
@@ -5086,6 +5090,7 @@ Used by Trusted Adapters to advertise their credential issuance capability.
 | `CompanyRegistration` | Organisations | Link to Companies House record |
 | `BitstringStatusListEndpoint` | Adapters | Credential revocation status list hosting |
 | `PdtfOrganisationEndpoint` | Organisations | PDTF credential exchange endpoint for the firm |
+| `PdtfDocumentEndpoint` | Transactions | Source-document retrieval for `pdtf://` URLs ([02 §6.6.2](./02-vc-data-model.md)) |
 
 ---
 
@@ -5303,7 +5308,7 @@ If a firm ceases to operate (SRA de-registration, company dissolution):
 
 1. Remove DID document from domain (or mark as deactivated)
 2. The corresponding Trust Mark is marked revoked via the Trust Anchor's `federation_trust_mark_status_endpoint`
-3. All Representation credentials issued to this Organisation should be revoked via Bitstring Status List
+3. All Representation credentials issued to this Organisation should be revoked through their status lists ([14 §1](./14-credential-revocation.md))
 
 #### 8.3.3 Person DID Deactivation
 
@@ -5339,7 +5344,7 @@ If a firm ceases to operate (SRA de-registration, company dissolution):
 
 ### 9.3 Federation Cross-Check as Defence in Depth
 
-The Trusted Issuer Registry provides a critical second layer of trust for `did:web`:
+OpenID Federation trust resolution ([04 §7](./04-openid-federation.md)) provides a critical second layer of trust for `did:web`:
 
 ```
 Verification chain:
@@ -5388,7 +5393,9 @@ Unregistered land (land not registered at HMLR) has no title number. PDTF needs 
 
 3. **Scope:** Does the identifier cover the title (the legal interest) or the physical extent of unregistered land? Multiple titles can overlap the same land.
 
-### 10.2 D26 — Organisation DID Methods
+### 10.2 D35 — Organisation DID Methods
+
+*Renumbered from D26, which [01 §3.3](./01-entity-graph.md) uses for "Transaction-centric graph". D34 is 01's Property–Title link decision.*
 
 **Status:** Decided (`did:key` provider-managed as default, `did:web` self-hosted as option)
 
@@ -5425,7 +5432,7 @@ The person's identity verification credential is bound to their `did:key` via `c
 1. **Credential signature** — valid, signed by an issuer in the Federated Registry
 2. **DID binding** — `credentialSubject.id` matches the DID presenting the credential
 3. **Proof of control** — the presenter signed the challenge with the private key corresponding to the DID (proving they are the credential subject, not a replayer)
-4. **Revocation status** — Bitstring Status List confirms the credential has not been revoked
+4. **Revocation status** — the status list ([14 §1](./14-credential-revocation.md)) confirms the credential has not been revoked
 5. **Issuer authority** — the issuing entity is listed in the Federated Registry as an authorised identity verifier
 
 **Verification flow:**
@@ -5592,10 +5599,10 @@ This generates the key pair, constructs the DID document with regulatory metadat
 | Title (registered) | URN | `urn:pdtf:titleNumber:{number}` | `urn:pdtf:titleNumber:DN123456` |
 | Title (unregistered) | URN | `urn:pdtf:unregisteredTitle:{uuid}` | `urn:pdtf:unregisteredTitle:f47ac10b-58cc-4372-a567-0e02b2c3d479` |
 | SellerCapacity | URN | `urn:pdtf:capacity:{uuid}` | `urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7` |
-| Offer | URN | `urn:pdtf:offer:{uuid}` | `urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f` |
+| Offer | URN | `urn:pdtf:offer:{uuid}` | `urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f` |
 | Gift | URN | `urn:pdtf:gift:{uuid}` | `urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e` |
 | Representation | URN | `urn:pdtf:representation:{uuid}` | `urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d` |
-| TransactionRole | URN | `urn:pdtf:role:{uuid}` | `urn:pdtf:role:d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a` |
+| TransactionRole | URN | `urn:pdtf:role:{uuid}` | `urn:pdtf:role:d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a` |
 | PropertyTitleLink | URN | `urn:pdtf:propertyTitleLink:{uuid}` | `urn:pdtf:propertyTitleLink:e5f6a7b8-c9d0-4e1f-8a3b-4c5d6e7f8a9b` |
 
 ## Appendix B: Decision Log
@@ -5604,7 +5611,7 @@ This generates the key pair, constructs the DID document with regulatory metadat
 |----|----------|------|--------|
 | D7 | `did:key` for Persons; `did:key` or `did:web` for Organisations; `did:web` for Transactions/Adapters | 2026-03-23 | **Updated** — Organisations may use provider-managed `did:key` (common case) or self-hosted `did:web` |
 | D23 | `urn:pdtf:unregisteredTitle:{uuid}` for unregistered titles | 2026-03-24 | **Open** — UUID version and first-registration transition TBD |
-| D26 | Organisations use `did:key` (provider-managed, default) or `did:web` (self-hosted) | 2026-03-24 | **Updated** — `did:key` via account provider is the common path; `did:web` for firms wanting direct control |
+| D35 (was D26) | Organisations use `did:key` (provider-managed, default) or `did:web` (self-hosted) | 2026-03-24 | **Updated** — `did:key` via account provider is the common path; `did:web` for firms wanting direct control |
 
 ## Appendix C: Related Sub-specs
 
@@ -5717,13 +5724,15 @@ The PDTF Trust Anchor is operated at:
 
 | Property | Value |
 |----------|-------|
-| Entity identifier | `https://trust.pdtf.org` |
-| DID | `did:web:trust.pdtf.org` |
-| Entity Configuration | `https://trust.pdtf.org/.well-known/openid-federation` |
-| Fetch endpoint | `https://trust.pdtf.org/federation/fetch` |
-| List endpoint | `https://trust.pdtf.org/federation/list` |
-| Trust Mark issuance | `https://trust.pdtf.org/federation/trust_mark` |
-| Trust Mark status | `https://trust.pdtf.org/federation/trust_mark_status` |
+| Entity identifier | `https://propdata.org.uk` |
+| DID | `did:web:propdata.org.uk` |
+| Entity Configuration | `https://propdata.org.uk/.well-known/openid-federation` |
+| Fetch endpoint | `https://propdata.org.uk/federation/fetch` |
+| List endpoint | `https://propdata.org.uk/federation/list` |
+| Trust Mark issuance | `https://propdata.org.uk/federation/trust_mark` |
+| Trust Mark status | `https://propdata.org.uk/federation/trust_mark_status` |
+
+**Operator and hostname.** In Phase 1 the Trust Anchor is operated by the platform operator as an interim, project-led Trust Anchor (§10.1). Who operates it in the long term is held open by consultation [Q6](/consultation/#q6-trust-anchor-governance). `https://propdata.org.uk` is the single hostname used throughout the specification and documentation for the Trust Anchor and for trust mark identifiers. If operation passes to a consortium or regulator, the entity identifier changes with it, and verifiers re-pin the new Trust Anchor key (§12.1). Earlier drafts also used `trust.pdtf.org`. That name is retired.
 
 ### 3.1 Entity Configuration
 
@@ -5731,8 +5740,8 @@ The Trust Anchor's self-signed Entity Configuration is a JWT published at `.well
 
 ```json
 {
-  "iss": "https://trust.pdtf.org",
-  "sub": "https://trust.pdtf.org",
+  "iss": "https://propdata.org.uk",
+  "sub": "https://propdata.org.uk",
   "iat": 1776038400,
   "exp": 1776124800,
   "jwks": {
@@ -5748,21 +5757,21 @@ The Trust Anchor's self-signed Entity Configuration is a JWT published at `.well
   "metadata": {
     "federation_entity": {
       "organization_name": "PDTF Trust Anchor",
-      "federation_fetch_endpoint": "https://trust.pdtf.org/federation/fetch",
-      "federation_list_endpoint": "https://trust.pdtf.org/federation/list",
-      "federation_trust_mark_endpoint": "https://trust.pdtf.org/federation/trust_mark",
-      "federation_trust_mark_status_endpoint": "https://trust.pdtf.org/federation/trust_mark_status"
+      "federation_fetch_endpoint": "https://propdata.org.uk/federation/fetch",
+      "federation_list_endpoint": "https://propdata.org.uk/federation/list",
+      "federation_trust_mark_endpoint": "https://propdata.org.uk/federation/trust_mark",
+      "federation_trust_mark_status_endpoint": "https://propdata.org.uk/federation/trust_mark_status"
     }
   },
   "trust_mark_issuers": {
     "https://propdata.org.uk/trust-marks/pdtf-verified-issuer": [
-      "https://trust.pdtf.org"
+      "https://propdata.org.uk"
     ],
     "https://propdata.org.uk/trust-marks/account-provider": [
-      "https://trust.pdtf.org"
+      "https://propdata.org.uk"
     ],
     "https://propdata.org.uk/trust-marks/regulated-conveyancer": [
-      "https://trust.pdtf.org",
+      "https://propdata.org.uk",
       "https://sra.org.uk",
       "https://clc-uk.org"
     ]
@@ -5789,7 +5798,7 @@ A subordinate entity (e.g. an adapter) publishes its own self-signed **Entity Co
   "iat": 1776038400,
   "exp": 1776124800,
   "jwks": { "keys": [ { "kty": "OKP", "crv": "Ed25519", "kid": "hmlr-2026-01", "x": "..." } ] },
-  "authority_hints": ["https://trust.pdtf.org"],
+  "authority_hints": ["https://propdata.org.uk"],
   "metadata": {
     "federation_entity": {
       "organization_name": "PDTF HMLR Adapter",
@@ -5800,8 +5809,8 @@ A subordinate entity (e.g. an adapter) publishes its own self-signed **Entity Co
       "credential_endpoint": "https://adapters.propdata.org.uk/hmlr/credential",
       "credentials_supported": [
         {
-          "format": "ldp_vc",
-          "types": ["VerifiableCredential", "TitleCredential"],
+          "format": "dc+sd-jwt",
+          "vct": "urn:pdtf:vct:TitleCredential",
           "cryptographic_binding_methods_supported": ["did:web"]
         }
       ]
@@ -5818,11 +5827,11 @@ A subordinate entity (e.g. an adapter) publishes its own self-signed **Entity Co
 
 ### 4.2 Subordinate Entity Statement (issued by Trust Anchor)
 
-When a verifier fetches `https://trust.pdtf.org/federation/fetch?sub=https://adapters.propdata.org.uk/hmlr`, the Trust Anchor returns a signed JWT:
+When a verifier fetches `https://propdata.org.uk/federation/fetch?sub=https://adapters.propdata.org.uk/hmlr`, the Trust Anchor returns a signed JWT:
 
 ```json
 {
-  "iss": "https://trust.pdtf.org",
+  "iss": "https://propdata.org.uk",
   "sub": "https://adapters.propdata.org.uk/hmlr",
   "iat": 1776038400,
   "exp": 1776124800,
@@ -5831,7 +5840,7 @@ When a verifier fetches `https://trust.pdtf.org/federation/fetch?sub=https://ada
     "openid_credential_issuer": {
       "credentials_supported": {
         "subset_of": [
-          { "types": ["VerifiableCredential", "TitleCredential"] }
+          { "vct": "urn:pdtf:vct:TitleCredential" }
         ]
       }
     }
@@ -5845,7 +5854,13 @@ The `jwks` in the subordinate statement pins the keys the Trust Anchor has witne
 
 ## 5. Trust Marks
 
-A **Trust Mark** is a signed JWT asserting that a subject entity meets a named policy. PDTF defines the following trust marks:
+A **Trust Mark** is a signed JWT asserting that a subject entity meets a named policy.
+
+:::caution[Catalogue: provisional, consultation Q7]
+The table below is the single PDTF trust mark catalogue. 00 §6.2 and the documentation site defer to it. It is provisional pending consultation [Q7](/consultation/#q7-trust-mark-granularity), which asks how granular trust must be. The working assumption is that authority over data categories is expressed by `delegation.authorised_paths` (§6) inside one `pdtf-verified-issuer` mark, not by a mark per category. Earlier drafts listed per-category marks such as `title-data-provider`, `property-data-provider`, `search-provider`, `energy-data-provider` and `environmental-data-provider`. Those marks are withdrawn.
+:::
+
+PDTF defines the following trust marks:
 
 | Trust Mark ID | Meaning | Typical Subject |
 |---------------|---------|-----------------|
@@ -5857,11 +5872,11 @@ A **Trust Mark** is a signed JWT asserting that a subject entity meets a named p
 
 ```json
 {
-  "iss": "https://trust.pdtf.org",
+  "iss": "https://propdata.org.uk",
   "sub": "https://adapters.propdata.org.uk/hmlr",
   "id": "https://propdata.org.uk/trust-marks/pdtf-verified-issuer",
   "iat": 1776038400,
-  "exp": 1807574400,
+  "exp": 1776643200,
   "ref": "https://propdata.org.uk/trust-marks/pdtf-verified-issuer/policy",
   "delegation": {
     "trust_level": "trusted_proxy",
@@ -5882,11 +5897,11 @@ The `delegation` claim is the PDTF-specific extension. Everything else is vanill
 
 ```json
 {
-  "iss": "https://trust.pdtf.org",
+  "iss": "https://propdata.org.uk",
   "sub": "https://platform.example.com",
   "id": "https://propdata.org.uk/trust-marks/account-provider",
   "iat": 1776038400,
-  "exp": 1807574400,
+  "exp": 1776643200,
   "delegation": {
     "trust_level": "account_provider",
     "identity_verification": {
@@ -5902,7 +5917,7 @@ The `managed_organisations` URL points to a signed JSON document listing the `di
 
 ### 5.3 Trust Mark Revocation
 
-Each trust mark carries `iat`/`exp` and can be checked for live status against the `federation_trust_mark_status_endpoint`. The Trust Anchor SHOULD set short lifetimes (days, not years) for high-impact trust marks and rely on status endpoint polling for faster revocation than the cache TTL would allow.
+Each trust mark carries `iat`/`exp` and can be checked for live status against the `federation_trust_mark_status_endpoint`. The Trust Anchor SHOULD set short lifetimes (days, not years) for high-impact trust marks; the examples in §5.1–5.2 use seven days and are re-issued before expiry, and rely on status endpoint polling for faster revocation than the cache TTL would allow.
 
 ### 5.4 Managed Organisations Document
 
@@ -6047,7 +6062,9 @@ interface TrustResolutionResult {
   /** Trust chain: [leaf, ..., trust anchor] */
   trustChain: string[];
 
-  /** Trust level derived from the delegation claim */
+  /** Issuer trust level from the delegation claim (§8.1–8.3). Federation
+   *  resolution never returns "assertion": that level is assigned per
+   *  credential from its evidence (§8.4). */
   trustLevel: "root_issuer" | "trusted_proxy" | "account_provider" | null;
 
   /** Whether all entity:paths in the VC are covered by delegation.authorised_paths */
@@ -6065,7 +6082,12 @@ interface TrustResolutionResult {
 
 ## 8. Trust Levels
 
-The `delegation.trust_level` claim classifies the subject. The same three levels that appeared in the earlier TIR design are preserved.
+This section is the canonical PDTF trust-level taxonomy. Sub-spec 07 §7.2, 00 and the documentation site use these identifiers and defer to it. There are **four** trust levels:
+
+- **Three issuer levels**, recorded in the federation as `delegation.trust_level` on the issuer's Trust Mark: `root_issuer`, `trusted_proxy` and `account_provider`.
+- **One credential level**, `assertion`. The federation does not record it. It applies to a credential whose evidence is a person's own statement (§8.4).
+
+The federation therefore records the trust level of each **issuer**. A verifier reads the level of an individual **credential** from the issuer's level together with the credential's `evidence`.
 
 ### 8.1 `root_issuer`
 
@@ -6077,17 +6099,30 @@ An authorised intermediary that fetches data from a primary source's API and rep
 
 ### 8.3 `account_provider`
 
-A platform that issues user or organisation DIDs and is responsible for identity verification at onboarding. Uses the separate `account-provider` trust mark (not `pdtf-verified-issuer`). Carries `delegation.identity_verification` and optionally `delegation.managed_organisations`.
+A platform that issues user or organisation DIDs and is responsible for identity verification at onboarding. Uses the separate `account-provider` trust mark (not `pdtf-verified-issuer`). Carries `delegation.identity_verification` and optionally `delegation.managed_organisations`. Under the working assumption in [02 §3.2.1](./02-vc-data-model.md), an account provider is also the issuer of the credentials that record its users' assertions. Those credentials carry the `assertion` level (§8.4), not `account_provider`.
 
-### 8.4 Comparison
+### 8.4 `assertion`
 
-| Aspect | root_issuer | trusted_proxy | account_provider |
-|--------|-------------|---------------|------------------|
-| Data source | Own canonical dataset | Primary source API | User onboarding |
-| VC content | Authoritative assertion | Faithful reproduction | Identity binding |
-| `proxy_for` required | No | Yes | No |
-| Trust mark ID | `pdtf-verified-issuer` | `pdtf-verified-issuer` | `account-provider` |
-| Phase | Phase 3 (future) | Phase 1 (now) | Phase 1 (now) |
+A person stating something as true, recorded against their verified identity. The TA6 / BASPI answers are the canonical case: whether the boiler has been serviced, whether there has been a boundary dispute. No registry holds these facts. Only the person can state them, and they carry liability for what they say.
+
+- **How it is identified.** A credential is at the `assertion` level when its `evidence` is a `UserAttestation` ([02 §6.2](./02-vc-data-model.md)). The issuer is an account provider acting for the person (02 §3.2.1), or in future the person's own wallet.
+- **What it means.** It is a signed, attributable statement, not independent confirmation. Verifiers MUST NOT treat it as registry data.
+- **Why it is a level.** It is traceable to an identified individual and the liability that attaches to them. A physically signed form is not.
+- **Not a federation level.** It never appears as `delegation.trust_level`, and federation trust resolution never returns it (§7.1).
+
+### 8.5 Comparison
+
+| Aspect | root_issuer | trusted_proxy | account_provider | assertion |
+|--------|-------------|---------------|------------------|-----------|
+| Applies to | Issuer | Issuer | Issuer | Credential |
+| Recorded in | `delegation.trust_level` | `delegation.trust_level` | `delegation.trust_level` | `evidence` type `UserAttestation` |
+| Data source | Own canonical dataset | Primary source API | User onboarding / identity verification | The person's own statement |
+| VC content | Authoritative assertion | Faithful reproduction | Identity binding | Attributable statement |
+| `proxy_for` required | No | Yes | No | — |
+| Trust mark ID | `pdtf-verified-issuer` | `pdtf-verified-issuer` | `account-provider` | — (issuer holds `account-provider`) |
+| Phase | Phase 3 (future) | Phase 1 (now) | Phase 1 (now) | Phase 1 (now) |
+
+Conflict ordering for state assembly, highest first: `root_issuer` > `trusted_proxy` > `account_provider` > `assertion` ([07 §7.2](./07-state-assembly.md)).
 
 ---
 
@@ -6126,7 +6161,7 @@ Reference implementations SHOULD ship with a bundled snapshot of the Trust Ancho
 
 ### 10.1 Phase 1
 
-The Trust Anchor is operated by the PDTF steward:
+The Trust Anchor is operated by the PDTF steward. This is the interim, project-led arrangement. Long-term governance is held open by consultation [Q6](/consultation/#q6-trust-anchor-governance).
 
 | Role | Responsibility | Phase 1 Holder |
 |------|---------------|----------------|
@@ -6173,7 +6208,7 @@ As PDTF 2.0 adoption grows, a multi-stakeholder property-sector governance body 
 
 When a primary source (e.g. HMLR) begins issuing PDTF-compliant VCs directly:
 
-1. HMLR publishes its own Entity Configuration, optionally as a subordinate of the PDTF Trust Anchor, or as its own Trust Anchor that PDTF verifiers pin alongside `trust.pdtf.org`
+1. HMLR publishes its own Entity Configuration, optionally as a subordinate of the PDTF Trust Anchor, or as its own Trust Anchor that PDTF verifiers pin alongside `https://propdata.org.uk`
 2. The Trust Anchor issues a `pdtf-verified-issuer` Trust Mark to HMLR with `trust_level: root_issuer`
 3. The corresponding proxy's Trust Mark is allowed to expire / marked revoked
 4. Verifiers begin preferring the root issuer's credentials
@@ -6212,7 +6247,7 @@ Existing VCs issued by deprecated proxies remain cryptographically valid — sig
 **Mitigations:**
 - Short-lived Trust Marks (days, not years)
 - Active `trust_mark_status_endpoint` polling for high-impact marks
-- VC-level revocation (Bitstring Status List) operates on minutes, independent of federation caches
+- VC-level revocation (status lists, [14 §1](./14-credential-revocation.md)) operates on minutes, independent of federation caches
 
 ### 12.4 Enumeration and Privacy
 
@@ -6257,7 +6292,7 @@ property-data-standards-co/core
 import { verifyCredential } from '@pdtf/vc-validator';
 
 const result = await verifyCredential(credential, {
-  trustAnchor: 'https://trust.pdtf.org',
+  trustAnchor: 'https://propdata.org.uk',
   trustAnchorKeys: pinnedJwks,
   federationCache: cache,
   trustFailMode: 'closed',
@@ -6273,7 +6308,7 @@ const result = await verifyCredential(credential, {
 
 | Decision | Summary | Status |
 |----------|---------|--------|
-| **D8** | Trust infrastructure is OpenID Federation with PDTF Trust Anchor at `trust.pdtf.org` | ✅ Confirmed (supersedes earlier GitHub-TIR decision) |
+| **D8** | Trust infrastructure is OpenID Federation with the PDTF Trust Anchor at `https://propdata.org.uk` (interim operator; governance held open, consultation Q6) | ✅ Confirmed (supersedes earlier GitHub-TIR decision) |
 | **D20** | Authorisation expressed as entity:path combinations inside the Trust Mark `delegation` claim | ✅ Confirmed |
 | **D21** | Account providers carry an `account-provider` Trust Mark; user DIDs traced via `managed_organisations` | ✅ Confirmed |
 | **D24** | 3-phase evolution: platform proxies → independently hosted adapters → primary-source root issuers | ✅ Confirmed |
@@ -6310,6 +6345,7 @@ const result = await verifyCredential(credential, {
 | **Root issuer** | Primary authoritative data source (e.g. HMLR) |
 | **Trusted proxy** | Authorised intermediary that repackages source data as VCs |
 | **Account provider** | Platform that issues user/org DIDs with identity verification |
+| **Assertion** | Credential-level trust level for a person's own statement (`UserAttestation` evidence), §8.4 |
 
 ---
 
@@ -6351,9 +6387,9 @@ This spec covers key management for **credential signing and verification only**
 |----------|-------------|
 | [01 — Entity Graph](./01-entity-graph.md) | Entities that hold DIDs backed by keys defined here |
 | 03 — DID Methods | DID documents reference `verificationMethod` entries whose keys are managed here |
-| 04 — VC Data Model | Credentials signed using the operations defined here |
+| 02 — VC Data Model | Credentials signed using the operations defined here |
 | 04 — OpenID Federation | Trust Marks reference issuer DIDs whose keys are managed here |
-| 07 — Revocation | Status List credentials signed with keys managed here |
+| 14 — Credential Revocation | Status lists signed with keys managed here |
 
 ### 1.3 Key Decisions
 
@@ -6398,7 +6434,11 @@ All cryptographic keys in PDTF 2.0 use **Ed25519** — the Edwards-curve Digital
 
 ### 2.3 Cryptosuite: eddsa-jcs-2022
 
-PDTF 2.0 uses the **`eddsa-jcs-2022`** cryptosuite as defined in the [W3C Data Integrity EdDSA Cryptosuites specification](https://www.w3.org/TR/vc-di-eddsa/).
+:::note[Superseded representation]
+This cryptosuite is the superseded representation, and the one the current reference libraries implement. The securing mechanism is stated once, in [02 §2.4](./02-vc-data-model.md): SD-JWT-VC, provisional pending consultation [Q20](/consultation/#q20-credential-format--securing-mechanism). Under SD-JWT-VC, the same Ed25519 keys sign JWS with `alg: EdDSA`, and everything in this sub-spec about key custody, rotation and KMS applies unchanged.
+:::
+
+In the Data Integrity representation, PDTF 2.0 uses the **`eddsa-jcs-2022`** cryptosuite as defined in the [W3C Data Integrity EdDSA Cryptosuites specification](https://www.w3.org/TR/vc-di-eddsa/).
 
 Key properties:
 
@@ -6453,7 +6493,7 @@ Adapter keys are the workhorses of the system. Each trusted proxy adapter — HM
 
 | Property | Value |
 |----------|-------|
-| **Purpose** | Generate user's `did:key` identity; sign user-asserted credentials |
+| **Purpose** | Generate user's `did:key` identity; holder-binding (`cnf`) key; sign the user's presentations (Key Binding JWT / VP) |
 | **DID method** | `did:key` (derived from public key) |
 | **Cardinality** | One key per user |
 | **Storage** | Google Cloud KMS (software-backed, custodial) |
@@ -6461,6 +6501,8 @@ Adapter keys are the workhorses of the system. Each trusted proxy adapter — HM
 | **Example** | `did:key:z6MkhR7...` for a seller, buyer, or conveyancer |
 
 User keys establish individual identity in the PDTF ecosystem. Each person (seller, buyer, conveyancer, estate agent) gets a key pair at onboarding. The public key is encoded as a `did:key` identifier which becomes their persistent identity across all credentials.
+
+**Who issues a user's assertions.** Under the working assumption stated in [02 §3.2.1](./02-vc-data-model.md) (provisional, consultation Q4), the platform issues credentials recording a user's assertions under its own `did:web`. The user's key is the holder key: it proves possession at presentation and does not sign the credential itself.
 
 **Current model: custodial.**
 The platform generates and holds user keys in Cloud KMS. Users don't directly interact with their key material. This is a pragmatic choice — most property professionals don't have digital wallets, and the onboarding friction of self-sovereign keys would be a barrier to adoption.
@@ -6487,7 +6529,7 @@ The platform key is the **root of trust** for the PDTF ecosystem in its current 
 
 | Property | Value |
 |----------|-------|
-| **Purpose** | Sign Bitstring Status List credentials for revocation |
+| **Purpose** | Sign status lists for revocation: Status List Tokens under SD-JWT-VC, Bitstring Status List credentials in the superseded representation ([14 §1](./14-credential-revocation.md)) |
 | **DID method** | Same as the credential issuer |
 | **Key** | Same key as the credential issuer's adapter/platform key |
 | **Storage** | Google Cloud KMS (same key — no separate provisioning) |
@@ -6506,7 +6548,7 @@ Status List credentials are themselves VCs — they must be signed. Status list 
 │ Category         │ DID Method   │ Storage   │ Signs                │
 ├──────────────────┼──────────────┼───────────┼──────────────────────┤
 │ Adapter Keys     │ did:web      │ KMS (HSM) │ Source-derived VCs   │
-│ User Keys        │ did:key      │ KMS (SW)  │ User assertions      │
+│ User Keys        │ did:key      │ KMS (SW)  │ Presentations (KB)   │
 │ Platform Key     │ did:web      │ KMS (HSM) │ Federation, attestations │
 │ Status List      │ (same key as │ (same as  │ Bitstring Status     │
 │ (not separate)   │  issuer)     │  issuer)  │ List VCs             │
@@ -6629,7 +6671,7 @@ Key version names are auto-generated by KMS (e.g., `1`, `2`, `3`). The primary v
 
 **User keys use SOFTWARE.** With potentially thousands of users, HSM costs would be significant ($2,500/month for 1,000 users). Software-backed keys are still stored in KMS (not exportable, IAM-controlled, audit-logged) — they just don't use dedicated HSM hardware. This is an acceptable trade-off because:
 
-- User keys sign fewer credential types (primarily user assertions, not source data)
+- User keys sign presentations and key-binding proofs, not source data (02 §3.2.1)
 - Individual key compromise affects one user, not an entire data source
 - The migration to wallet-based keys (§10) will eventually move user keys out of KMS entirely
 
@@ -6716,8 +6758,9 @@ Platform Key (did:web:platform.example.com)
     │       adapter DID + verifying its Trust Mark via federation resolution
     │
     └── User Keys (did:key:z6Mk...)
-        └── Sign user-asserted VCs ──→ Verifiable by resolving
-            did:key + verifying account-provider Trust Mark via federation resolution
+        └── Sign presentations (Key Binding JWT) ──→ Verifiable against the
+            credential's cnf key; the credential itself is issued by the
+            account provider's did:web (02 §3.2.1), verified via its Trust Mark
 ```
 
 **Note:** This is not a certificate chain in the X.509 sense. There's no chain-of-signatures from platform key down to adapter keys. Instead, trust is established by the OpenID Federation: the platform (as Trust Anchor) signs Subordinate Entity Statements and Trust Marks that declare which adapter DIDs are trusted for which credential types. Verification resolves the federation trust chain.
@@ -7003,7 +7046,7 @@ Platform key rotation follows the same pattern as adapter key rotation (§7.1): 
 
 ## 8. Signing Operations
 
-This section defines how a Verifiable Credential is signed using the `eddsa-jcs-2022` cryptosuite and Google Cloud KMS.
+This section defines how a Verifiable Credential is signed using the `eddsa-jcs-2022` cryptosuite and Google Cloud KMS. That is the superseded Data Integrity representation, which the current reference libraries implement. Under SD-JWT-VC ([02 §2.4](./02-vc-data-model.md), [§9](./02-vc-data-model.md)) the KMS call is the same: an Ed25519 signature over the JWS signing input, in place of the JCS-canonicalised document.
 
 ### 8.1 Signing Flow
 
@@ -7131,7 +7174,7 @@ async function signCredential(
 {
   "@context": [
     "https://www.w3.org/ns/credentials/v2",
-    "https://schema.pdtf.org/v4/context"
+    "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
   "type": ["VerifiableCredential", "TitleCredential"],
   "issuer": "did:web:adapters.propdata.org.uk:hmlr",
@@ -7428,7 +7471,7 @@ This is the fundamental difference from PDTF v1, where verification meant "trust
 
 ### 10.1 Current State: Custodial Keys
 
-Today, the platform generates and manages user keys in Cloud KMS. Users authenticate via Firebase Auth and never directly interact with their cryptographic identity. The credential service signs on their behalf when they make assertions (e.g., completing a TA6 property information form).
+Today, the platform generates and manages user keys in Cloud KMS. Users authenticate via Firebase Auth and never directly interact with their cryptographic identity. When they make assertions (e.g., completing a TA6 property information form), the platform issues the credential under its own `did:web`, and the user's KMS-held key signs their presentations (02 §3.2.1, provisional).
 
 **Advantages of custodial model:**
 - Zero onboarding friction — users don't need a wallet
@@ -7997,7 +8040,7 @@ The composer's input is a set of Verifiable Credentials associated with a transa
   },
   {
     "type": ["VerifiableCredential", "PropertyCredential"],
-    "issuer": "did:key:z6Mkh...seller",
+    "issuer": "did:web:platform.example.com",
     "validFrom": "2026-03-21T14:30:00Z",
     "credentialSubject": {
       "id": "urn:pdtf:uprn:100023456789",
@@ -8041,15 +8084,16 @@ The composer's input is a set of Verifiable Credentials associated with a transa
 | `issuer` | Determines trust level via OpenID Federation trust resolution (§7) |
 | `validFrom` | Temporal ordering — latest wins for conflicting paths |
 | `type` | Entity type classification (PropertyCredential, TitleCredential, etc.) |
-| `credentialStatus` | Revocation check — revoked credentials are excluded from assembly |
-| `proof` | Signature verification — invalid signatures are excluded |
+| `status` (`credentialStatus` in the superseded representation) | Revocation check: revoked credentials are excluded from assembly. Mechanism per [14 §1](./14-credential-revocation.md) |
+| Signature (JWS; `proof` in the superseded representation) | Signature verification: invalid signatures are excluded ([02 §2.4](./02-vc-data-model.md)) |
+| `evidence` | A `UserAttestation` marks the credential as `assertion` trust level ([04 §8.4](./04-openid-federation.md)) |
 
 ### 3.3 Pre-Assembly Filtering
 
 Before composition begins, credentials are filtered:
 
-1. **Signature verification** — invalid proofs are rejected
-2. **Revocation check** — revoked credentials (Bitstring Status List) are excluded
+1. **Signature verification** — invalid signatures are rejected
+2. **Revocation check** — revoked credentials are excluded (status list, [14 §1](./14-credential-revocation.md)). A credential whose status cannot be checked is handled as 14 §13 specifies: fail-closed for relationship credentials
 3. **Expiry check** — credentials past `validUntil` are excluded
 4. **OpenID Federation trust resolution** — issuer must hold a Trust Mark whose `delegation.authorised_paths` covers the entity:path combinations they claim
 
@@ -8128,11 +8172,12 @@ Consider a Property entity (`urn:pdtf:uprn:100023456789`) with three VCs arrivin
 }
 ```
 
-**VC 2 — Seller (account provider), issued 2026-03-20:**
+**VC 2 — Seller assertion, issued by the platform for the seller, 2026-03-20** (issuer per [02 §3.2.1](./02-vc-data-model.md); provisional, consultation Q4):
 ```json
 {
-  "issuer": "did:key:z6Mkh...seller",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-20T14:30:00Z",
+  "evidence": [{ "type": "UserAttestation", "source": "did:key:z6Mkh...seller", "method": "BASPI form completion" }],
   "credentialSubject": {
     "id": "urn:pdtf:uprn:100023456789",
     "heating": {
@@ -8184,11 +8229,11 @@ VC 1 (2026-03-18) → VC 2 (2026-03-20) → VC 3 (2026-03-22)
 
 **Step 2b — Resolve trust levels:**
 - VC 1: `adapters.propdata.org.uk:epc` → OpenID Federation trust resolution → `trusted_proxy` for `Property:/energyEfficiency/*`
-- VC 2: `did:key:z6Mkh...seller` → OpenID Federation trust resolution → `account_provider` (user attestation)
+- VC 2: `did:web:platform.example.com` → OpenID Federation trust resolution → `account_provider` issuer; `UserAttestation` evidence → credential level `assertion` ([04 §8.4](./04-openid-federation.md))
 - VC 3: `adapters.propdata.org.uk:epc` → OpenID Federation trust resolution → `trusted_proxy` for `Property:/energyEfficiency/*`
 
 **Step 2c — Conflict resolution:**
-VC 1 and VC 3 both claim `energyEfficiency.certificate.*`. Same trust level (trustedProxy), so latest validFrom wins. VC 3 supersedes VC 1 for all `energyEfficiency` paths.
+VC 1 and VC 3 both claim `energyEfficiency.certificate.*`. Same trust level (`trusted_proxy`), so latest validFrom wins. VC 3 supersedes VC 1 for all `energyEfficiency` paths.
 
 **Step 2d — Deep merge (applied in sorted order):**
 
@@ -8280,19 +8325,19 @@ Schema check: `heatingType` = "Central heating" → `centralHeatingDetails` is v
   "energyEfficiency.certificate": {
     "vcId": "vc-3-id",
     "issuer": "did:web:adapters.propdata.org.uk:epc",
-    "trustLevel": "trustedProxy",
+    "trustLevel": "trusted_proxy",
     "validFrom": "2026-03-22T09:00:00Z"
   },
   "heating": {
     "vcId": "vc-2-id",
-    "issuer": "did:key:z6Mkh...seller",
-    "trustLevel": "accountProvider",
+    "issuer": "did:web:platform.example.com",
+    "trustLevel": "assertion",
     "validFrom": "2026-03-20T14:30:00Z"
   },
   "address": {
     "vcId": "vc-2-id",
-    "issuer": "did:key:z6Mkh...seller",
-    "trustLevel": "accountProvider",
+    "issuer": "did:web:platform.example.com",
+    "trustLevel": "assertion",
     "validFrom": "2026-03-20T14:30:00Z"
   }
 }
@@ -8335,7 +8380,7 @@ function deepMerge(target: object, source: object): object {
 
 ### 4.4 V4 Output Shape
 
-The composed v4 state follows the structure defined in [Sub-spec 01 §6](./01-entity-graph.md):
+The composed v4 state follows the structure defined in [Sub-spec 01 §6](./01-entity-graph.md). Identifiers are abbreviated for readability (`own-1`, `rep-1`). Real generated identifiers are UUID v4 ([03 §3.3](./03-did-methods.md)):
 
 ```json
 {
@@ -8462,7 +8507,7 @@ The composed v4 state follows the structure defined in [Sub-spec 01 §6](./01-en
       "energyEfficiency.certificate": {
         "vcId": "vc-epc-003",
         "issuer": "did:web:adapters.propdata.org.uk:epc",
-        "trustLevel": "trustedProxy",
+        "trustLevel": "trusted_proxy",
         "validFrom": "2026-03-22T09:00:00Z"
       }
     }
@@ -8991,17 +9036,18 @@ The composer must decide which value wins.
 
 ### 7.2 Trust Level Ordering
 
-The primary resolution mechanism is trust level, defined by the Trusted Issuer Registry:
+The primary resolution mechanism is trust level. The taxonomy is defined in [04 §8](./04-openid-federation.md): three issuer levels resolved through OpenID Federation (`delegation.trust_level`), and the credential-level `assertion`, read from `UserAttestation` evidence:
 
 ```
-rootIssuer > trustedProxy > accountProvider
+root_issuer > trusted_proxy > account_provider > assertion
 ```
 
 | Trust Level | Description | Example Issuers |
 |------------|-------------|-----------------|
-| `rootIssuer` | Primary data source — the authority itself | HMLR, MHCLG (EPC), Environment Agency, VOA |
-| `trustedProxy` | Adapter that fetches from the primary source and signs | PDTF HMLR adapter, PDTF EPC adapter |
-| `accountProvider` | User-attested data via a platform account | The platform (on behalf of sellers/buyers) |
+| `root_issuer` | Primary data source — the authority itself | HMLR, MHCLG (EPC), Environment Agency, VOA |
+| `trusted_proxy` | Adapter that fetches from the primary source and signs | PDTF HMLR adapter, PDTF EPC adapter |
+| `account_provider` | Identity and onboarding data issued by an accredited account provider | The platform (identity binding) |
+| `assertion` | A person's own statement, recorded against their verified identity (`UserAttestation` evidence) | The platform, issuing for sellers and buyers ([02 §3.2.1](./02-vc-data-model.md)) |
 
 **Rule:** A credential from a higher trust level always wins, regardless of timestamp.
 
@@ -9011,8 +9057,8 @@ When two VCs have the same trust level, the later `validFrom` wins:
 
 ```typescript
 function resolveConflict(vc1: VC, vc2: VC, federation: FederationResolver): VC {
-  const trust1 = tir.getTrustLevel(vc1.issuer);
-  const trust2 = tir.getTrustLevel(vc2.issuer);
+  const trust1 = effectiveTrustLevel(vc1, federation);
+  const trust2 = effectiveTrustLevel(vc2, federation);
 
   // Higher trust level wins
   if (trustRank(trust1) > trustRank(trust2)) return vc1;
@@ -9026,11 +9072,19 @@ function resolveConflict(vc1: VC, vc2: VC, federation: FederationResolver): VC {
   return vc1.id < vc2.id ? vc1 : vc2;
 }
 
+// 04 §8: a UserAttestation makes the credential an assertion, whatever the
+// issuer's federation level; otherwise use the issuer's delegation.trust_level.
+function effectiveTrustLevel(vc: VC, federation: FederationResolver): string {
+  if (vc.evidence?.some(e => e.type === 'UserAttestation')) return 'assertion';
+  return federation.getTrustLevel(vc.issuer);
+}
+
 function trustRank(level: string): number {
   switch (level) {
-    case 'rootIssuer': return 3;
-    case 'trustedProxy': return 2;
-    case 'accountProvider': return 1;
+    case 'root_issuer': return 4;
+    case 'trusted_proxy': return 3;
+    case 'account_provider': return 2;
+    case 'assertion': return 1;
     default: return 0;
   }
 }
@@ -9041,11 +9095,11 @@ function trustRank(level: string): number {
 Conflict resolution operates at the **path level**, not the VC level. A single VC may contain data at multiple paths, and different paths from that VC may have different conflict outcomes:
 
 ```
-VC from EPC adapter (trustedProxy):
+VC from EPC adapter (trusted_proxy):
   energyEfficiency.certificate.currentEnergyRating = "C"   ← wins (higher trust)
   address.postcode = "EH45 8AB"                             ← loses (not authorised for address)
 
-VC from seller (accountProvider):
+VC from seller (assertion):
   energyEfficiency.certificate.currentEnergyRating = "D"    ← loses
   address.postcode = "EH45 8AB"                             ← wins (authorised for address paths)
 ```
@@ -9063,14 +9117,14 @@ Every path in the composed state is annotated with its provenance — which VC c
   "source": {
     "vcId": "urn:uuid:epc-vc-2026-03-22",
     "issuer": "did:web:adapters.propdata.org.uk:epc",
-    "trustLevel": "trustedProxy",
+    "trustLevel": "trusted_proxy",
     "validFrom": "2026-03-22T09:00:00Z"
   },
   "superseded": [
     {
       "vcId": "urn:uuid:epc-vc-2026-03-18",
       "issuer": "did:web:adapters.propdata.org.uk:epc",
-      "trustLevel": "trustedProxy",
+      "trustLevel": "trusted_proxy",
       "validFrom": "2026-03-18T10:00:00Z",
       "reason": "superseded_by_later_vc"
     }
@@ -9604,7 +9658,7 @@ For performance optimisation (future), the composer could support incremental up
 | VC with unknown entity type | Log warning, skip VC, continue composition |
 | VC with invalid `credentialSubject.id` | Log error, skip VC |
 | Schema not found for entity type | Log error, skip entity (cannot prune without schema) |
-| Federation trust resolution failure | Fall back to `account_provider` trust level |
+| Federation trust resolution failure | Exclude the credential: it fails the §3.3 trust check, and only credentials passing all four checks are composed. Log it as unauthorised. Never assign it a fallback trust level |
 | Merge produces invalid state (fails schema validation) | Log error, return last valid state, alert |
 | Collection conversion loses data | Fatal error — this should never happen in production |
 
@@ -9832,7 +9886,7 @@ A complete worked example showing composition of a realistic transaction from VC
 ```json
 {
   "type": ["VerifiableCredential", "PropertyCredential"],
-  "issuer": "did:key:z6Mkh...seller",
+  "issuer": "did:web:platform.example.com",
   "validFrom": "2026-03-16T14:00:00Z",
   "credentialSubject": {
     "id": "urn:pdtf:uprn:100023456789",
@@ -10032,7 +10086,7 @@ A non-exhaustive list of discriminator patterns in the PDTF schema that the prun
 
 ## 1. Purpose
 
-The PDTF 2.0 specification suite defines a trust architecture built on W3C Verifiable Credentials, Decentralised Identifiers, and a federated Trusted Issuer Registry. Specifications alone are insufficient — implementers need working code that demonstrates correct behaviour, provides ready-to-use libraries, and serves as the canonical interpretation of the spec when ambiguity arises.
+The PDTF 2.0 specification suite defines a trust architecture built on W3C Verifiable Credentials, Decentralised Identifiers, and OpenID Federation ([04](./04-openid-federation.md)), which replaced the earlier Trusted Issuer Registry. Specifications alone are insufficient — implementers need working code that demonstrates correct behaviour, provides ready-to-use libraries, and serves as the canonical interpretation of the spec when ambiguity arises.
 
 The reference implementations serve four goals:
 
@@ -10107,6 +10161,10 @@ The validator executes a sequential pipeline. Each stage can short-circuit on fa
 1. Structure Validation  →  2. Resolve Issuer DID  →  3. Verify Signature
         →  4. Federation Lookup  →  5. Expiry Check  →  6. Revocation Check  →  Result
 ```
+
+:::note[Current implementation state]
+The pipeline below describes what `@pdtf/vc-validator` implements today: Data Integrity (`eddsa-jcs-2022`) and Bitstring Status List. That is the superseded representation, and the one the current reference libraries implement. The securing mechanism is stated once, in [02 §2.4](./02-vc-data-model.md): SD-JWT-VC, provisional pending consultation [Q20](/consultation/#q20-credential-format--securing-mechanism). The revocation mechanism is stated in [14 §1](./14-credential-revocation.md).
+:::
 
 **Stage 1 — Structure Validation.** Validates the VC JSON against W3C VC Data Model 2.0 structure and PDTF-specific requirements: `@context` includes the PDTF context URL, `type` includes a recognised PDTF credential type, `credentialSubject` conforms to the entity schema, and `proof` is present with a supported cryptosuite.
 
@@ -10209,7 +10267,7 @@ type ValidationErrorCode =
 
 ```typescript
 interface ValidatorConfig {
-  /** URL of the Trusted Issuer Registry API. */
+  /** Entity identifier of the OpenID Federation Trust Anchor (04 §3), e.g. 'https://propdata.org.uk'. */
   trustAnchor: string;
   /** DID resolver instance. If not provided, a default resolver is created. */
   didResolver?: DIDResolver;
@@ -10233,7 +10291,7 @@ import { createValidator } from '@pdtf/vc-validator';
 import { createResolver } from '@pdtf/did-resolver';
 
 const validator = createValidator({
-  trustAnchor: 'https://trust.pdtf.org',
+  trustAnchor: 'https://propdata.org.uk',
   didResolver: createResolver({ cacheTtlMs: 600_000 }),
 });
 
@@ -10489,7 +10547,7 @@ const credential = await builder.buildCredential({
 
 ### 5.4 Signing Process
 
-The builder follows the `eddsa-jcs-2022` Data Integrity cryptosuite:
+The builder follows the `eddsa-jcs-2022` Data Integrity cryptosuite. That is the current implementation state, not the spec's answer ([02 §2.4](./02-vc-data-model.md)):
 
 1. **Assemble** the unsigned credential — populate all fields, generate UUID URN if no `id` provided.
 2. **Construct proof options** — `type: 'DataIntegrityProof'`, `cryptosuite: 'eddsa-jcs-2022'`, `created`, `verificationMethod`, `proofPurpose: 'assertionMethod'`.
@@ -10878,8 +10936,7 @@ All packages target modern browsers (last 2 versions of Chrome, Firefox, Safari,
 Anticipated but out of scope for initial release:
 
 - **`@pdtf/vc-presenter`** — Verifiable Presentation construction for selective disclosure
-- **`@pdtf/status-list`** — Bitstring Status List credential creation and management
-- **`@pdtf/tir-client`** — Typed client for the Trusted Issuer Registry API
+- **`@pdtf/status-list`** — Status list creation and management (Token Status List per 14 §1.1; Bitstring Status List for the superseded representation)
 - **`@pdtf/migration`** — Tools for migrating PDTF v1/v3 data to v4 credential format
 
 ---
@@ -10959,6 +11016,8 @@ Credential revocation is the mechanism by which an issuer declares that a creden
 > **D18 (provisional — see [02 §2.4](./02-vc-data-model.md)):** Every credential issued in the PDTF 2.0 ecosystem MUST carry a revocation reference, and issuers MUST maintain status infrastructure capable of revoking any credential they have issued. Under the SD-JWT-VC securing mechanism this is the IETF **Token Status List** (`status` claim — §1.1). The W3C **Bitstring Status List** described from §2 is the equivalent mechanism for the superseded embedded-proof / JSON-LD representation.
 
 This is not optional. Credentials without revocation support MUST be rejected by conformant verifiers.
+
+**D18 and §1.1 are the single statement of PDTF's status mechanism.** 00 §7.3, 02 §2.1 and §8, 07 §3 and the documentation site defer to them. The mechanism follows the securing mechanism ([02 §2.4](./02-vc-data-model.md), consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)), so it is provisional for the same reason.
 
 ### 1.1 Revocation mechanism under SD-JWT-VC (Token Status List)
 
@@ -11051,7 +11110,11 @@ The Bitstring Status List strikes the right balance: it is a W3C standard with g
 
 ### Requirement
 
-Every Verifiable Credential issued within PDTF 2.0 MUST include a `credentialStatus` property. Credentials without this property MUST be rejected by conformant verifiers, regardless of whether the credential signature is valid.
+:::note[Superseded representation]
+This section specifies the `credentialStatus` field of the superseded Data Integrity representation. Under SD-JWT-VC the equivalent requirement applies to the `status` claim (§1.1).
+:::
+
+In that representation, every Verifiable Credential issued within PDTF 2.0 MUST include a `credentialStatus` property. Credentials without this property MUST be rejected by conformant verifiers, regardless of whether the credential signature is valid.
 
 ### Structure
 
@@ -11660,6 +11723,14 @@ Fail-closed applies as for the relationship credentials (D18.2). A PropertyTitle
 
 ## 8. Suspension vs Revocation
 
+**Working position (provisional, §14 Q1).** This is the single statement on suspension. 02 §8.2 and 00 §7.3 defer to it.
+
+- Every credential carries a **revocation** entry.
+- **Relationship credentials** (SellerCapacity, Offer, Gift, Representation, TransactionRole) SHOULD also carry a **suspension** entry, so that a disputed or under-investigation relationship can be held without being permanently revoked.
+- **Property data credentials** MAY carry one. If their data is wrong, revoke and reissue.
+
+Under Token Status List, one list with `bits: 2` expresses both states (§1.1). In the superseded representation, two `credentialStatus` entries are used (§3).
+
 ### Definitions
 
 | | Revocation | Suspension |
@@ -12056,7 +12127,7 @@ A status list is a point-in-time snapshot. An attacker who captures an older ver
 
 Should all credential types support suspension, or only specific types (ownership, representation)? Suspension adds operational complexity (the ability to un-set bits and re-sign). Property data VCs may not need suspension — if data is wrong, revoke and reissue.
 
-**Proposed resolution:** Suspension is OPTIONAL for property data VCs and RECOMMENDED for the relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole).
+**Proposed resolution (adopted as the working position in §8):** Suspension is OPTIONAL for property data VCs and RECOMMENDED for the relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole).
 
 ### Q2: Cross-Issuer Revocation
 
@@ -12184,7 +12255,7 @@ PDTF v1/v3 does not have credential revocation (claims are asserted through OIDC
 
 | ID | Decision | Rationale | Date |
 |----|----------|-----------|------|
-| D18 | Bitstring Status List mandatory for all issuers | W3C standard, privacy-preserving, cacheable, simple infrastructure requirement | 2026-03-24 |
+| D18 | Status list mandatory for all issuers: Token Status List under SD-JWT-VC (§1.1), Bitstring Status List in the superseded representation. Provisional, following consultation Q20 | Standards-based, privacy-preserving, cacheable, simple infrastructure requirement | 2026-03-24 (revised Nov 2026) |
 | D18.1 | Minimum 16KB (131,072 bit) status lists | W3C recommendation for herd privacy; storage cost negligible | 2026-03-24 |
 | D18.2 | Fail-closed for relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole, PropertyTitleLink) | Risk of accepting revoked credentials in property transactions too high | 2026-03-24 |
 | D18.3 | Indices never reused | Prevents confusion and replay attacks | 2026-03-24 |
@@ -12265,11 +12336,15 @@ Implementations can claim conformance at different levels depending on their sco
 The minimum implementation needed by a consumer (e.g. a lender portal or conveyancing CMS) to trust a single PDTF credential.
 
 To claim Level 1, an implementation MUST correctly process all Level 1 test vectors, which cover:
-- W3C VC v2 format validation
+- Credential format validation
 - DID resolution (`did:key` and `did:web`)
-- Data Integrity signature verification (`eddsa-jcs-2022`)
-- Bitstring Status List resolution and bit checking
+- Signature verification for the securing mechanism stated in [02 §2.4](../02-vc-data-model/): SD-JWT-VC (issuer JWS, Disclosure digests, Key Binding JWT)
+- Status list resolution and entry checking for the mechanism stated in [14 §1](../14-credential-revocation/): Token Status List
 - OpenID Federation trust resolution and Trust Mark `delegation` authorisation checks
+
+:::caution[Provisional: consultation Q20]
+The securing and status mechanisms are provisional ([02 §2.4](../02-vc-data-model/), consultation Q20), so the Level 1 vectors follow them. The current reference libraries implement only Data Integrity (`eddsa-jcs-2022`) and Bitstring Status List. Until SD-JWT-VC vectors are published, the suite also carries Data Integrity vectors, tagged `representation: "data-integrity"`. An implementation MAY claim Level 1 against those, provided it states which representation it was tested with.
+:::
 
 ### Level 2: Entity State Assembly
 Required for systems that compose the entity graph and manage transaction state.
@@ -12304,14 +12379,16 @@ Each test category contains a `manifest.json` describing the test cases:
   "tests": [
     {
       "id": "vc-valid-epc",
-      "description": "A valid EPC credential signed with eddsa-jcs-2022",
-      "input": "fixtures/valid/epc-1.json",
+      "description": "A valid EPC credential secured as SD-JWT-VC (EdDSA)",
+      "input": "fixtures/valid/epc-1.sd-jwt",
+      "representation": "sd-jwt-vc",
       "expect": "pass"
     },
     {
       "id": "vc-invalid-signature",
       "description": "An EPC credential where the subject data has been tampered with after signing",
-      "input": "fixtures/invalid/tampered-epc-1.json",
+      "input": "fixtures/invalid/tampered-epc-1.sd-jwt",
+      "representation": "sd-jwt-vc",
       "expect": "fail",
       "failReason": "signature_mismatch"
     }
@@ -12321,9 +12398,9 @@ Each test category contains a `manifest.json` describing the test cases:
 
 ### 2.2 Test Categories
 
-1. **VC Verification:** Valid VCs, tampered subjects, invalid dates, missing required fields.
+1. **VC Verification:** Valid VCs, tampered subjects, tampered or missing Disclosures, invalid Key Binding JWTs, invalid dates, missing required fields.
 2. **DID Resolution:** Valid `did:key` derivations, valid `did:web` documents, incorrect `assertionMethod` arrays, key format errors.
-3. **Status Lists:** Active credentials, revoked credentials, suspended credentials, out-of-bounds indices.
+3. **Status Lists:** Active credentials, revoked credentials, suspended credentials, out-of-bounds indices, unsigned or wrongly-signed status lists.
 4. **Federation Trust Resolution:** Trust Mark `delegation.authorised_paths` coverage, unauthorised paths, wildcard matching (e.g. `Title:*`), trust level inheritance.
 5. **State Assembly:** Pruning tests (e.g. changing `heatingType` to "None" and ensuring `centralHeatingDetails` is stripped).
 

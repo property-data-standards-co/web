@@ -40,6 +40,10 @@ The PDTF packages are in active development and not yet published. Code examples
 
 Given a W3C Verifiable Credential containing PDTF entity data, verify its signature, issuer authorisation, and revocation status in one call:
 
+:::note[Provisional]
+This example is in the Data Integrity representation (an embedded `proof` using `eddsa-jcs-2022`) that the current libraries implement. The spec's provisional securing mechanism is SD-JWT-VC: see [02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism) (consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)).
+:::
+
 <Tabs syncKey="language">
   <TabItem label="TypeScript">
     ```typescript
@@ -50,6 +54,7 @@ Given a W3C Verifiable Credential containing PDTF entity data, verify its signat
         "https://www.w3.org/ns/credentials/v2",
         "https://propdata.org.uk/ns/v4"
       ],
+      "id": "urn:pdtf:vc:7f3a2b1c-9d4e-4f6a-8b7c-0d1e2f3a4b5c",
       "type": ["VerifiableCredential", "PropertyCredential"],
       "issuer": "did:web:adapter.propdata.org.uk",
       "credentialSubject": {
@@ -66,7 +71,7 @@ Given a W3C Verifiable Credential containing PDTF entity data, verify its signat
     const validator = new VcValidator();
     const didResolver = new DidResolver();
     const trustResolver = new FederationRegistryResolver({
-      registryUrl: 'https://trust.pdtf.org/.well-known/openid-federation'
+      trustAnchors: ['https://propdata.org.uk']
     });
 
     const result = await validator.validate(credential, {
@@ -77,7 +82,7 @@ Given a W3C Verifiable Credential containing PDTF entity data, verify its signat
     if (result.valid) {
       console.log('Credential is valid');
       console.log('Issuer trust level:', result.stages.trust.details?.trustLevel);
-      // → 'root-issuer' | 'accredited-issuer' | 'trusted-proxy'
+      // → 'root_issuer' | 'trusted_proxy' | 'account_provider'
     } else {
       console.error('Verification failed:', result.warnings);
     }
@@ -95,6 +100,7 @@ Given a W3C Verifiable Credential containing PDTF entity data, verify its signat
                 "https://www.w3.org/ns/credentials/v2",
                 "https://propdata.org.uk/ns/v4"
             ],
+            "id": "urn:pdtf:vc:7f3a2b1c-9d4e-4f6a-8b7c-0d1e2f3a4b5c",
             "type": ["VerifiableCredential", "PropertyCredential"],
             "issuer": "did:web:adapter.propdata.org.uk",
             "credentialSubject": {
@@ -109,9 +115,9 @@ Given a W3C Verifiable Credential containing PDTF entity data, verify its signat
 
         let validator = VcValidator::new();
         let did_resolver = DidResolver::new();
-        let trust_resolver = FederationRegistryResolver::new(
-            "https://trust.pdtf.org/.well-known/openid-federation"
-        );
+        let trust_resolver = FederationRegistryResolver::new(vec![
+            "https://propdata.org.uk".into(),
+        ])?;
 
         let result = validator.validate(&credential, &did_resolver, &trust_resolver).await?;
 
@@ -137,6 +143,7 @@ Given a W3C Verifiable Credential containing PDTF entity data, verify its signat
             "https://www.w3.org/ns/credentials/v2",
             "https://propdata.org.uk/ns/v4",
         ],
+        "id": "urn:pdtf:vc:7f3a2b1c-9d4e-4f6a-8b7c-0d1e2f3a4b5c",
         "type": ["VerifiableCredential", "PropertyCredential"],
         "issuer": "did:web:adapter.propdata.org.uk",
         "credentialSubject": {
@@ -153,7 +160,7 @@ Given a W3C Verifiable Credential containing PDTF entity data, verify its signat
     validator = VcValidator()
     did_resolver = DidResolver()
     trust_resolver = FederationRegistryResolver(
-        registry_url="https://trust.pdtf.org/.well-known/openid-federation"
+        trust_anchors=["https://propdata.org.uk"]
     )
 
     result = validator.validate(
@@ -165,7 +172,7 @@ Given a W3C Verifiable Credential containing PDTF entity data, verify its signat
     if result.valid:
         print("Credential is valid")
         print("Issuer trust level:", result.stages.trust.details.trust_level)
-        # → 'root-issuer' | 'accredited-issuer' | 'trusted-proxy'
+        # → 'root_issuer' | 'trusted_proxy' | 'account_provider'
     else:
         print("Verification failed:", result.warnings)
     ```
@@ -181,6 +188,7 @@ Given a W3C Verifiable Credential containing PDTF entity data, verify its signat
         "https://www.w3.org/ns/credentials/v2",
         "https://propdata.org.uk/ns/v4"
       ],
+      "id": "urn:pdtf:vc:7f3a2b1c-9d4e-4f6a-8b7c-0d1e2f3a4b5c",
       "type": ["VerifiableCredential", "PropertyCredential"],
       "issuer": "did:web:adapter.propdata.org.uk",
       "credentialSubject": {
@@ -196,9 +204,10 @@ Given a W3C Verifiable Credential containing PDTF entity data, verify its signat
 
     var validator = new VcValidator();
     var didResolver = new DidResolver();
-    var trustResolver = new FederationRegistryResolver(
-        registryUrl: "https://trust.pdtf.org/.well-known/openid-federation"
-    );
+    var trustResolver = new FederationRegistryResolver(new FederationOptions
+    {
+        TrustAnchors = new[] { "https://propdata.org.uk" },
+    });
 
     var result = await validator.ValidateAsync(credential, new ValidateOptions
     {
@@ -223,12 +232,14 @@ Given a W3C Verifiable Credential containing PDTF entity data, verify its signat
 
 1. **Structure** — validates the `credentialSubject` against the PDTF v4 JSON schema.
 2. **Signature** — resolves the issuer's DID document, extracts the verification method, and validates the `eddsa-jcs-2022` proof.
-3. **Trust** — evaluates the issuer's OpenID Federation Trust Marks and confirms they are authorised for this entity type and data path.
-4. **Status** — fetches the Bitstring Status List and checks the credential's revocation bit.
+3. **Trust** — resolves the issuer's trust chain to the Trust Anchor (`https://propdata.org.uk`), verifies its Trust Mark, and confirms `delegation.authorised_paths` covers this entity type and data path. If trust resolution fails, the credential is rejected; there is no fallback trust level.
+4. **Status** — fetches the issuer's signed Bitstring Status List and checks the credential's revocation (and any suspension) bit.
+
+The issuer trust level is one of `root_issuer`, `trusted_proxy` or `account_provider`, read from the Trust Mark's `delegation.trust_level`. A fourth level, `assertion`, applies to credentials whose evidence is a person's own statement (`UserAttestation`) and is never returned by federation resolution ([04 §8](/specs/04-openid-federation/#8-trust-levels)).
 
 ## 2. Verify OpenID Federation Trust Marks
 
-The OpenID Federation Trust Anchor dictates who is authorised to issue which types of credentials:
+The OpenID Federation Trust Anchor at `https://propdata.org.uk` dictates who is authorised to issue which types of credentials. In Phase 1 it is an interim, project-led Trust Anchor; long-term governance is consultation [Q6](/consultation/#q6-trust-anchor-governance).
 
 <Tabs syncKey="language">
   <TabItem label="TypeScript">
@@ -236,7 +247,7 @@ The OpenID Federation Trust Anchor dictates who is authorised to issue which typ
     import { FederationRegistryResolver } from '@pdtf/core';
 
     const trustResolver = new FederationRegistryResolver({
-      registryUrl: 'https://trust.pdtf.org/.well-known/openid-federation'
+      trustAnchors: ['https://propdata.org.uk']
     });
 
     // Check if an issuer has a Trust Mark authorising them for a specific path
@@ -258,9 +269,9 @@ The OpenID Federation Trust Anchor dictates who is authorised to issue which typ
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
-        let trust_resolver = FederationRegistryResolver::new(
-            "https://trust.pdtf.org/.well-known/openid-federation"
-        );
+        let trust_resolver = FederationRegistryResolver::new(vec![
+            "https://propdata.org.uk".into(),
+        ])?;
 
         let is_trusted = trust_resolver
             .is_issuer_trusted(
@@ -284,7 +295,7 @@ The OpenID Federation Trust Anchor dictates who is authorised to issue which typ
     from pdtf_core import FederationRegistryResolver
 
     trust_resolver = FederationRegistryResolver(
-        registry_url="https://trust.pdtf.org/.well-known/openid-federation"
+        trust_anchors=["https://propdata.org.uk"]
     )
 
     is_trusted = trust_resolver.is_issuer_trusted(
@@ -302,9 +313,10 @@ The OpenID Federation Trust Anchor dictates who is authorised to issue which typ
     ```csharp
     using Pdtf.Core;
 
-    var trustResolver = new FederationRegistryResolver(
-        registryUrl: "https://trust.pdtf.org/.well-known/openid-federation"
-    );
+    var trustResolver = new FederationRegistryResolver(new FederationOptions
+    {
+        TrustAnchors = new[] { "https://propdata.org.uk" },
+    });
 
     var isTrusted = await trustResolver.IsIssuerTrustedAsync(
         "did:web:adapter.propdata.org.uk",
@@ -367,7 +379,7 @@ The OpenID Federation Trust Anchor dictates who is authorised to issue which typ
 
 ## 3. Check revocation status
 
-Every PDTF credential includes a `credentialStatus` field pointing to a Bitstring Status List. Check it directly:
+Every PDTF credential carries a revocation reference. The current libraries implement the W3C Bitstring Status List (`credentialStatus`); the spec's provisional mechanism is the IETF Token Status List ([14 §1](/specs/14-credential-revocation/#1-purpose), consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)). Check it directly:
 
 <Tabs syncKey="language">
   <TabItem label="TypeScript">
@@ -436,7 +448,7 @@ Every PDTF credential includes a `credentialStatus` field pointing to a Bitstrin
   </TabItem>
 </Tabs>
 
-The status list is a compact bitstring where each credential is assigned an index. Issuers publish the status list at a public URL and flip individual bits to revoke credentials — no need to contact the issuer directly.
+The status list is a compact bitstring where each credential is assigned an index. Issuers sign the status list, publish it at a public URL, and flip individual bits to revoke credentials — no need to contact the issuer directly. Relationship credentials should also support suspension ([14 §8](/specs/14-credential-revocation/#8-suspension-vs-revocation)).
 
 ## 4. Resolve a DID
 
@@ -453,7 +465,7 @@ Look up a DID document for any PDTF entity that uses `did:web`:
     const doc = await resolver.resolve('did:web:platform.example.com:transactions:abc123');
 
     console.log('Service endpoints:', doc.service);
-    // → [{ type: 'PDTFv4API', serviceEndpoint: 'https://...' }]
+    // → [{ type: 'PdtfTransactionEndpoint', serviceEndpoint: 'https://...' }, { type: 'McpEndpoint', ... }]
 
     console.log('Verification methods:', doc.verificationMethod);
     // → [{ type: 'Ed25519VerificationKey2020', publicKeyMultibase: 'z6Mkh...' }]
@@ -523,5 +535,5 @@ pdtf did resolve did:web:platform.example.com:transactions:abc123
 
 - [Understand the entity graph](/architecture/entities/) — how property data decomposes into ten entity types
 - [Read the VC data model spec](/specs/02-vc-data-model/) — full credential format reference
-- [Explore the OpenID Federation spec](/specs/04-openid-federation/) — registry schema and trust levels
+- [Explore the OpenID Federation spec](/specs/04-openid-federation/) — trust chains, trust marks and trust levels
 - [Browse the packages](/docs/packages/core/) — package documentation

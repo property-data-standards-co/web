@@ -25,7 +25,7 @@ This sub-specification defines the decentralised identifier (DID) system and URN
 
 This spec covers:
 
-- DID method selection and rationale (decisions **D7**, **D26**)
+- DID method selection and rationale (decisions **D7**, **D35**)
 - URN scheme for non-DID entities (decision **D23**)
 - DID document structure for each entity type
 - Verification methods and key encoding
@@ -59,7 +59,7 @@ It does **not** cover:
 |----|----------|-----------|
 | **D7** | `did:key` for Persons; `did:key` or `did:web` for Organisations; `did:web` for Transactions and Trusted Adapters | Persons need zero-infrastructure identifiers derived from their signing keys. Organisations may use provider-managed `did:key` (the common case — issued by their case management platform) or self-hosted `did:web` (for firms wanting direct control). Transactions and adapters need discoverable service endpoints that `did:web` provides. |
 | **D23** | `urn:pdtf:unregisteredTitle:{uuid}` for unregistered titles | Unregistered land has no HMLR title number. A PDTF-minted UUID provides a stable identifier until first registration completes. **Open:** confirm UUID version and whether the URN should survive first registration. |
-| **D26** | `did:key` (provider-managed) or `did:web` (self-hosted) for Organisations | Most organisations will use provider-managed `did:key` identifiers issued by their account provider (e.g. LMS). The provider verifies the organisation's identity and regulatory status. Self-hosted `did:web` at the firm's domain is available for firms wanting direct control. |
+| **D35** | `did:key` (provider-managed) or `did:web` (self-hosted) for Organisations | Most organisations will use provider-managed `did:key` identifiers issued by their account provider (e.g. LMS). The provider verifies the organisation's identity and regulatory status. Self-hosted `did:web` at the firm's domain is available for firms wanting direct control. |
 
 ---
 
@@ -203,6 +203,7 @@ Registrant: Property Data Standards Company
 | `urn:pdtf:uprn:{uprn}` | Property | Ordnance Survey UPRN (Unique Property Reference Number) |
 | `urn:pdtf:titleNumber:{number}` | Title (registered) | HMLR title number |
 | `urn:pdtf:unregisteredTitle:{uuid}` | Title (unregistered) | Platform-generated UUID v4 (D23) |
+| `urn:pdtf:vc:{uuid}` | Credential identifier (the credential's `id` / `jti`, not an entity) | Issuer-generated UUID v4 ([00 §14.1 Q3.3](/specs/00-architecture-overview/), [02 §2.2](/specs/02-vc-data-model/)) |
 | `urn:pdtf:capacity:{uuid}` | SellerCapacity | Platform-generated UUID v4 |
 | `urn:pdtf:offer:{uuid}` | Offer | Platform-generated UUID v4 |
 | `urn:pdtf:gift:{uuid}` | Gift | Platform-generated UUID v4 |
@@ -225,6 +226,7 @@ pdtf-nss          = property-urn
                   / offer-urn
                   / gift-urn
                   / representation-urn
+                  / vc-urn
                   / role-urn
                   / property-title-link-urn
 
@@ -239,6 +241,9 @@ district-prefix   = 1*4ALPHA
 
 ; Unregistered Title — UUID v4 (D23)
 unregistered-title-urn = "unregisteredTitle:" uuid-v4
+
+; Credential identifier — UUID v4 (00 Q3.3)
+vc-urn            = "vc:" uuid-v4
 
 ; SellerCapacity — UUID v4
 capacity-urn      = "capacity:" uuid-v4
@@ -279,10 +284,10 @@ urn:pdtf:titleNumber:DN123456
 urn:pdtf:titleNumber:AGL12345
 urn:pdtf:unregisteredTitle:f47ac10b-58cc-4372-a567-0e02b2c3d479
 urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7
-urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f
 urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
 urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
-urn:pdtf:role:d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a
+urn:pdtf:role:d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a
 urn:pdtf:propertyTitleLink:e5f6a7b8-c9d0-4e1f-8a3b-4c5d6e7f8a9b
 ```
 
@@ -296,7 +301,7 @@ The boundary is clear: **actors get DIDs, subjects get URNs**.
 | Yes | Yes | `did:web` |
 | No | No | `urn:pdtf:*` |
 
-- **Persons** sign credentials → `did:key`
+- **Persons** hold signing keys (holder binding and presentations) → `did:key`. Who issues a credential recording a person's assertion is stated in [02 §3.2.1](/specs/02-vc-data-model/) (provisional, consultation Q4)
 - **Organisations** sign credentials → `did:key` (provider-managed, common case) or `did:web` (self-hosted, with service endpoints)
 - **Transactions** host endpoints (PDTF API, MCP) → `did:web`
 - **Properties** are credential subjects, never issuers → `urn:pdtf:uprn:*`
@@ -556,7 +561,7 @@ For the HMLR Official Copies adapter at `did:web:adapters.propdata.org.uk:hmlr`,
 
 - Multiple keys in `assertionMethod` — adapters may use key rotation with overlapping validity periods. `key-2` might be the next rotation key, already listed in `assertionMethod` but not yet primary.
 - The `#vc-issuance` service endpoint tells consumers where to request VCs and what credential types the adapter issues.
-- The `#status` endpoint links to the Bitstring Status List for revocation checking.
+- The `#status` endpoint links to the adapter's status lists for revocation checking ([14 §1](/specs/14-credential-revocation/)).
 - `credentialTypes` in the service endpoint metadata lists the VC types this adapter can issue, enabling automated discovery.
 
 ---
@@ -614,7 +619,11 @@ DID documents assign keys to specific verification relationships, which determin
 
 ### 5.3 Proof Cryptosuite
 
-Verifiable Credentials in PDTF 2.0 use the `eddsa-jcs-2022` cryptosuite for Data Integrity Proofs:
+:::note[Superseded representation]
+The Data Integrity proof below is the superseded representation, and the one the current reference libraries implement. The securing mechanism is stated once, in [02 §2.4](/specs/02-vc-data-model/): SD-JWT-VC, provisional pending consultation [Q20](/consultation/#q20-credential-format--securing-mechanism). Under SD-JWT-VC the JWS header `kid` MUST likewise reference a key listed under the issuer's `assertionMethod`.
+:::
+
+In the Data Integrity representation, Verifiable Credentials in PDTF 2.0 use the `eddsa-jcs-2022` cryptosuite:
 
 ```json
 {
@@ -642,7 +651,7 @@ The `verificationMethod` in the proof MUST reference a key listed in the issuer'
 
 ## 6. Service Endpoints
 
-Service endpoints in DID documents enable machine-readable discovery of APIs and capabilities. PDTF 2.0 defines three custom service endpoint types.
+Service endpoints in DID documents enable machine-readable discovery of APIs and capabilities. PDTF 2.0 defines three custom service endpoint types (§6.1–6.3) plus the additional types in §6.4. These `type` values are canonical, and the documentation and guides use them. A client looking for a transaction's API looks for `PdtfTransactionEndpoint`; one looking for its MCP server looks for `McpEndpoint`.
 
 ### 6.1 PdtfTransactionEndpoint
 
@@ -729,6 +738,7 @@ Used by Trusted Adapters to advertise their credential issuance capability.
 | `CompanyRegistration` | Organisations | Link to Companies House record |
 | `BitstringStatusListEndpoint` | Adapters | Credential revocation status list hosting |
 | `PdtfOrganisationEndpoint` | Organisations | PDTF credential exchange endpoint for the firm |
+| `PdtfDocumentEndpoint` | Transactions | Source-document retrieval for `pdtf://` URLs ([02 §6.6.2](/specs/02-vc-data-model/)) |
 
 ---
 
@@ -946,7 +956,7 @@ If a firm ceases to operate (SRA de-registration, company dissolution):
 
 1. Remove DID document from domain (or mark as deactivated)
 2. The corresponding Trust Mark is marked revoked via the Trust Anchor's `federation_trust_mark_status_endpoint`
-3. All Representation credentials issued to this Organisation should be revoked via Bitstring Status List
+3. All Representation credentials issued to this Organisation should be revoked through their status lists ([14 §1](/specs/14-credential-revocation/))
 
 #### 8.3.3 Person DID Deactivation
 
@@ -982,7 +992,7 @@ If a firm ceases to operate (SRA de-registration, company dissolution):
 
 ### 9.3 Federation Cross-Check as Defence in Depth
 
-The Trusted Issuer Registry provides a critical second layer of trust for `did:web`:
+OpenID Federation trust resolution ([04 §7](/specs/04-openid-federation/)) provides a critical second layer of trust for `did:web`:
 
 ```
 Verification chain:
@@ -1031,7 +1041,9 @@ Unregistered land (land not registered at HMLR) has no title number. PDTF needs 
 
 3. **Scope:** Does the identifier cover the title (the legal interest) or the physical extent of unregistered land? Multiple titles can overlap the same land.
 
-### 10.2 D26 — Organisation DID Methods
+### 10.2 D35 — Organisation DID Methods
+
+*Renumbered from D26, which [01 §3.3](/specs/01-entity-graph/) uses for "Transaction-centric graph". D34 is 01's Property–Title link decision.*
 
 **Status:** Decided (`did:key` provider-managed as default, `did:web` self-hosted as option)
 
@@ -1068,7 +1080,7 @@ The person's identity verification credential is bound to their `did:key` via `c
 1. **Credential signature** — valid, signed by an issuer in the Federated Registry
 2. **DID binding** — `credentialSubject.id` matches the DID presenting the credential
 3. **Proof of control** — the presenter signed the challenge with the private key corresponding to the DID (proving they are the credential subject, not a replayer)
-4. **Revocation status** — Bitstring Status List confirms the credential has not been revoked
+4. **Revocation status** — the status list ([14 §1](/specs/14-credential-revocation/)) confirms the credential has not been revoked
 5. **Issuer authority** — the issuing entity is listed in the Federated Registry as an authorised identity verifier
 
 **Verification flow:**
@@ -1235,10 +1247,10 @@ This generates the key pair, constructs the DID document with regulatory metadat
 | Title (registered) | URN | `urn:pdtf:titleNumber:{number}` | `urn:pdtf:titleNumber:DN123456` |
 | Title (unregistered) | URN | `urn:pdtf:unregisteredTitle:{uuid}` | `urn:pdtf:unregisteredTitle:f47ac10b-58cc-4372-a567-0e02b2c3d479` |
 | SellerCapacity | URN | `urn:pdtf:capacity:{uuid}` | `urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7` |
-| Offer | URN | `urn:pdtf:offer:{uuid}` | `urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f` |
+| Offer | URN | `urn:pdtf:offer:{uuid}` | `urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f` |
 | Gift | URN | `urn:pdtf:gift:{uuid}` | `urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e` |
 | Representation | URN | `urn:pdtf:representation:{uuid}` | `urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d` |
-| TransactionRole | URN | `urn:pdtf:role:{uuid}` | `urn:pdtf:role:d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a` |
+| TransactionRole | URN | `urn:pdtf:role:{uuid}` | `urn:pdtf:role:d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a` |
 | PropertyTitleLink | URN | `urn:pdtf:propertyTitleLink:{uuid}` | `urn:pdtf:propertyTitleLink:e5f6a7b8-c9d0-4e1f-8a3b-4c5d6e7f8a9b` |
 
 ## Appendix B: Decision Log
@@ -1247,7 +1259,7 @@ This generates the key pair, constructs the DID document with regulatory metadat
 |----|----------|------|--------|
 | D7 | `did:key` for Persons; `did:key` or `did:web` for Organisations; `did:web` for Transactions/Adapters | 2026-03-23 | **Updated** — Organisations may use provider-managed `did:key` (common case) or self-hosted `did:web` |
 | D23 | `urn:pdtf:unregisteredTitle:{uuid}` for unregistered titles | 2026-03-24 | **Open** — UUID version and first-registration transition TBD |
-| D26 | Organisations use `did:key` (provider-managed, default) or `did:web` (self-hosted) | 2026-03-24 | **Updated** — `did:key` via account provider is the common path; `did:web` for firms wanting direct control |
+| D35 (was D26) | Organisations use `did:key` (provider-managed, default) or `did:web` (self-hosted) | 2026-03-24 | **Updated** — `did:key` via account provider is the common path; `did:web` for firms wanting direct control |
 
 ## Appendix C: Related Sub-specs
 

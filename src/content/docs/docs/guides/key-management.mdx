@@ -7,6 +7,10 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 Every PDTF credential is signed with an Ed25519 key. How you store and manage those keys depends on your environment and security requirements. `@pdtf/core` provides a `KeyProvider` interface with four built-in implementations.
 
+:::note[Provisional]
+The signing examples produce the Data Integrity representation (`DataIntegrityProof`, `eddsa-jcs-2022`) that the current libraries implement. The spec's provisional securing mechanism is SD-JWT-VC ([02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism), consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)). The examples are trimmed to show key handling: real credentials also need an `id` (`urn:pdtf:vc:{uuid-v4}`) and a status entry, as shown in [Issue a Credential](/docs/guides/issue-credential/).
+:::
+
 ## Quick Start
 
 For local development and testing, SQLite is the fastest path:
@@ -185,9 +189,11 @@ All providers implement the same `KeyProvider` interface. Your signing code does
 | Category | Purpose | Example |
 |----------|---------|---------|
 | `adapter` | Signs credentials from a data source adapter | EPC adapter, HMLR adapter |
-| `user` | Signs user-initiated attestations | Seller property information |
+| `user` | A person's custodial key: signs their presentations (Key Binding JWT / VP), not credentials | Seller presenting their SellerCapacity |
 | `platform` | Signs platform-level credentials | Transaction lifecycle events |
 | `organisation` | Organisation identity key | `did:web:platform.example.com` anchor |
+
+When a person asserts something through a platform (for example, a seller's property information), the platform issues and signs the credential under its own `did:web` with a `platform` key. The person's `did:key` goes in `evidence` and, where holder-bound, `cnf` ([02 §3.2.1](/specs/02-vc-data-model/#321-issuer-of-a-persons-assertion)).
 
 ---
 
@@ -353,7 +359,7 @@ gcloud kms keyrings create pdtf \
 KMS supports key versions. To rotate:
 
 1. Create a new key version in KMS (or let auto-rotation handle it)
-2. Update the TIR with the new `did:key`
+2. Publish the new public key in your `did:web` DID document (`verificationMethod` and `assertionMethod`) and in your federation Entity Configuration
 3. Disable the old key version after a grace period
 4. Old credentials remain verifiable (the public key was embedded in the DID)
 
@@ -443,7 +449,7 @@ service/validate     → Validation service receipt signing
 
 ## For Third-Party Implementers
 
-If you're building a PDTF adapter (e.g., for a conveyancing platform), here's the minimal path:
+If you're building a PDTF adapter (e.g., for a conveyancing platform), here's the minimal path. In production an adapter signs under a `did:web` and joins OpenID Federation; the dev `did:key` below is for local testing. There is no Trusted Issuer Registry: federation replaced it ([04 §1.1](/specs/04-openid-federation/#11-why-openid-federation)).
 
 <Tabs syncKey="language">
   <TabItem label="TypeScript">
@@ -452,16 +458,17 @@ If you're building a PDTF adapter (e.g., for a conveyancing platform), here's th
     ```
 
     ```ts
-    import { SqliteKeyProvider, VcSigner, TirClient } from '@pdtf/core';
+    import { SqliteKeyProvider, VcSigner } from '@pdtf/core';
 
     // 1. Set up key management
     const keys = new SqliteKeyProvider({ dbPath: './keys.db' });
     const key = await keys.generateKey('my-adapter', 'adapter');
 
-    // 2. Register your DID in the TIR
-    //    → Submit a PR to property-data-standards-co/tir
-    //    → Add your issuer entry with key.did and authorised paths
-    console.log(`Register this DID in the TIR: ${key.did}`);
+    // 2. Join the federation
+    //    → Apply to the Trust Anchor (https://propdata.org.uk) for a
+    //      pdtf-verified-issuer Trust Mark covering your authorised paths
+    //    → Publish your Entity Configuration at /.well-known/openid-federation
+    console.log(`Publish this key in your DID document: ${key.did}`);
 
     // 3. Start signing credentials
     const signer = new VcSigner(keys, 'my-adapter', key.did);
@@ -490,8 +497,8 @@ If you're building a PDTF adapter (e.g., for a conveyancing platform), here's th
     let provider = MemoryKeyProvider::new();
     let record = provider.generate_key("my-adapter", KeyCategory::Adapter).await?;
 
-    // 2. Register your DID in the TIR
-    println!("Register this DID in the TIR: {}", record.did);
+    // 2. Join the federation (Trust Anchor: https://propdata.org.uk)
+    println!("Publish this key in your DID document: {}", record.did);
 
     // 3. Start signing
     let signer = VcSigner::from_key_id(&provider, "my-adapter").await?;
@@ -519,8 +526,8 @@ If you're building a PDTF adapter (e.g., for a conveyancing platform), here's th
     # 1. Generate a keypair
     keypair = generate_keypair()
 
-    # 2. Register your DID in the TIR
-    print(f"Register this DID in the TIR: {keypair['did']}")
+    # 2. Join the federation (Trust Anchor: https://propdata.org.uk)
+    print(f"Publish this key in your DID document: {keypair['did']}")
 
     # 3. Sign a credential
     vc = {
@@ -549,8 +556,8 @@ If you're building a PDTF adapter (e.g., for a conveyancing platform), here's th
     // 1. Generate a keypair
     var keypair = PdtfCore.GenerateKeypair();
 
-    // 2. Register your DID in the TIR
-    Console.WriteLine($"Register this DID in the TIR: {keypair.Did}");
+    // 2. Join the federation (Trust Anchor: https://propdata.org.uk)
+    Console.WriteLine($"Publish this key in your DID document: {keypair.Did}");
 
     // 3. Sign a credential
     var vc = JsonSerializer.Serialize(new {

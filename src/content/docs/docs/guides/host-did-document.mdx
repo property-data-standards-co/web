@@ -131,6 +131,8 @@ Adapters and transaction DIDs usually expose services.
 
 These endpoints are not decorative. They let clients discover where to request credentials and where revocation data lives.
 
+Service `type` values are canonical in [03 §6](/specs/03-did-methods/#6-service-endpoints). A transaction DID advertises its API as `PdtfTransactionEndpoint` and its MCP server as `McpEndpoint`; adapters use `VcIssuanceEndpoint`. The other defined types are `RegulatoryRegistration`, `CompanyRegistration`, `BitstringStatusListEndpoint`, `PdtfOrganisationEndpoint` and `PdtfDocumentEndpoint`.
+
 ## 5. Verify hosting end to end
 
 Once the file is live, test it with the same resolver that PDTF verifiers use.
@@ -194,7 +196,7 @@ Before you rely on the DID in live issuance:
 4. include that same key in `assertionMethod`
 5. keep the key fragment stable, typically `#key-1`
 6. update the DID document during key rotation before using the new key
-7. register the issuer DID in the TIR
+7. if you issue credentials, join the OpenID Federation: publish your Entity Configuration at `/.well-known/openid-federation` with `authority_hints` pointing to the Trust Anchor (`https://propdata.org.uk`), and obtain the Trust Mark that covers your paths ([04 §10.2](/specs/04-openid-federation/#102-accreditation-process))
 
 ## 7. Common failure modes
 

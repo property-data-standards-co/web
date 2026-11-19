@@ -3,7 +3,7 @@ title: "Credential Exchange Protocols"
 description: "How PDTF credentials are issued and verified using OID4VCI, OID4VP, and FAPI 2.0"
 ---
 
-PDTF credentials use the **W3C Verifiable Credential** format, but format alone doesn't define how credentials move between systems. The **OpenID for Verifiable Credentials** family of protocols handles the exchange — how an adapter issues a credential to a wallet, and how a verifier requests and checks one.
+PDTF credentials use the **W3C Verifiable Credential** data model, secured as **SD-JWT-VC** under the spec's provisional securing mechanism ([02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism), consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)). But format alone doesn't define how credentials move between systems. The **OpenID for Verifiable Credentials** family of protocols handles the exchange — how an adapter issues a credential to a wallet, and how a verifier requests and checks one.
 
 ## The three protocols
 
@@ -38,8 +38,10 @@ In PDTF, the "issuers" are typically **adapters** — services that fetch data f
 4. Adapter fetches the data from the primary source
 
 5. Adapter signs the credential and returns it
-   { "credential": "eyJhbGci...", "format": "ldp_vc" }
+   { "credential": "eyJhbGci...", "format": "dc+sd-jwt" }
 ```
+
+`dc+sd-jwt` is the OID4VCI format for SD-JWT-VC. The current libraries implement the superseded Data Integrity representation, whose OID4VCI format is `ldp_vc`.
 
 ### What makes this different from a plain API?
 
@@ -48,7 +50,7 @@ With a traditional API, you trust the platform serving the data. With OID4VCI:
 - The credential is **signed by the adapter** — it's verifiable even if received second-hand
 - The adapter's authority is **provable** via its federation trust mark
 - The credential is **portable** — it can be stored in a wallet and presented to anyone, not just the original requester
-- **Revocation** is built in via Bitstring Status List
+- **Revocation** is built in via the issuer's signed status list (Token Status List under SD-JWT-VC)
 
 ### Credential offer
 
@@ -161,12 +163,14 @@ PDTF supports **custodial cloud wallets** — server-side wallets operated by pl
 
 ```
 1. Seller logs into the platform and completes their TA6 form
-2. The platform's custodial wallet receives the signed TA6 credential
+2. The platform issues and signs the TA6 credential as the seller's account provider, and its custodial wallet holds it
 3. Buyer's conveyancer requests the TA6 via OID4VP
 4. The platform wallet checks the seller's consent settings
-5. If consented, the wallet creates a VP and returns it
+5. If consented, the wallet creates a presentation, signed with the seller's custodial key, and returns it
 6. The conveyancer verifies the VP — same trust chain as a mobile wallet
 ```
+
+Who issues a credential recording a person's assertion is a provisional working assumption ([02 §3.2.1](/specs/02-vc-data-model/#321-issuer-of-a-persons-assertion), consultation [Q4](/consultation/#q4-the-consumer-wallet-gap)): the person's key signs the presentation, not the credential.
 
 The credential is just as verifiable whether it came from a custodial cloud wallet or a mobile app. The trust mark on the issuer, the signature on the credential, and the revocation status are all identical.
 

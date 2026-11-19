@@ -19,22 +19,25 @@ Each check is independent. None trusts the others. The buyer provides the same p
 
 A **single verified digital identity** that travels with the person across the transaction eliminates this redundancy. The identity is verified once, at government-grade assurance, and presented cryptographically to each party that needs it. No rescanning. No duplication. No inconsistency.
 
-This isn't hypothetical. GOV.UK Wallet is being built on the same open standards that PDTF 2.0 uses.
+This isn't hypothetical. GOV.UK Wallet is being built on the OpenID credential exchange standards that PDTF 2.0 also uses.
 
 ## GOV.UK Wallet Alignment
 
-GOV.UK Wallet and PDTF 2.0 share the same technical foundation:
+GOV.UK Wallet and PDTF 2.0 share the exchange protocols but not the credential format:
 
 | Standard | GOV.UK Wallet | PDTF 2.0 |
 |---|---|---|
-| **W3C Verifiable Credentials Data Model 2.0** | Credential format | Credential format |
+| **Credential format** | **mdoc** (ISO/IEC 18013-5) for new credentials | **SD-JWT-VC** for PDTF's own credentials, with mdoc verified at the identity boundary (provisional) |
 | **OID4VCI** (OpenID for Verifiable Credential Issuance) | How credentials are issued to the wallet | How PDTF credentials are issued |
-| **OID4VP** (OpenID for Verifiable Presentation) | How credentials are presented to verifiers | How PDTF credentials are presented for verification |
-| **Bitstring Status List** | Credential revocation | Credential revocation |
+| **OID4VP** (OpenID for Verifiable Presentation) | How credentials are presented to verifiers | How PDTF credentials are presented, and how PDTF ingests GOV.UK-verified identity |
 
-This standards alignment is not a coincidence — it's a design choice. Because both systems use the same credential format, issuance protocol, presentation protocol, and revocation mechanism, **PDTF credentials and GOV.UK Wallet credentials are natively interoperable**. No translation layers. No format conversion. A credential issued into a GOV.UK Wallet can be presented directly to a PDTF-enabled platform, and vice versa.
+:::note[Provisional: consultation Q20]
+PDTF's securing mechanism is stated in [Sub-spec 02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism), with the GOV.UK Wallet and eIDAS analysis in [02 §13.4](/specs/02-vc-data-model/#134-credential-format--securing-mechanism). It is open for consultation in [Q20](/consultation/#q20-credential-format--securing-mechanism). Earlier versions of this page said GOV.UK Wallet used the W3C VC Data Model with Bitstring Status List and was "natively interoperable" with PDTF. That was wrong: the wallet mandates mdoc.
+:::
 
-For the Smart Data ecosystem, this demonstrates how a sector-specific scheme (property) can interoperate with national digital identity infrastructure without custom integration work — the standards do the heavy lifting.
+The alignment is at the protocol layer. Because both sides use OID4VP, a PDTF platform can request and verify a GOV.UK Wallet **mdoc** identity credential, and record the binding in the Person entity (below). PDTF's own property credentials are a different format, SD-JWT-VC. They are not stored in the GOV.UK Wallet today, so a PDTF platform must verify both formats.
+
+For the Smart Data ecosystem, this shows how a sector-specific scheme (property) can interoperate with national digital identity infrastructure by sharing protocols rather than custom integrations, while choosing the credential format that suits its own data.
 
 ## Person Identity Binding
 

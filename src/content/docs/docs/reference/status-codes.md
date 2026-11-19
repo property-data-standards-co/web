@@ -5,7 +5,14 @@ description: "API status codes and error responses"
 
 ## Overview
 
-PDTF 2.0 uses W3C Bitstring Status List v1.0 for credential revocation and suspension. Every credential issued within the ecosystem MUST include a `credentialStatus` field. Credentials without one MUST be rejected.
+Every credential issued within the PDTF 2.0 ecosystem MUST carry a revocation reference. Credentials without one MUST be rejected.
+
+- **Under SD-JWT-VC** (the spec's provisional securing mechanism), the reference is the IETF Token Status List `status` claim, pointing to a Status List Token signed by the issuer (see [Token Status List](#token-status-list) below).
+- **In the superseded Data Integrity representation**, which the current libraries implement, it is a W3C Bitstring Status List `credentialStatus` entry. Most of this page documents that form; its index allocation, hosting, caching and rotation rules carry across to Token Status List.
+
+:::note[Provisional]
+The status mechanism follows the securing mechanism and is stated in [14 §1 and §1.1](/specs/14-credential-revocation/#11-revocation-mechanism-under-sd-jwt-vc-token-status-list) (consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)).
+:::
 
 This reference covers:
 
@@ -16,9 +23,26 @@ This reference covers:
 - Status state matrix
 - Caching requirements
 
+## Token Status List
+
+Under SD-JWT-VC each credential carries a `status` claim:
+
+```json
+{
+  "status": {
+    "status_list": {
+      "idx": 18293,
+      "uri": "https://adapters.propdata.org.uk/status/epc/1"
+    }
+  }
+}
+```
+
+The `uri` serves a Status List Token: a JWT (`application/statuslist+jwt`) signed by the issuer, whose `status_list` holds the compressed list (`lst`) and the bits per entry (`bits`: 1, or 2 to also express suspension). Status values are `0` = VALID, `1` = INVALID (revoked) and `2` = SUSPENDED.
+
 ## Credential status field
 
-Every PDTF credential MUST include:
+In the Data Integrity representation, every PDTF credential MUST include:
 
 ```json
 {
@@ -40,11 +64,11 @@ Every PDTF credential MUST include:
 | `statusListIndex` | string | required | non-negative integer as string, bit position in the list |
 | `statusListCredential` | URI | required | HTTPS URL of the status list VC |
 
-A credential MAY include two `credentialStatus` entries — one for revocation, one for suspension — each referencing separate status lists.
+A credential MAY include two `credentialStatus` entries — one for revocation, one for suspension — each referencing separate status lists. Every credential carries the revocation entry; see [Suspension guidance](#suspension-guidance) for which types also carry suspension.
 
 ## Status list credential
 
-The status list is itself a Verifiable Credential.
+In the Data Integrity representation, the status list is itself a Verifiable Credential, signed by the issuer. Status lists are always signed, never unsigned.
 
 ```json
 {
@@ -144,7 +168,7 @@ For each credentialStatus entry in the credential:
      - statusPurpose == "suspension" → credential is SUSPENDED
 
 If any entry is revoked → reject
-If any entry is suspended → reject (or warn, per policy)
+If any entry is suspended → reject (temporary: the credential may be reinstated, see [14 §8](/specs/14-credential-revocation/#8-suspension-vs-revocation))
 If all entries are 0 → credential status is active
 ```
 
@@ -216,6 +240,8 @@ Access-Control-Allow-Origin: *
 | user identity credential | account disabled, suspended, or deleted |
 
 ## Suspension guidance
+
+Working position ([14 §8](/specs/14-credential-revocation/#8-suspension-vs-revocation), provisional): every credential carries a revocation entry. Relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole) SHOULD also support suspension, and property data credentials MAY.
 
 Suspension is appropriate for:
 

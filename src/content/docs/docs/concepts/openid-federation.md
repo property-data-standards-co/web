@@ -26,7 +26,7 @@ Each link in the chain is a signed JWT. A verifier walks the chain from bottom t
 
 In the PDTF ecosystem:
 
-- **Trust Anchor**: `propdata.org.uk` operates the federation Trust Anchor. It publishes its own entity statement at `https://propdata.org.uk/.well-known/openid-federation` and signs subordinate statements for authorised adapters.
+- **Trust Anchor**: the federation Trust Anchor is `https://propdata.org.uk`. It publishes its own entity statement at `https://propdata.org.uk/.well-known/openid-federation` and signs subordinate statements for authorised adapters. In Phase 1 the platform operator runs it as an interim, project-led Trust Anchor; long-term governance is open for consultation ([Q6](/consultation/#q6-trust-anchor-governance)).
 - **Subordinate entities**: Each adapter (e.g. the PDTF HMLR proxy, an EPC adapter) publishes its own entity statement and is referenced by a subordinate statement from the Trust Anchor.
 - **Trust Marks**: The Trust Anchor issues **Property Trust Marks** — signed tokens that declare what an entity is authorised to do.
 
@@ -55,43 +55,48 @@ An entity statement is a signed JWT published at `{entity_url}/.well-known/openi
     }
   },
   "trust_marks": [
-    { "id": "https://propdata.org.uk/trust-marks/title-data-provider", "trust_mark": "eyJ..." }
+    { "id": "https://propdata.org.uk/trust-marks/pdtf-verified-issuer", "trust_mark": "eyJ..." }
   ]
 }
 ```
 
 ## Property Trust Marks
 
-A **Trust Mark** is a signed JWT issued by the Trust Anchor that declares an entity's authorisation. Think of it like a digital badge — *"this adapter is an authorised title data provider"*.
+A **Trust Mark** is a signed JWT issued by the Trust Anchor that declares an entity's authorisation. Think of it like a digital badge — *"this adapter is authorised to issue these title data paths"*.
 
 Each Property Trust Mark contains:
 
 | Field | Purpose | Example |
 |---|---|---|
-| `id` | The trust mark type URI | `https://propdata.org.uk/trust-marks/title-data-provider` |
+| `id` | The trust mark type URI | `https://propdata.org.uk/trust-marks/pdtf-verified-issuer` |
 | `iss` | The Trust Anchor that issued it | `https://propdata.org.uk` |
 | `sub` | The entity it's issued to | `https://adapters.propdata.org.uk/hmlr` |
-| `iat` / `exp` | When issued and when it expires | Standard JWT timestamps |
-| `trust_level` | Root issuer or trusted proxy | `trustedProxy` |
-| `authorised_paths` | Which entity:path combos the entity can issue credentials for | `["Title:/registerExtract/*", "Title:/ownership/*"]` |
+| `iat` / `exp` | When issued and when it expires | Short-lived: days, not years (examples use 7 days) |
+| `delegation.trust_level` | The issuer's trust level | `trusted_proxy` (or `root_issuer`, `account_provider`) |
+| `delegation.authorised_paths` | Which entity:path combos the entity can issue credentials for | `["Title:/registerExtract/*", "Title:/ownership/*"]` |
 
 ### Current Property Trust Marks
 
+:::note[Provisional]
+The trust mark catalogue is stated in [04 §5](/specs/04-openid-federation/#5-trust-marks) and is provisional pending consultation [Q7](/consultation/#q7-trust-mark-granularity). Earlier per-category marks such as `title-data-provider` and `property-data-provider` are withdrawn.
+:::
+
 | Trust Mark ID | Purpose |
 |---|---|
-| `title-data-provider` | Authorised to issue Title credentials (register extracts, ownership, title extents) |
-| `property-data-provider` | Authorised to issue Property credentials (EPC, flood risk, council tax, etc.) |
-| `regulated-conveyancer` | Authorised to act as a conveyancer in transactions (representation, transaction roles) |
+| `pdtf-verified-issuer` | Authorised to issue PDTF credentials for specific entity:path combinations (adapters, root issuers) |
 | `account-provider` | Authorised to issue user and organisation DIDs |
+| `regulated-conveyancer` | An SRA/CLC regulated conveyancing firm |
 
-Trust marks are **scoped** — holding `title-data-provider` doesn't grant authority over Property data, and vice versa. The `authorised_paths` field narrows trust even further:
+Authority over a data category is **scoped** by `delegation.authorised_paths` inside the `pdtf-verified-issuer` mark, not by a separate mark per category:
 
 ```json
 {
-  "id": "https://propdata.org.uk/trust-marks/property-data-provider",
+  "id": "https://propdata.org.uk/trust-marks/pdtf-verified-issuer",
   "sub": "https://adapters.propdata.org.uk/epc",
-  "trust_level": "trustedProxy",
-  "authorised_paths": ["Property:/energyEfficiency/*"]
+  "delegation": {
+    "trust_level": "trusted_proxy",
+    "authorised_paths": ["Property:/energyEfficiency/*"]
+  }
 }
 ```
 
@@ -105,8 +110,10 @@ When a verifier receives a credential, the trust check follows this sequence:
 2. **Build the trust chain** — follow the chain of subordinate statements up to the Trust Anchor
 3. **Validate signatures** — every statement in the chain must be properly signed
 4. **Check the Trust Mark** — find the relevant trust mark for the credential type
-5. **Verify path authorisation** — confirm the trust mark's `authorised_paths` cover the credential's data paths
+5. **Verify path authorisation** — confirm the trust mark's `delegation.authorised_paths` cover the credential's data paths
 6. **Check status** — ensure the trust mark hasn't expired or been revoked
+
+If trust resolution fails, the credential is excluded; there is no fallback trust level.
 
 ```typescript
 import { FederationRegistryResolver } from '@pdtf/core';

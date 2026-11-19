@@ -272,7 +272,7 @@ On verification failure, resolvers should bypass cache and re-fetch once.
 
 - `did:web` MUST resolve over HTTPS only.
 - DID document `id` MUST exactly match the queried DID.
-- Verifiers SHOULD cross-check issuer DIDs against the Trusted Issuer Registry.
+- Verifiers SHOULD cross-check issuer DIDs against the issuer's OpenID Federation trust chain and Trust Mark ([03 §9.3](/specs/03-did-methods/#93-federation-cross-check-as-defence-in-depth)).
 - DNS and TLS integrity matter for `did:web`; DNSSEC is recommended, especially for adapter infrastructure.
 
 ## Quick reference
@@ -280,6 +280,7 @@ On verification failure, resolvers should bypass cache and re-fetch once.
 | Question | Answer |
 |---|---|
 | Can a person use `did:web`? | Not in PDTF 2.0, persons use `did:key`. |
+| Does a person's `did:key` sign their assertions? | No. The platform signs under its own `did:web` as account provider; the person's key is in `evidence` and `cnf`, and signs presentations. This is provisional ([02 §3.2.1](/specs/02-vc-data-model/#321-issuer-of-a-persons-assertion), consultation [Q4](/consultation/#q4-the-consumer-wallet-gap)). |
 | Can an organisation use `did:key`? | Yes, provider-managed is the default/common case. |
 | Can an organisation use `did:web`? | Yes, when self-hosting and direct control are desired. |
 | Why do transactions use `did:web`? | They need discoverable API and MCP endpoints. |

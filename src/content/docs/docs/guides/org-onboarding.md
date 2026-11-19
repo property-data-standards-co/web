@@ -3,7 +3,7 @@ title: "Organisation Onboarding"
 description: "Onboard your organisation as a PDTF 2.0 participant"
 ---
 
-Organisation onboarding in PDTF 2.0 is about establishing a stable cryptographic identity for your organisation (a DID), then getting that DID recognised for specific claim types via the Trusted Issuer Registry (TIR).
+Organisation onboarding in PDTF 2.0 is about establishing a stable cryptographic identity for your organisation (a DID), then getting your organisation recognised for specific claim types through OpenID Federation. (Earlier drafts used a Trusted Issuer Registry; federation replaced it, see [04 §1.1](/specs/04-openid-federation/#11-why-openid-federation).)
 
 ## What you need to participate
 
@@ -22,13 +22,13 @@ PDTF supports two patterns:
 
 If you operate a public service (adapter, platform, validation service), `did:web` is typically the best fit because it is resolvable and can advertise service endpoints.
 
-## Get listed in the Trusted Issuer Registry
+## Join the federation
 
 Being able to sign a credential proves identity, not authority.
 
-To be treated as *authoritative* for a given claim, your DID needs to be listed in the TIR with the entity:path combinations you are allowed to assert (for example `Property:/energyEfficiency/certificate`).
+To be treated as *authoritative* for a given claim, your organisation needs a Trust Mark from the PDTF Trust Anchor (`https://propdata.org.uk`). For issuers this is `pdtf-verified-issuer`, whose `delegation.authorised_paths` lists the entity:path combinations you are allowed to assert (for example `Property:/energyEfficiency/certificate`). Account providers hold `account-provider` and regulated conveyancing firms hold `regulated-conveyancer`. The catalogue is provisional, pending consultation [Q7](/consultation/#q7-trust-mark-granularity) ([04 §5](/specs/04-openid-federation/#5-trust-marks)).
 
-Operationally, this is a pull request against the public TIR repo. Once merged, verifiers can immediately start trusting credentials signed by your DID for those paths.
+Operationally, you apply to the Trust Anchor operator (in Phase 1, the platform operator as interim, project-led Trust Anchor; long-term governance is consultation [Q6](/consultation/#q6-trust-anchor-governance)). Once it issues your Subordinate Entity Statement and Trust Mark, publish your Entity Configuration at `/.well-known/openid-federation` with `authority_hints` pointing to the Trust Anchor. Verifiers then resolve trust for your credentials on those paths. Trust Marks are short-lived and re-issued before expiry ([04 §10.2](/specs/04-openid-federation/#102-accreditation-process)).
 
 ## Validate your setup
 
@@ -37,8 +37,8 @@ Before issuing anything, do a quick end-to-end check:
 1. Resolve your DID (for `did:web`, confirm `/.well-known/did.json` is reachable over HTTPS).
 2. Confirm your signing key appears under `assertionMethod`.
 3. Issue a test credential and verify it locally using `@pdtf/core`.
-4. Check TIR authorisation for the exact paths you assert.
-5. Add `credentialStatus` and ensure your status list endpoint is reachable.
+4. Check federation trust resolution for the exact paths you assert.
+5. Add a revocation status entry and ensure your signed status list is reachable. The current libraries use Bitstring `credentialStatus`; the spec's provisional mechanism is Token Status List ([14 §1](/specs/14-credential-revocation/#1-purpose), consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)).
 
 ## Next steps
 

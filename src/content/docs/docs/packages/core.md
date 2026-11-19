@@ -1,9 +1,13 @@
 ---
 title: "@pdtf/core (TypeScript)"
-description: "The TypeScript reference implementation — signing, verification, DIDs, status lists, TIR client, and CLI."
+description: "The TypeScript reference implementation — signing, verification, DIDs, status lists, legacy TIR client, and CLI."
 ---
 
 The TypeScript reference implementation of PDTF 2.0. All core functionality in a single dependency.
+
+:::note[Implementation state]
+This library implements the Data Integrity representation (`DataIntegrityProof`, `eddsa-jcs-2022`) and the W3C Bitstring Status List only. That is the current implementation state, not the spec's answer: the provisional securing mechanism is SD-JWT-VC with Token Status List ([02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism), [14 §1](/specs/14-credential-revocation/#1-purpose), consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)).
+:::
 
 ```bash
 npm install @pdtf/core
@@ -145,6 +149,10 @@ const isRevoked = getBit(decoded, 42);  // true
 
 Trusted Issuer Registry client — load and validate issuer authorisations.
 
+:::caution[Legacy]
+PDTF 2.0 replaced the Trusted Issuer Registry with OpenID Federation ([04 §1.1](/specs/04-openid-federation/#11-why-openid-federation)). This module predates that change and is kept for backward compatibility and entity:path matching only; do not use it for trust decisions. Resolve trust with `FederationRegistryResolver` and the Trust Anchor `https://propdata.org.uk` (see [Verify Trust](/docs/guides/integrate-federation/)). Its trust-level strings may predate the canonical snake_case levels `root_issuer`, `trusted_proxy`, `account_provider` and `assertion` ([04 §8](/specs/04-openid-federation/#8-trust-levels)).
+:::
+
 ```ts
 import { loadRegistry, isAuthorised } from '@pdtf/core';
 
@@ -171,7 +179,7 @@ npx @pdtf/core did-resolve did:key:z6Mk...
 # Initialise an organisation DID
 npx @pdtf/core org-init --domain example.com --output ./keys
 
-# Validate a TIR registry file
+# Validate a TIR registry file (legacy)
 npx @pdtf/core tir-validate ./registry.json
 
 # Inspect a VC (print structure without verification)

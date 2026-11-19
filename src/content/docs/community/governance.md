@@ -15,13 +15,13 @@ This governance framework describes how that architecture is operated, how parti
 
 The Smart Data model is federated: each sector operates its own trust infrastructure while conforming to cross-sector principles set by a future **Smart Data Coordination Entity (SDCE)**.
 
-PDTF 2.0 implements this through a **Trust Anchor** at `trust.pdtf.org`. The Trust Anchor is the root of an [OpenID Federation](https://openid.net/specs/openid-federation-1_0.html) hierarchy that:
+PDTF 2.0 implements this through a **Trust Anchor** at `https://propdata.org.uk`. In Phase 1 it is an interim, project-led Trust Anchor run by the platform operator. Who should operate it in the long term is open for consultation ([Q6](/consultation/#q6-trust-anchor-governance); [Sub-spec 04 §3](/specs/04-openid-federation/#3-trust-anchor)). The Trust Anchor is the root of an [OpenID Federation](https://openid.net/specs/openid-federation-1_0.html) hierarchy that:
 
 - Publishes the federation's entity configuration and signing keys
 - Issues Trust Marks to accredited participants
 - Maintains the trust chain from which all participant credentials derive authority
 
-HM Land Registry is identified in the Smart Data analysis as the likely **lead regulator** for the property sector. As the regulatory landscape matures, the Trust Anchor's policies and accreditation criteria will align with HMLR's regulatory requirements, and `trust.pdtf.org` will integrate with whatever cross-sector coordination the SDCE establishes.
+HM Land Registry is identified in the Smart Data analysis as the likely **lead regulator** for the property sector. As the regulatory landscape matures, the Trust Anchor's policies and accreditation criteria will align with HMLR's regulatory requirements, and the Trust Anchor will integrate with whatever cross-sector coordination the SDCE establishes.
 
 This means PDTF is not a closed ecosystem. It is one node in a wider government-endorsed data-sharing architecture, with a clear path to interoperability with other Smart Data sectors (energy, finance, telecoms) as they come online.
 

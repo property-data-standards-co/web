@@ -3,7 +3,7 @@ title: "Credentials"
 description: "W3C Verifiable Credentials in the PDTF context"
 ---
 
-PDTF 2.0 uses **W3C Verifiable Credentials v2** as the core format for property data. Instead of trusting whichever platform happens to be serving the data, consumers verify a signed credential issued by a recognised source or trusted adapter.
+PDTF 2.0 uses the **W3C Verifiable Credentials v2** data model for property data. Instead of trusting whichever platform happens to be serving the data, consumers verify a signed credential issued by a recognised source or trusted adapter.
 
 ## What a credential does
 
@@ -15,7 +15,7 @@ A credential packages together:
 - **evidence** showing where the data came from
 - **terms of use** controlling who may access it
 - **status** information for revocation
-- a cryptographic **proof**
+- a cryptographic **signature** from the issuer
 
 This makes every claim independently portable and verifiable.
 
@@ -42,6 +42,7 @@ For example, an EPC credential only needs to assert the energy section:
 
 ```json
 {
+  "id": "urn:pdtf:vc:7f3a2b1c-9d4e-4f6a-8b7c-0d1e2f3a4b5c",
   "type": ["VerifiableCredential", "PropertyCredential"],
   "issuer": "did:web:adapters.propdata.org.uk:epc",
   "credentialSubject": {
@@ -69,18 +70,24 @@ Each credential can include an `evidence` array describing where the claim came 
 
 Access is controlled with `termsOfUse`, typically through a `PdtfAccessPolicy` that records:
 
-- confidentiality level
+- confidentiality level (`public`, `transactionParticipants`, `roleRestricted` or `partyOnly`)
 - whether the data contains PII
-- role restrictions
+- role restrictions (`roleRestrictions`, using role names such as `Seller's Conveyancer`)
 
-That means the same transaction can yield different views depending on whether the requester is a seller, buyer, conveyancer, or unauthenticated user.
+That means the same transaction can yield different views depending on whether the requester is a seller, buyer, conveyancer, or unauthenticated user. The vocabulary is provisional and stated in [02 §7.2–7.4](/specs/02-vc-data-model/#73-confidentiality-levels).
+
+When a person asserts something through a platform, such as a BASPI answer or an offer, the platform issues and signs the credential as their account provider. The person's `did:key` is recorded in a `UserAttestation` evidence item, and signs presentations rather than the credential (provisional; see [02 §3.2.1](/specs/02-vc-data-model/#321-issuer-of-a-persons-assertion)).
 
 ## Status and proof
 
-Every PDTF credential includes:
+Every PDTF credential carries:
 
-- `credentialStatus` using **Bitstring Status List**
-- `proof` using **Data Integrity** with **`eddsa-jcs-2022`**
+- a revocation reference: under SD-JWT-VC, a Token Status List `status` claim
+- the issuer's signature: under SD-JWT-VC, a JWS over the claims
+
+:::note[Provisional]
+The spec's provisional securing mechanism is SD-JWT-VC, stated in [02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism) (consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)). The current libraries implement the superseded Data Integrity representation: an embedded `proof` with `eddsa-jcs-2022`, and a Bitstring Status List `credentialStatus`.
+:::
 
 That gives two essential checks:
 
@@ -89,7 +96,7 @@ That gives two essential checks:
 
 ## Credential exchange protocols
 
-The credential format (W3C VC) defines what a credential looks like. But how do credentials actually move between systems?
+The credential data model (W3C VC) defines what a credential contains. But how do credentials actually move between systems?
 
 PDTF uses the **OpenID for Verifiable Credentials** protocol family:
 

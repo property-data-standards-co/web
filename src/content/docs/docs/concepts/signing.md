@@ -1,13 +1,17 @@
 ---
 title: "Signing & Proof"
-description: "Cryptographic signing with eddsa-jcs-2022"
+description: "How PDTF credentials are signed and verified"
 ---
 
-PDTF 2.0 uses **W3C Data Integrity proofs** so that credentials can be verified cryptographically, not just trusted because they came from a familiar platform. Signing is what turns JSON into a verifiable assertion.
+PDTF 2.0 signs every credential so that it can be verified cryptographically, not just trusted because it came from a familiar platform. Signing is what turns JSON into a verifiable assertion.
 
-## The proof format PDTF uses
+:::note[Provisional]
+The spec's provisional securing mechanism is **SD-JWT-VC**: a JWS over the claims, with selective disclosure and holder key binding. **Data Integrity** (`DataIntegrityProof`, `eddsa-jcs-2022`) is the superseded representation, and it is what the current libraries implement. This page describes that representation. See [02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism) (consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)).
+:::
 
-Every PDTF credential includes a `proof` object using:
+## The Data Integrity proof format
+
+In the Data Integrity representation, every PDTF credential includes a `proof` object using:
 
 - `type`: `DataIntegrityProof`
 - `cryptosuite`: `eddsa-jcs-2022`
@@ -31,7 +35,7 @@ Example:
 
 ## Why `eddsa-jcs-2022`
 
-PDTF standardises on this cryptosuite because it is a pragmatic fit for structured property data:
+The Data Integrity representation uses this cryptosuite because it is a pragmatic fit for structured property data:
 
 - **Ed25519** gives fast, compact signatures
 - **JCS** (JSON Canonicalization Scheme) gives deterministic JSON serialisation
@@ -42,14 +46,14 @@ In short, it is standards-based without being unnecessarily heavy.
 
 ## How signing works
 
-At issuance time, the issuer:
+In the Data Integrity representation, at issuance time the issuer:
 
 1. builds the credential
 2. canonicalises the JSON using JCS
 3. signs the canonical byte sequence with its Ed25519 private key
 4. embeds the resulting proof in the credential
 
-The signing key must correspond to a verification method listed under the issuer DID's `assertionMethod`.
+The signing key must correspond to a verification method listed under the issuer DID's `assertionMethod`. Under SD-JWT-VC the same rule applies to the JWS header `kid`.
 
 ## How verification works
 
@@ -61,7 +65,7 @@ A verifier checks a PDTF credential in roughly this order:
 4. canonicalise the credential payload the same way
 5. verify the Ed25519 signature in `proofValue`
 6. confirm the key is authorised for `assertionMethod`
-7. check revocation status and TIR authorisation
+7. check revocation status and the issuer's OpenID Federation authorisation (trust mark `delegation.authorised_paths`)
 
 If any of those steps fail, the credential should not be trusted.
 
@@ -70,7 +74,7 @@ If any of those steps fail, the credential should not be trusted.
 The specs standardise on **Ed25519** keys. Operationally, PDTF expects:
 
 - one key per trusted adapter
-- one key per user identity where custodial or wallet-based identity is in play
+- one key per user identity where custodial or wallet-based identity is in play; a person's key signs presentations, while the platform signs the credentials that record their assertions ([02 §3.2.1](/specs/02-vc-data-model/#321-issuer-of-a-persons-assertion), provisional)
 - platform-managed keys for issuance flows in Phase 1
 - cloud KMS or HSM-backed storage for high-value issuer keys
 

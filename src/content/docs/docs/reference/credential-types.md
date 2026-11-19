@@ -5,15 +5,20 @@ description: "Complete list of PDTF credential types and their subjects"
 
 ## Overview
 
-PDTF 2.0 uses W3C Verifiable Credentials v2.0 with Data Integrity proofs. Every credential MUST include:
+PDTF 2.0 uses the W3C Verifiable Credentials v2.0 data model. Every credential MUST include:
 
-- `@context`
+- `id` (`urn:pdtf:vc:{uuid}`, carried as `jti` under SD-JWT-VC; it may not be omitted)
 - `type`
 - `issuer`
 - `validFrom`
 - `credentialSubject`
-- `credentialStatus`
-- `proof`
+- a revocation reference: the Token Status List `status` claim, or `credentialStatus` in the Data Integrity representation
+
+`@context` is an optional semantic overlay, and `proof` appears only in the Data Integrity representation.
+
+:::note[Provisional]
+The spec's provisional securing mechanism is SD-JWT-VC; Data Integrity (`DataIntegrityProof`, `eddsa-jcs-2022`) is the superseded representation, and it is what the current libraries implement. See [02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism) (consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)).
+:::
 
 PDTF credentials use a single `credentialSubject`, never an array.
 
@@ -22,15 +27,21 @@ PDTF credentials use a single `credentialSubject`, never an array.
 | Credential type | Subject entity | `credentialSubject.id` format | Typical issuer | Purpose |
 |---|---|---|---|---|
 | `PropertyCredential` | Property | `urn:pdtf:uprn:{uprn}` | trusted proxy, root issuer, platform | Property facts and logbook data |
-| `TitleCredential` | Title | `urn:pdtf:titleNumber:{n}` or `urn:pdtf:unregisteredTitle:{id}` | HMLR proxy or root issuer | Register extract, title extents, legal title details |
-| `SellerCapacityCredential` | SellerCapacity | `urn:pdtf:capacity:{id}` | account provider / platform | The capacity in which a party sells; implies Seller |
-| `OfferCredential` | Offer | `urn:pdtf:offer:{id}` | platform on behalf of buyer | Buyer linkage, amount, conditions, status; implies Buyer |
-| `GiftCredential` | Gift | `urn:pdtf:gift:{id}` | platform on behalf of giftor | Gift of funds towards an offer; implies Giftor |
-| `RepresentationCredential` | Representation | `urn:pdtf:representation:{id}` | platform on behalf of instructing party | One party instructed by another, with the kind of representation |
-| `TransactionRoleCredential` | TransactionRole | `urn:pdtf:role:{id}` | platform | A role with no more specific relationship (lender, landlord, tenant, surveyor) |
+| `TitleCredential` | Title | `urn:pdtf:titleNumber:{n}` or `urn:pdtf:unregisteredTitle:{uuid}` | HMLR proxy or root issuer | Register extract, title extents, legal title details |
+| `SellerCapacityCredential` | SellerCapacity | `urn:pdtf:capacity:{uuid}` | account provider / platform | The capacity in which a party sells; implies Seller |
+| `OfferCredential` | Offer | `urn:pdtf:offer:{uuid}` | platform on behalf of buyer | Buyer linkage, amount, conditions, status; implies Buyer |
+| `GiftCredential` | Gift | `urn:pdtf:gift:{uuid}` | platform on behalf of giftor | Gift of funds towards an offer; implies Giftor |
+| `RepresentationCredential` | Representation | `urn:pdtf:representation:{uuid}` | platform on behalf of instructing party | One party instructed by another, with the kind of representation |
+| `TransactionRoleCredential` | TransactionRole | `urn:pdtf:role:{uuid}` | platform | A role with no more specific relationship (lender, landlord, tenant, surveyor) |
 | `TransactionCredential` | Transaction | `did:web:{host}:transactions:{id}` | platform | Transaction lifecycle and sale context |
 
+:::note[Provisional]
+When a person asserts something through a platform (a BASPI answer, an offer, an instruction to a conveyancer), the platform issues and signs the credential under its own `did:web` as the person's account provider. The person's `did:key` appears in `evidence` (`UserAttestation.source`) and, where the credential is holder-bound, in `cnf`; it signs presentations, not the credential. See [02 §3.2.1](/specs/02-vc-data-model/#321-issuer-of-a-persons-assertion) (consultation [Q4](/consultation/#q4-the-consumer-wallet-gap)).
+:::
+
 ## Common envelope
+
+The envelope below is in the Data Integrity representation that the current libraries implement. Under SD-JWT-VC the same claims travel in a JWS, with `jti` for `id` and a `status` claim for `credentialStatus` ([02 §9](/specs/02-vc-data-model/#9-securing-mechanism)).
 
 ```json
 {
@@ -38,6 +49,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
     "https://www.w3.org/ns/credentials/v2",
     "https://trust.propdata.org.uk/ns/pdtf/v2"
   ],
+  "id": "urn:pdtf:vc:7f3a2b1c-9d4e-4f6a-8b7c-0d1e2f3a4b5c",
   "type": ["VerifiableCredential", "PropertyCredential"],
   "issuer": "did:web:adapters.propdata.org.uk:epc",
   "validFrom": "2026-03-24T10:00:00Z",
@@ -109,7 +121,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 
 **Subject:**
 - `urn:pdtf:titleNumber:{number}`
-- `urn:pdtf:unregisteredTitle:{id}`
+- `urn:pdtf:unregisteredTitle:{uuid}`
 
 **Use:** sparse subset of the `Title` schema.
 
@@ -142,7 +154,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 
 ## SellerCapacityCredential
 
-**Subject:** `urn:pdtf:capacity:{id}`
+**Subject:** `urn:pdtf:capacity:{uuid}`
 
 **Design rule:** thin claim only. It records the capacity in which a party sells; it does not duplicate title register content. Issued for every seller, whether or not a capacity has been declared yet, so the credential embodying the Seller role is never missing.
 
@@ -162,7 +174,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 {
   "type": ["VerifiableCredential", "SellerCapacityCredential"],
   "credentialSubject": {
-    "id": "urn:pdtf:capacity:own-a1b2c3",
+    "id": "urn:pdtf:capacity:7c9e6679-7425-40de-944b-e07fc1f90ae7",
     "seller": "did:key:z6MkhSellerAbc123",
     "transaction": "did:web:platform.example.com:transactions:tx-789",
     "sellersCapacity": { "capacity": "Legal Owner" },
@@ -173,7 +185,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 
 ## OfferCredential
 
-**Subject:** `urn:pdtf:offer:{id}`
+**Subject:** `urn:pdtf:offer:{uuid}`
 
 **Rule:** an Offer always identifies a buyer. A giftor contributing towards an offer is linked to it through `GiftCredential`, not here.
 
@@ -196,7 +208,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 {
   "type": ["VerifiableCredential", "OfferCredential"],
   "credentialSubject": {
-    "id": "urn:pdtf:offer:off-j1k2l3",
+    "id": "urn:pdtf:offer:c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f",
     "buyer": "did:key:z6MkhBuyerXyz789",
     "transaction": "did:web:platform.example.com:transactions:tx-789",
     "offerId": "o1",
@@ -215,7 +227,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 
 ## GiftCredential
 
-**Subject:** `urn:pdtf:gift:{id}`
+**Subject:** `urn:pdtf:gift:{uuid}`
 
 **Purpose:** records that a party is gifting funds towards a purchase, and the terms a conveyancer must resolve before reporting to a lender.
 
@@ -234,7 +246,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 {
   "type": ["VerifiableCredential", "GiftCredential"],
   "credentialSubject": {
-    "id": "urn:pdtf:gift:gf-m4n5o6",
+    "id": "urn:pdtf:gift:b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
     "donor": "did:key:z6MkhParentPqr456",
     "transaction": "did:web:platform.example.com:transactions:tx-789",
     "offerId": "o1",
@@ -252,7 +264,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 
 ## RepresentationCredential
 
-**Subject:** `urn:pdtf:representation:{id}`
+**Subject:** `urn:pdtf:representation:{uuid}`
 
 **Rule:** one credential per (representative, represented party) pair. A conveyancer instructed jointly by two sellers holds two; a couple instructing separate conveyancers yields one each. The retainer is with the client, so the represented party is a person or organisation, never an offer. The representative's firm is recorded on the Transaction roster, not here.
 
@@ -271,7 +283,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 {
   "type": ["VerifiableCredential", "RepresentationCredential"],
   "credentialSubject": {
-    "id": "urn:pdtf:representation:rep-d4e5f6",
+    "id": "urn:pdtf:representation:a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
     "representative": "did:key:z6MkhConveyancerDef456",
     "representedParty": "did:key:z6MkhSellerAbc123",
     "role": "Seller's Conveyancer",
@@ -282,7 +294,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 
 ## TransactionRoleCredential
 
-**Subject:** `urn:pdtf:role:{id}`
+**Subject:** `urn:pdtf:role:{uuid}`
 
 **Purpose:** asserts a party's role where no more specific relationship credential applies — lender, landlord, tenant, surveyor, platform support — or where the specific relationship is not yet established. Every party carrying a role holds exactly one role-bearing credential.
 
@@ -300,7 +312,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 {
   "type": ["VerifiableCredential", "TransactionRoleCredential"],
   "credentialSubject": {
-    "id": "urn:pdtf:role:tr-g7h8i9",
+    "id": "urn:pdtf:role:d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a",
     "participant": "did:web:bigbank.co.uk",
     "role": "Lender",
     "transaction": "did:web:platform.example.com:transactions:tx-789"
@@ -354,7 +366,7 @@ PDTF credentials use a single `credentialSubject`, never an array.
 |---|---|
 | `ElectronicRecord` | data fetched from authoritative API or electronic source |
 | `DocumentExtraction` | data extracted from source document |
-| `UserAttestation` | data attested by user |
+| `UserAttestation` | data attested by a person; `source` is their `did:key`, and the issuing platform signs the credential |
 | `ProfessionalVerification` | data verified by professional |
 
 ## Terms of use
@@ -363,28 +375,42 @@ PDTF uses `PdtfAccessPolicy` in `termsOfUse`.
 
 | Field | Meaning |
 |---|---|
-| `confidentiality` | `public`, `restricted`, `confidential` |
+| `confidentiality` | `public`, `transactionParticipants`, `roleRestricted`, `partyOnly` |
 | `pii` | whether credential contains personal data |
-| `roleRestrictions` | allowed requester roles |
+| `roleRestrictions` | allowed requester roles, required when `confidentiality` is `roleRestricted`; v3 role strings such as `Seller's Conveyancer`, `Buyer's Conveyancer`, `Lender` |
+
+:::note[Provisional]
+The classification vocabulary and role identifiers are stated in [02 §7.2–7.4](/specs/02-vc-data-model/#73-confidentiality-levels) (consultation [Q17](/consultation/#q17-intent-based-access-control) and [Q19](/consultation/#q19-file-handling-and-evidence-access)).
+:::
 
 ## Revocation
 
-Every credential MUST include `credentialStatus` referencing a Bitstring Status List entry.
+Every credential MUST carry a revocation reference. Under SD-JWT-VC this is the IETF Token Status List `status` claim, `{ "status_list": { "idx": N, "uri": "..." } }`, pointing to a Status List Token (a JWT signed by the issuer). Status values are `0` = VALID, `1` = INVALID (revoked) and `2` = SUSPENDED.
+
+In the superseded Data Integrity representation, which the current libraries implement, the reference is a `credentialStatus` Bitstring Status List entry:
 
 | Field | Meaning |
 |---|---|
 | `type` | `BitstringStatusListEntry` |
-| `statusPurpose` | usually `revocation`, optionally also `suspension` |
+| `statusPurpose` | `revocation`, plus a second `suspension` entry where supported |
 | `statusListIndex` | bit position in status list |
-| `statusListCredential` | URL of status list VC |
+| `statusListCredential` | URL of the signed status list credential |
+
+Every credential carries a revocation entry. Relationship credentials (SellerCapacity, Offer, Gift, Representation, TransactionRole) SHOULD also support suspension, and property data credentials MAY.
+
+:::note[Provisional]
+The status mechanism follows the securing mechanism and is stated in [14 §1.1](/specs/14-credential-revocation/#11-revocation-mechanism-under-sd-jwt-vc-token-status-list); the suspension position is in [14 §8](/specs/14-credential-revocation/#8-suspension-vs-revocation).
+:::
 
 ## Proof format
 
-All PDTF credentials use:
+Under SD-JWT-VC the credential is JWS-signed (`EdDSA` or `ES256`) and has no embedded `proof`. The Data Integrity representation, which the current libraries implement, uses:
 
 - `type`: `DataIntegrityProof`
 - `cryptosuite`: `eddsa-jcs-2022`
 - `proofPurpose`: `assertionMethod`
+
+See [02 §2.4](/specs/02-vc-data-model/#24-securing-mechanism) (provisional, consultation [Q20](/consultation/#q20-credential-format--securing-mechanism)).
 
 ## Mapping from credential type to entity graph
 
@@ -403,9 +429,9 @@ All PDTF credentials use:
 
 A validator should check:
 
-1. `type` includes `VerifiableCredential` and exactly one PDTF credential type.
+1. `type` includes `VerifiableCredential` and exactly one PDTF credential type, and `id` is a `urn:pdtf:vc:{uuid}`.
 2. `credentialSubject.id` format matches the declared credential type.
-3. Proof verifies against issuer DID document.
+3. Signature (JWS or Data Integrity proof) verifies against the issuer's DID document.
 4. Credential is not revoked or suspended.
-5. Issuer is authorised for the asserted entity:path combinations via the TIR.
+5. Issuer is authorised for the asserted entity:path combinations through OpenID Federation (Trust Mark `delegation.authorised_paths`). If trust resolution fails, the credential is excluded.
 6. Sparse payload paths are valid against the corresponding entity schema.
